@@ -96,6 +96,8 @@ provided.
 - The DMX input hardware-in-the-loop test uses the RP2040 as a physical DMX
   sender, advertises the Python test process as an Art-Net subscriber, and
   verifies that uNode forwards the received DMX slots as ArtDmx.
+- Full-frame DMX tests verify all 512 slots in both directions, including the
+  final slots near channel 512.
 - ArtPollReply tests bind UDP port `6454`, because uNode sends replies to the
   standard Art-Net port. Close other Art-Net software if the port is already in
   use.

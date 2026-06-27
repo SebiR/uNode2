@@ -239,6 +239,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       flush to real DMX output, and Art-Net timeout failsafe zero output.
 - [x] Add hardware-in-the-loop tests that verify uNode DMX-to-Art-Net input
       with the RP2040 sender.
+- [x] Add full 512-slot hardware-in-the-loop coverage in both DMX directions
+      to catch off-by-one errors at channel 512.
 - [x] Add initial host-side tests for Art-Net packet parsing and packet
       generation.
 - [x] Add live hardware integration coverage for REST configuration updates,

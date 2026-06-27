@@ -22,13 +22,15 @@ def _wait_for_rp2040_frame_values(
     expected: list[int],
     *,
     start: int = 1,
+    count: int | None = None,
     timeout: float = 4.0,
 ) -> dict:
     deadline = time.time() + timeout
     last_frame = {}
+    read_count = len(expected) if count is None else count
 
     while time.time() < deadline:
-        last_frame = tool.get_frame(start=start, count=len(expected))
+        last_frame = tool.get_frame(start=start, count=read_count)
         if last_frame.get("values") == expected:
             return last_frame
         time.sleep(0.1)
@@ -95,6 +97,10 @@ def _send_artdmx_repeated(
     for _index in range(count):
         send_artnet_packet(unode_ip, packet)
         time.sleep(0.05)
+
+
+def _full_frame_pattern() -> list[int]:
+    return [((index * 37) + 11) & 0xFF for index in range(512)]
 
 
 def _local_ipv4_for_target(target_ip: str) -> str:
@@ -229,6 +235,41 @@ def test_artnet_to_dmx_output_maps_sparse_high_channels(
         "RP2040 analyzer confirmed sparse channel mapping: "
         f"CH1={low['values']}, CH128={middle['values']}, CH507={high['values']}"
     )
+
+
+def test_artnet_to_dmx_output_preserves_full_512_slot_frame(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(unode_client, preserved_config)
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    values = _full_frame_pattern()
+    step("Sending full 512-slot ArtDmx frame and checking every DMX slot")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        values,
+        sequence=45,
+    )
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        values,
+        count=512,
+    )
+
+    step(
+        "RP2040 analyzer confirmed exact 512-slot DMX output: "
+        f"slots={frame['slots']}, first={frame['values'][:4]}, "
+        f"last={frame['values'][-4:]}"
+    )
+    assert frame["slots"] == 512
 
 
 def test_artsync_flushes_pending_artdmx_to_real_dmx_output(
@@ -415,6 +456,84 @@ def test_dmx_input_from_rp2040_reaches_artnet_receiver(
         )
 
         assert packet.length >= len(values)
+    finally:
+        rp2040_tool.idle()
+        sock.close()
+
+
+def test_dmx_input_from_rp2040_preserves_full_512_slot_artdmx(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    config = preserved_config.copy()
+    config["direction"] = 1  # DMX -> Art-Net
+    config["net"] = 0
+    config["subnetId"] = 0
+    config["universe"] = 1
+
+    step("Switching uNode to DMX -> Art-Net for full-frame input test")
+    unode_client.save_config(config)
+    universe = configured_port_address(config)
+    wait_for_status(
+        unode_client,
+        lambda data: int(data["direction"]) == 1
+        and int(data["universe"]) == universe,
+    )
+
+    receiver_ip = _local_ipv4_for_target(unode_ip)
+    subscriber_reply = make_artpollreply_for_subscriber(
+        ip=receiver_ip,
+        net=config["net"],
+        subnet=config["subnetId"],
+        universe=config["universe"],
+    )
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        try:
+            sock.bind(("", ARTNET_PORT))
+        except OSError as error:
+            pytest.skip(f"UDP {ARTNET_PORT} is unavailable: {error}")
+
+        step(
+            "Advertising Python test receiver as Art-Net subscriber: "
+            f"{receiver_ip}"
+        )
+        for _index in range(3):
+            sock.sendto(subscriber_reply, (unode_ip, ARTNET_PORT))
+            time.sleep(0.1)
+
+        values = _full_frame_pattern()
+        step("Configuring RP2040 DMX sender with a full 512-slot frame")
+        rp2040_tool.mode("tx")
+        rp2040_tool.set_timing(
+            break_us=176,
+            mab_us=16,
+            fps=40,
+        )
+        rp2040_tool.set_frame(values, slots=512)
+
+        step("Starting RP2040 DMX sender and waiting for full ArtDmx")
+        rp2040_tool.tx("start")
+
+        packet = _wait_for_artdmx_from_unode(
+            sock,
+            unode_ip=unode_ip,
+            universe=universe,
+            expected=values,
+        )
+
+        step(
+            "Python Art-Net receiver confirmed exact 512-slot ArtDmx: "
+            f"length={packet.length}, first={list(packet.values[:4])}, "
+            f"last={list(packet.values[-4:])}"
+        )
+
+        assert packet.length == 512
+        assert list(packet.values) == values
     finally:
         rp2040_tool.idle()
         sock.close()
