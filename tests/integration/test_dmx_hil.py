@@ -18,6 +18,24 @@ from helpers import configured_port_address, send_artnet_packet, step, wait_for_
 from rp2040_dmx_tool import Rp2040DmxTool
 from unode_client import UNodeClient
 
+DMX_SPEC_BREAK_MIN_US = 92
+DMX_SPEC_MAB_MIN_US = 12
+DMX_NOMINAL_BAUD = 250_000
+DMX_BAUD_TOLERANCE_PERCENT = 2.0
+DMX_FULL_FRAME_SLOTS = 512
+DMX_START_CODE_AND_SLOT_BITS = 11
+DMX_FULL_FRAME_DATA_US = (
+    (DMX_FULL_FRAME_SLOTS + 1)
+    * DMX_START_CODE_AND_SLOT_BITS
+    * 1_000_000
+    / DMX_NOMINAL_BAUD
+)
+DMX_FULL_FRAME_MIN_PACKET_US = (
+    DMX_SPEC_BREAK_MIN_US
+    + DMX_SPEC_MAB_MIN_US
+    + DMX_FULL_FRAME_DATA_US
+)
+
 
 def _wait_for_rp2040_frame_values(
     tool: Rp2040DmxTool,
@@ -111,6 +129,50 @@ def _wait_for_output_failsafe(unode_client: UNodeClient) -> dict:
         lambda data: data["failsafeActive"] is True,
         timeout=7.0,
         interval=0.25,
+    )
+
+
+def _percent_deviation(value: float, nominal: float) -> float:
+    return ((value - nominal) / nominal) * 100.0
+
+
+def _format_window(minimum: float | None, maximum: float | None, unit: str) -> str:
+    if minimum is None and maximum is None:
+        return f"not bounded by this test {unit}".strip()
+    if maximum is None:
+        return f">= {minimum:.0f} {unit}"
+    if minimum is None:
+        return f"<= {maximum:.0f} {unit}"
+    return f"{minimum:.0f}..{maximum:.0f} {unit}"
+
+
+def _report_timing_metric(
+    name: str,
+    stats: dict,
+    *,
+    unit: str,
+    nominal: float | None = None,
+    minimum: float | None = None,
+    maximum: float | None = None,
+) -> None:
+    actual_min = float(stats["min"])
+    actual_avg = float(stats["avg"])
+    actual_max = float(stats["max"])
+    deviation = (
+        f", avg deviation={_percent_deviation(actual_avg, nominal):+.2f}%"
+        if nominal is not None
+        else ""
+    )
+    target = (
+        f"nominal={nominal:.0f} {unit}, "
+        if nominal is not None
+        else ""
+    )
+    step(
+        f"Timing {name}: actual min/avg/max="
+        f"{actual_min:.1f}/{actual_avg:.1f}/{actual_max:.1f} {unit}; "
+        f"{target}allowed {_format_window(minimum, maximum, unit)}"
+        f"{deviation}"
     )
 
 
@@ -281,6 +343,94 @@ def test_artnet_to_dmx_output_preserves_full_512_slot_frame(
         f"last={frame['values'][-4:]}"
     )
     assert frame["slots"] == 512
+
+
+def test_artnet_to_dmx_output_timing_matches_dmx512_limits(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(unode_client, preserved_config)
+
+    step("Putting RP2040 DMX tool into RX analyzer mode for timing capture")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    values = _full_frame_pattern()
+    step("Sending full 512-slot ArtDmx frame for DMX timing measurement")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        values,
+        sequence=46,
+    )
+
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        values,
+        count=512,
+    )
+
+    step("Clearing startup/transient analyzer stats before timing window")
+    rp2040_tool.clear_stats()
+
+    step("Collecting RP2040 timing statistics from live uNode DMX output")
+    time.sleep(2.0)
+    stats = rp2040_tool.get_stats()
+
+    baud = float(stats["baudEstimate"])
+    baud_tolerance = DMX_NOMINAL_BAUD * DMX_BAUD_TOLERANCE_PERCENT / 100.0
+    baud_min = DMX_NOMINAL_BAUD - baud_tolerance
+    baud_max = DMX_NOMINAL_BAUD + baud_tolerance
+
+    _report_timing_metric(
+        "Break",
+        stats["breakUs"],
+        unit="us",
+        minimum=DMX_SPEC_BREAK_MIN_US,
+    )
+    _report_timing_metric(
+        "Mark-After-Break",
+        stats["mabUs"],
+        unit="us",
+        minimum=DMX_SPEC_MAB_MIN_US,
+    )
+    _report_timing_metric(
+        "Data",
+        stats["dataUs"],
+        unit="us",
+        nominal=DMX_FULL_FRAME_DATA_US,
+    )
+    _report_timing_metric(
+        "Frame period",
+        stats["frameUs"],
+        unit="us",
+        minimum=DMX_FULL_FRAME_MIN_PACKET_US,
+    )
+    _report_timing_metric(
+        "Slots",
+        stats["slots"],
+        unit="slots",
+        nominal=DMX_FULL_FRAME_SLOTS,
+        minimum=DMX_FULL_FRAME_SLOTS,
+        maximum=DMX_FULL_FRAME_SLOTS,
+    )
+    step(
+        "Timing Baud: actual="
+        f"{baud:.0f} Bd; nominal={DMX_NOMINAL_BAUD} Bd; "
+        f"allowed {baud_min:.0f}..{baud_max:.0f} Bd "
+        f"({DMX_BAUD_TOLERANCE_PERCENT:.1f}% test tolerance); "
+        f"deviation={_percent_deviation(baud, DMX_NOMINAL_BAUD):+.2f}%"
+    )
+
+    assert stats["frames"] >= 10
+    assert stats["breakUs"]["min"] >= DMX_SPEC_BREAK_MIN_US
+    assert stats["mabUs"]["min"] >= DMX_SPEC_MAB_MIN_US
+    assert stats["slots"]["min"] == DMX_FULL_FRAME_SLOTS
+    assert stats["slots"]["max"] == DMX_FULL_FRAME_SLOTS
+    assert stats["frameUs"]["min"] >= DMX_FULL_FRAME_MIN_PACKET_US
+    assert baud_min <= baud <= baud_max
 
 
 def test_artsync_flushes_pending_artdmx_to_real_dmx_output(

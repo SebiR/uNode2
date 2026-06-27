@@ -99,6 +99,9 @@ provided.
   verifies that uNode forwards the received DMX slots as ArtDmx.
 - Full-frame DMX tests verify all 512 slots in both directions, including the
   final slots near channel 512.
+- The DMX output timing test measures Break, Mark-After-Break, frame/data time,
+  slot count, and estimated baud rate with the RP2040 analyzer and prints
+  actual values, accepted windows, and percentage deviation from nominal timing.
 - ArtPollReply tests bind UDP port `6454`, because uNode sends replies to the
   standard Art-Net port. Close other Art-Net software if the port is already in
   use.

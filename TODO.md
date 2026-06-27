@@ -243,6 +243,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       with the RP2040 sender.
 - [x] Add full 512-slot hardware-in-the-loop coverage in both DMX directions
       to catch off-by-one errors at channel 512.
+- [x] Add hardware-in-the-loop DMX output timing coverage for Break,
+      Mark-After-Break, full-frame period, slot count, and baud estimate.
 - [x] Add initial host-side tests for Art-Net packet parsing and packet
       generation.
 - [x] Add live hardware integration coverage for REST configuration updates,
