@@ -3,6 +3,7 @@ param(
     [string]$NodeIp = "2.0.0.1",
     [string]$BaseUrl = "",
     [string]$Password = "",
+    [string]$Rp2040Port = "",
     [string]$Path = ""
 )
 
@@ -38,6 +39,15 @@ if ($Integration)
         $env:UNODE_PASSWORD = $Password
     }
 
+    if ($Rp2040Port.Length -gt 0)
+    {
+        $env:UNODE_RP2040_PORT = $Rp2040Port
+    }
+    else
+    {
+        Remove-Item Env:\UNODE_RP2040_PORT -ErrorAction SilentlyContinue
+    }
+
     if ($Path.Length -eq 0)
     {
         $Path = "tests/integration"
@@ -48,6 +58,10 @@ if ($Integration)
     Write-Host "Mode    : integration" -ForegroundColor Yellow
     Write-Host "Node IP : $env:UNODE_IP"
     Write-Host "Base URL: $env:UNODE_BASE_URL"
+    if ($env:UNODE_RP2040_PORT)
+    {
+        Write-Host "RP2040  : $env:UNODE_RP2040_PORT"
+    }
 }
 else
 {

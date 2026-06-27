@@ -41,10 +41,13 @@ def _request_artipprog_reply(
 
         while time.time() < deadline:
             try:
-                data, _sender = sock.recvfrom(1024)
+                data, sender = sock.recvfrom(1024)
             except socket.timeout as error:
                 last_error = error
                 break
+
+            if sender[0] != unode_ip:
+                continue
 
             try:
                 return parse_artipprogreply(data)

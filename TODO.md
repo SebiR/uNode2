@@ -232,8 +232,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       length, and direction changes in the hardware test suite.
 - [x] Add RP2040 DMX analyzer/test-fixture firmware in a dedicated project
       folder, for example `firmware/rp2040_dmx_tool`.
-- [ ] Add a Python serial client for the RP2040 DMX tool JSONL protocol.
-- [ ] Add hardware-in-the-loop tests that verify uNode Art-Net-to-DMX output
+- [x] Add a Python serial client for the RP2040 DMX tool JSONL protocol.
+- [x] Add hardware-in-the-loop tests that verify uNode Art-Net-to-DMX output
       with the RP2040 analyzer.
 - [ ] Add hardware-in-the-loop tests that verify uNode DMX-to-Art-Net input
       with the RP2040 sender.

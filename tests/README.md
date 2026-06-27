@@ -54,6 +54,21 @@ Or pass it to the runner:
 .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Password "your-password"
 ```
 
+Run hardware-in-the-loop DMX tests with an RP2040 DMX tool connected by USB:
+
+```powershell
+.\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Rp2040Port COM7
+```
+
+Or auto-detect a single connected RP2040 USB serial port:
+
+```powershell
+.\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Rp2040Port auto
+```
+
+The RP2040 tests are skipped unless `UNODE_RP2040_PORT` or `-Rp2040Port` is
+provided.
+
 ## Notes
 
 - Integration tests may change the node configuration temporarily. They try to
@@ -72,6 +87,8 @@ Or pass it to the runner:
 - The PollReply bit tests verify direction-dependent PortTypes, SwIn/SwOut,
   GoodOutputA/B, Status1 indicator bits, Status2 capability/squawk bits, and
   Status3 failsafe bits.
+- The DMX hardware-in-the-loop test sends ArtDmx to uNode, receives the real DMX
+  output with the RP2040 analyzer, and compares the channel values.
 - ArtPollReply tests bind UDP port `6454`, because uNode sends replies to the
   standard Art-Net port. Close other Art-Net software if the port is already in
   use.

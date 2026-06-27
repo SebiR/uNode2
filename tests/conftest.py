@@ -5,8 +5,10 @@ import time
 from collections.abc import Iterator
 
 import pytest
+from serial.tools import list_ports
 
 from helpers import step
+from rp2040_dmx_tool import Rp2040DmxTool
 from unode_client import UNodeClient
 
 
@@ -30,6 +32,34 @@ def unode_client() -> UNodeClient:
     )
     client.ensure_authenticated()
     return client
+
+
+@pytest.fixture(scope="session")
+def rp2040_port() -> str:
+    port = os.environ.get("UNODE_RP2040_PORT", "")
+    if not port:
+        pytest.skip("Set UNODE_RP2040_PORT to run RP2040 DMX hardware tests")
+    if port.lower() == "auto":
+        matches = [
+            candidate.device
+            for candidate in list_ports.comports()
+            if candidate.vid == 0x2E8A
+        ]
+        if not matches:
+            pytest.skip("No RP2040 USB serial port found for DMX hardware tests")
+        if len(matches) > 1:
+            pytest.skip(
+                "Multiple RP2040 USB serial ports found; set UNODE_RP2040_PORT explicitly"
+            )
+        return matches[0]
+    return port
+
+
+@pytest.fixture()
+def rp2040_tool(rp2040_port: str) -> Iterator[Rp2040DmxTool]:
+    step(f"Opening RP2040 DMX tool on {rp2040_port}")
+    with Rp2040DmxTool(rp2040_port) as tool:
+        yield tool
 
 
 @pytest.fixture()

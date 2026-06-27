@@ -1,0 +1,119 @@
+"""USB-serial client for the RP2040 DMX tool JSONL protocol."""
+
+from __future__ import annotations
+
+import json
+import time
+from dataclasses import dataclass
+from typing import Any
+
+import serial
+
+
+@dataclass
+class Rp2040DmxTool:
+    port: str
+    baudrate: int = 115200
+    timeout: float = 1.0
+
+    def __post_init__(self) -> None:
+        self.serial = serial.Serial(
+            self.port,
+            self.baudrate,
+            timeout=self.timeout,
+            write_timeout=self.timeout,
+        )
+        # Give USB serial a short moment to settle, then discard stale terminal
+        # output from previous manual sessions.
+        time.sleep(0.2)
+        self.serial.reset_input_buffer()
+
+    def close(self) -> None:
+        if self.serial.is_open:
+            self.serial.close()
+
+    def __enter__(self) -> "Rp2040DmxTool":
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        try:
+            self.idle()
+        finally:
+            self.close()
+
+    def command(
+        self,
+        payload: dict[str, Any],
+        *,
+        timeout: float = 2.0,
+    ) -> dict[str, Any]:
+        line = json.dumps(payload, separators=(",", ":")).encode("utf-8") + b"\n"
+        self.serial.write(line)
+        self.serial.flush()
+        return self._read_json_response(timeout=timeout)
+
+    def _read_json_response(self, *, timeout: float) -> dict[str, Any]:
+        deadline = time.time() + timeout
+        last_line = b""
+
+        while time.time() < deadline:
+            line = self.serial.readline()
+            if not line:
+                continue
+
+            last_line = line.strip()
+            if not last_line.startswith(b"{"):
+                continue
+
+            try:
+                decoded = json.loads(last_line.decode("utf-8"))
+            except json.JSONDecodeError:
+                continue
+
+            if decoded.get("event") == "ready":
+                continue
+
+            if decoded.get("ok") is False:
+                raise AssertionError(f"RP2040 command failed: {decoded}")
+
+            return decoded
+
+        raise AssertionError(f"Timed out waiting for RP2040 JSON response; last={last_line!r}")
+
+    def ping(self) -> dict[str, Any]:
+        return self.command({"cmd": "ping"})
+
+    def mode(self, value: str) -> dict[str, Any]:
+        return self.command({"cmd": "mode", "value": value})
+
+    def idle(self) -> dict[str, Any]:
+        return self.mode("idle")
+
+    def clear_stats(self) -> dict[str, Any]:
+        return self.command({"cmd": "clear", "target": "stats"})
+
+    def get_stats(self) -> dict[str, Any]:
+        return self.command({"cmd": "get", "target": "stats"})
+
+    def get_frame(self, *, start: int = 1, count: int = 16) -> dict[str, Any]:
+        return self.command(
+            {
+                "cmd": "get",
+                "target": "frame",
+                "start": start,
+                "count": count,
+            }
+        )
+
+    def set_frame(self, values: list[int], *, slots: int | None = None) -> dict[str, Any]:
+        return self.command(
+            {
+                "cmd": "set",
+                "target": "frame",
+                "slots": len(values) if slots is None else slots,
+                "values": values,
+            }
+        )
+
+    def tx(self, action: str) -> dict[str, Any]:
+        return self.command({"cmd": "tx", "action": action})
