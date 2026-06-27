@@ -237,6 +237,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       with the RP2040 analyzer.
 - [x] Add hardware-in-the-loop coverage for sparse DMX channel mapping, ArtSync
       flush to real DMX output, and Art-Net timeout failsafe zero output.
+- [x] Add hardware-in-the-loop coverage for all output failsafe modes: Hold,
+      All to Zero, All to Full, and Failsafe Scene.
 - [x] Add hardware-in-the-loop tests that verify uNode DMX-to-Art-Net input
       with the RP2040 sender.
 - [x] Add full 512-slot hardware-in-the-loop coverage in both DMX directions

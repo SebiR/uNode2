@@ -92,7 +92,8 @@ provided.
   output with the RP2040 analyzer, and compare channel values across low,
   middle, and high DMX channel ranges.
 - The DMX hardware-in-the-loop tests also verify ArtSync buffering/flush on the
-  real DMX output and All-to-Zero failsafe output after Art-Net timeout.
+  real DMX output and all four output failsafe modes after Art-Net timeout:
+  Hold, All-to-Zero, All-to-Full, and Failsafe Scene.
 - The DMX input hardware-in-the-loop test uses the RP2040 as a physical DMX
   sender, advertises the Python test process as an Art-Net subscriber, and
   verifies that uNode forwards the received DMX slots as ArtDmx.

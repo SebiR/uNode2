@@ -103,6 +103,15 @@ def _full_frame_pattern() -> list[int]:
     return [((index * 37) + 11) & 0xFF for index in range(512)]
 
 
+def _wait_for_output_failsafe(unode_client: UNodeClient) -> dict:
+    return wait_for_status(
+        unode_client,
+        lambda data: data["failsafeActive"] is True,
+        timeout=7.0,
+        interval=0.25,
+    )
+
+
 def _local_ipv4_for_target(target_ip: str) -> str:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -380,6 +389,163 @@ def test_artnet_output_failsafe_zero_reaches_real_dmx_output(
     )
     step(
         "RP2040 analyzer confirmed failsafe zero output: "
+        f"values={frame['values']}"
+    )
+
+
+def test_artnet_output_failsafe_hold_keeps_last_real_dmx_output(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        failsafe_mode=0,  # Hold
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    held = [33, 66, 99, 132, 165, 198]
+    step(f"Sending ArtDmx before Hold failsafe timeout: {held}")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        held,
+        sequence=62,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        held,
+    )
+
+    step("Waiting for uNode Art-Net output timeout / Hold failsafe")
+    status = _wait_for_output_failsafe(unode_client)
+    step(f"uNode reports failsafe active: mode={status['failsafeModeName']}")
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        held,
+        timeout=3.0,
+    )
+    step(
+        "RP2040 analyzer confirmed Hold keeps last DMX output: "
+        f"values={frame['values']}"
+    )
+
+
+def test_artnet_output_failsafe_full_reaches_real_dmx_output(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        failsafe_mode=2,  # All to Full
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    nonfull = [10, 20, 30, 40, 50, 60]
+    full = [255, 255, 255, 255, 255, 255]
+
+    step(f"Sending non-full ArtDmx before All-to-Full timeout: {nonfull}")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        nonfull,
+        sequence=63,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        nonfull,
+    )
+
+    step("Waiting for uNode Art-Net output timeout / All-to-Full failsafe")
+    status = _wait_for_output_failsafe(unode_client)
+    step(f"uNode reports failsafe active: mode={status['failsafeModeName']}")
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        full,
+        timeout=3.0,
+    )
+    step(
+        "RP2040 analyzer confirmed failsafe full output: "
+        f"values={frame['values']}"
+    )
+
+
+def test_artnet_output_failsafe_scene_reaches_real_dmx_output(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        failsafe_mode=3,  # Failsafe Scene
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    scene = [5, 25, 50, 100, 150, 250]
+    live = [210, 190, 170, 150, 130, 110]
+
+    step(f"Sending scene ArtDmx before recording failsafe scene: {scene}")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        scene,
+        sequence=64,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        scene,
+    )
+
+    step("Recording current DMX output as persistent failsafe scene")
+    unode_client.ensure_authenticated()
+    status_code, body = unode_client.post_json("/api/failsafe/record")
+    if status_code != 200:
+        raise AssertionError(
+            "Recording failsafe scene failed with "
+            f"HTTP {status_code}: {body.decode(errors='replace')}"
+        )
+
+    step(f"Sending different live ArtDmx before Failsafe-Scene timeout: {live}")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        live,
+        sequence=65,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        live,
+    )
+
+    step("Waiting for uNode Art-Net output timeout / Failsafe Scene")
+    status = _wait_for_output_failsafe(unode_client)
+    step(f"uNode reports failsafe active: mode={status['failsafeModeName']}")
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        scene,
+        timeout=3.0,
+    )
+    step(
+        "RP2040 analyzer confirmed recorded failsafe scene output: "
         f"values={frame['values']}"
     )
 
