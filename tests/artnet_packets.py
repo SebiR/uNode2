@@ -53,6 +53,37 @@ def make_artpoll(talk_to_me: int = 0x00, priority: int = 0x10) -> bytes:
     )
 
 
+def make_artpollreply_for_subscriber(
+    *,
+    ip: str,
+    net: int = 0,
+    subnet: int = 0,
+    universe: int = 0,
+    short_name: str = "uNode Test",
+    long_name: str = "uNode Python Test Subscriber",
+) -> bytes:
+    """Build a minimal ArtPollReply advertising one Art-Net input port."""
+
+    packet = bytearray(239)
+    packet[0:8] = ARTNET_ID
+    packet[8:10] = _opcode_bytes(OP_POLL_REPLY)
+    packet[10:14] = _ip_bytes(ip)
+    packet[14:16] = ARTNET_PORT.to_bytes(2, "little")
+    packet[16:18] = bytes([0, 1])
+    packet[18] = net & 0x7F
+    packet[19] = subnet & 0x0F
+    packet[23] = 0xE0
+    packet[26:44] = _fixed_c_string(short_name, 18)
+    packet[44:108] = _fixed_c_string(long_name, 64)
+    packet[108:172] = _fixed_c_string("#0001 [0001] Test Subscriber", 64)
+    packet[172:174] = (1).to_bytes(2, "big")
+    packet[174] = 0x40  # DMX input port, suitable as an ArtDmx subscriber.
+    packet[186] = universe & 0x0F
+    packet[211] = 1
+    packet[212] = 0x08
+    return bytes(packet)
+
+
 def make_artsync() -> bytes:
     """Build a minimal ArtSync packet."""
 
@@ -211,6 +242,15 @@ class ArtIpProgReply:
     gateway: str
 
 
+@dataclass(frozen=True)
+class ArtDmxPacket:
+    universe: int
+    sequence: int
+    physical: int
+    length: int
+    values: bytes
+
+
 def parse_artpollreply(packet: bytes) -> ArtPollReply:
     """Parse the ArtPollReply fields currently asserted by uNode tests."""
 
@@ -243,6 +283,29 @@ def parse_artpollreply(packet: bytes) -> ArtPollReply:
         good_output_b=packet[213:217],
         status3=packet[217],
         bind_index=packet[211],
+    )
+
+
+def parse_artdmx(packet: bytes) -> ArtDmxPacket:
+    """Parse one ArtDmx packet."""
+
+    if len(packet) < 18:
+        raise ValueError(f"ArtDmx too short: {len(packet)} bytes")
+    if packet[0:8] != ARTNET_ID:
+        raise ValueError("Invalid Art-Net ID")
+    if int.from_bytes(packet[8:10], "little") != OP_DMX:
+        raise ValueError("Packet is not ArtDmx")
+
+    length = int.from_bytes(packet[16:18], "big")
+    if len(packet) < 18 + length:
+        raise ValueError("ArtDmx payload is truncated")
+
+    return ArtDmxPacket(
+        sequence=packet[12],
+        physical=packet[13],
+        universe=int.from_bytes(packet[14:16], "little") & 0x7FFF,
+        length=length,
+        values=packet[18 : 18 + length],
     )
 
 

@@ -115,5 +115,26 @@ class Rp2040DmxTool:
             }
         )
 
+    def set_timing(
+        self,
+        *,
+        break_us: int = 176,
+        mab_us: int = 16,
+        fps: int = 40,
+        inter_slot_us: int = 0,
+        mbb_us: int = 0,
+    ) -> dict[str, Any]:
+        return self.command(
+            {
+                "cmd": "set",
+                "target": "timing",
+                "breakUs": break_us,
+                "mabUs": mab_us,
+                "fps": fps,
+                "interSlotUs": inter_slot_us,
+                "mbbUs": mbb_us,
+            }
+        )
+
     def tx(self, action: str) -> dict[str, Any]:
         return self.command({"cmd": "tx", "action": action})

@@ -212,22 +212,22 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       cleared by uNode.
 - [ ] Keep short-frame DMX output as a separate decision because the sender
       must still satisfy minimum break-to-break timing.
-- [ ] Build an RP2040-based hardware-in-the-loop DMX test fixture.
-- [ ] Use PIO to generate configurable DMX break, mark-after-break, slot timing,
+- [x] Build an RP2040-based hardware-in-the-loop DMX test fixture.
+- [x] Use PIO to generate configurable DMX break, mark-after-break, slot timing,
       slot count, frame rate, and channel values.
-- [ ] Use a separate PIO receive path to capture complete DMX frames and
+- [x] Use a separate PIO receive path to capture complete DMX frames and
       measure timing, jitter, framing errors, and channel data from uNode.
 - [ ] Add controlled fault injection for missing frames, invalid timing,
       truncated frames, and deliberate signal loss.
-- [ ] Define a small versioned USB-serial command protocol with machine-readable
+- [x] Define a small versioned USB-serial command protocol with machine-readable
       `OK`, `ERROR`, measurement, and frame responses.
-- [ ] Add commands for fixture identity, mode selection, transmitter settings,
+- [x] Add commands for fixture identity, mode selection, transmitter settings,
       frame data, capture control, statistics, and reset.
 - [ ] Add switchable RS-485 direction and termination to the fixture hardware;
       consider galvanic isolation for robust bench use.
-- [ ] Add host-side hardware-in-the-loop tests that coordinate the RP2040,
+- [x] Add host-side hardware-in-the-loop tests that coordinate the RP2040,
       uNode HTTP API, and Art-Net UDP traffic.
-- [ ] Verify both DMX-to-Art-Net and Art-Net-to-DMX directions automatically.
+- [x] Verify both DMX-to-Art-Net and Art-Net-to-DMX directions automatically.
 - [ ] Cover signal-loss failsafe, refresh intervals, channel mapping, frame
       length, and direction changes in the hardware test suite.
 - [x] Add RP2040 DMX analyzer/test-fixture firmware in a dedicated project
@@ -237,7 +237,7 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       with the RP2040 analyzer.
 - [x] Add hardware-in-the-loop coverage for sparse DMX channel mapping, ArtSync
       flush to real DMX output, and Art-Net timeout failsafe zero output.
-- [ ] Add hardware-in-the-loop tests that verify uNode DMX-to-Art-Net input
+- [x] Add hardware-in-the-loop tests that verify uNode DMX-to-Art-Net input
       with the RP2040 sender.
 - [x] Add initial host-side tests for Art-Net packet parsing and packet
       generation.

@@ -17,9 +17,11 @@ from artnet_packets import (
     OP_SYNC,
     make_artaddress,
     make_artdmx,
+    make_artpollreply_for_subscriber,
     make_artipprog,
     make_artpoll,
     make_artsync,
+    parse_artdmx,
     parse_artipprogreply,
     parse_artpollreply,
 )
@@ -44,6 +46,26 @@ def test_artsync_wire_format() -> None:
     assert int.from_bytes(packet[10:12], "big") == ARTNET_PROTOCOL_VERSION
     assert packet[12:14] == b"\x00\x00"
     assert len(packet) == 14
+
+
+def test_make_artpollreply_for_subscriber_wire_format() -> None:
+    packet = make_artpollreply_for_subscriber(
+        ip="2.0.0.99",
+        net=1,
+        subnet=2,
+        universe=3,
+    )
+
+    assert packet[0:8] == ARTNET_ID
+    assert int.from_bytes(packet[8:10], "little") == OP_POLL_REPLY
+    assert packet[10:14] == b"\x02\x00\x00\x63"
+    assert int.from_bytes(packet[14:16], "little") == ARTNET_PORT
+    assert packet[18] == 1
+    assert packet[19] == 2
+    assert packet[174] == 0x40
+    assert packet[186] == 3
+    assert packet[211] == 1
+    assert len(packet) == 239
 
 
 def test_artaddress_wire_format() -> None:
@@ -105,6 +127,13 @@ def test_artdmx_wire_format() -> None:
     assert int.from_bytes(packet[14:16], "little") == 0x1234
     assert int.from_bytes(packet[16:18], "big") == 4
     assert packet[18:22] == b"\x01\x02\x03\x00"
+
+    parsed = parse_artdmx(packet)
+    assert parsed.sequence == 7
+    assert parsed.physical == 2
+    assert parsed.universe == 0x1234
+    assert parsed.length == 4
+    assert parsed.values == b"\x01\x02\x03\x00"
 
 
 def test_artdmx_clamps_values_and_rejects_oversized_payload() -> None:

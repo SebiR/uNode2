@@ -93,6 +93,9 @@ provided.
   middle, and high DMX channel ranges.
 - The DMX hardware-in-the-loop tests also verify ArtSync buffering/flush on the
   real DMX output and All-to-Zero failsafe output after Art-Net timeout.
+- The DMX input hardware-in-the-loop test uses the RP2040 as a physical DMX
+  sender, advertises the Python test process as an Art-Net subscriber, and
+  verifies that uNode forwards the received DMX slots as ArtDmx.
 - ArtPollReply tests bind UDP port `6454`, because uNode sends replies to the
   standard Art-Net port. Close other Art-Net software if the port is already in
   use.

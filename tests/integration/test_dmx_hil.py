@@ -1,8 +1,17 @@
 from __future__ import annotations
 
 import time
+import socket
 
-from artnet_packets import make_artdmx, make_artsync
+import pytest
+
+from artnet_packets import (
+    ARTNET_PORT,
+    make_artdmx,
+    make_artpollreply_for_subscriber,
+    make_artsync,
+    parse_artdmx,
+)
 from helpers import configured_port_address, send_artnet_packet, step, wait_for_status
 from rp2040_dmx_tool import Rp2040DmxTool
 from unode_client import UNodeClient
@@ -86,6 +95,52 @@ def _send_artdmx_repeated(
     for _index in range(count):
         send_artnet_packet(unode_ip, packet)
         time.sleep(0.05)
+
+
+def _local_ipv4_for_target(target_ip: str) -> str:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.connect((target_ip, ARTNET_PORT))
+        return sock.getsockname()[0]
+    finally:
+        sock.close()
+
+
+def _wait_for_artdmx_from_unode(
+    sock: socket.socket,
+    *,
+    unode_ip: str,
+    universe: int,
+    expected: list[int],
+    timeout: float = 5.0,
+):
+    deadline = time.time() + timeout
+    last_packet = None
+
+    while time.time() < deadline:
+        remaining = max(0.05, deadline - time.time())
+        sock.settimeout(remaining)
+        try:
+            data, sender = sock.recvfrom(1024)
+        except socket.timeout:
+            break
+
+        if sender[0] != unode_ip:
+            continue
+
+        try:
+            packet = parse_artdmx(data)
+        except ValueError:
+            continue
+
+        last_packet = packet
+        if packet.universe == universe and list(packet.values[: len(expected)]) == expected:
+            return packet
+
+    raise AssertionError(
+        "Timed out waiting for ArtDmx from uNode "
+        f"universe={universe}, expected={expected}, last={last_packet}"
+    )
 
 
 def test_artnet_to_dmx_output_reaches_rp2040_analyzer(
@@ -286,3 +341,80 @@ def test_artnet_output_failsafe_zero_reaches_real_dmx_output(
         "RP2040 analyzer confirmed failsafe zero output: "
         f"values={frame['values']}"
     )
+
+
+def test_dmx_input_from_rp2040_reaches_artnet_receiver(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    config = preserved_config.copy()
+    config["direction"] = 1  # DMX -> Art-Net
+    config["net"] = 0
+    config["subnetId"] = 0
+    config["universe"] = 1
+
+    step("Switching uNode to DMX -> Art-Net for hardware DMX input test")
+    unode_client.save_config(config)
+    universe = configured_port_address(config)
+    wait_for_status(
+        unode_client,
+        lambda data: int(data["direction"]) == 1
+        and int(data["universe"]) == universe,
+    )
+
+    receiver_ip = _local_ipv4_for_target(unode_ip)
+    subscriber_reply = make_artpollreply_for_subscriber(
+        ip=receiver_ip,
+        net=config["net"],
+        subnet=config["subnetId"],
+        universe=config["universe"],
+    )
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        try:
+            sock.bind(("", ARTNET_PORT))
+        except OSError as error:
+            pytest.skip(f"UDP {ARTNET_PORT} is unavailable: {error}")
+
+        step(
+            "Advertising Python test receiver as Art-Net subscriber: "
+            f"{receiver_ip}"
+        )
+        for _index in range(3):
+            sock.sendto(subscriber_reply, (unode_ip, ARTNET_PORT))
+            time.sleep(0.1)
+
+        values = [9, 18, 27, 36, 45, 54]
+        step(f"Configuring RP2040 DMX sender with {len(values)} slots: {values}")
+        rp2040_tool.mode("tx")
+        rp2040_tool.set_timing(
+            break_us=176,
+            mab_us=16,
+            fps=40,
+        )
+        rp2040_tool.set_frame(values, slots=len(values))
+
+        step("Starting RP2040 DMX sender and waiting for uNode ArtDmx")
+        rp2040_tool.tx("start")
+
+        packet = _wait_for_artdmx_from_unode(
+            sock,
+            unode_ip=unode_ip,
+            universe=universe,
+            expected=values,
+        )
+
+        step(
+            "Python Art-Net receiver saw uNode ArtDmx: "
+            f"universe={packet.universe}, length={packet.length}, "
+            f"values={list(packet.values[:len(values)])}"
+        )
+
+        assert packet.length >= len(values)
+    finally:
+        rp2040_tool.idle()
+        sock.close()
