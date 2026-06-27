@@ -33,6 +33,10 @@ The firmware prints a ready event after boot:
 {"ok":true,"event":"ready","tool":"rp2040_dmx_tool","fw":"0.1.0","protocol":"jsonl"}
 ```
 
+After boot the DMX UART is idle and the DMX TX/RX pins are high impedance.
+This keeps directly connected UARTs free for firmware upload. Enable RX or TX
+explicitly with `mode` or `tx` commands.
+
 Useful commands:
 
 ```json
@@ -98,6 +102,9 @@ send
 
 The live table is disabled by default so automated tests receive only JSON
 unless it is explicitly enabled with `view on`.
+
+`idle`, `stop`, and one-shot `send` release the DMX UART afterwards and return
+the DMX TX/RX pins to high impedance.
 
 ## DMX timing baseline
 

@@ -1,6 +1,9 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
+#include "DmxToolConfig.h"
+#include "DmxToolTypes.h"
+
 // -----------------------------------------------------------------------------
 // RP2040 DMX Analyzer / Test Sender
 // -----------------------------------------------------------------------------
@@ -14,115 +17,7 @@
 //
 // If your transceiver is wired differently, adjust the definitions below.
 
-#define DMX_TX_PIN 0
-#define DMX_RX_PIN 1
-
-// Set to a GPIO connected to DE/!RE if your transceiver has a direction pin.
-// -1 keeps the pin unused, which is suitable for separate RX/TX transceivers.
-#define DMX_DIR_PIN -1
-#define DMX_DIR_TX_LEVEL HIGH
-#define DMX_DIR_RX_LEVEL LOW
-
-static constexpr uint16_t DMX_MAX_SLOTS = 512;
-static constexpr uint16_t DMX_MAX_PACKET_BYTES = DMX_MAX_SLOTS + 1;
-static constexpr uint32_t DEFAULT_DMX_BAUD = 250000;
-static constexpr uint32_t DEFAULT_BREAK_US = 176;
-static constexpr uint32_t DEFAULT_MAB_US = 16;
-static constexpr uint32_t DEFAULT_MBB_US = 0;
-static constexpr uint32_t DEFAULT_TX_FPS = 40;
-static constexpr uint32_t RX_BREAK_MIN_US = 88;
-static constexpr uint32_t RX_FRAME_IDLE_US = 120;
-static constexpr uint32_t DISPLAY_INTERVAL_MS = 1000;
-static constexpr uint32_t CHANGE_HIGHLIGHT_MS = 700;
-static constexpr uint16_t DEFAULT_DISPLAY_FIRST_CHANNEL = 1;
-static constexpr uint16_t DEFAULT_DISPLAY_CHANNELS = 64;
-static constexpr size_t DMX_UART_RX_BUFFER_SIZE = 2048;
-static constexpr size_t MAX_COMMAND_LINE_LENGTH = 8192;
-static constexpr const char* TOOL_VERSION = "0.1.0";
-
-enum ToolMode {
-  MODE_RX,
-  MODE_TX,
-  MODE_IDLE
-};
-
-enum TestPattern {
-  PATTERN_STATIC,
-  PATTERN_RAMP,
-  PATTERN_CHASE,
-  PATTERN_BLINK
-};
-
-struct RunningStats {
-  uint32_t count = 0;
-  uint32_t minValue = UINT32_MAX;
-  uint32_t maxValue = 0;
-  double sum = 0.0;
-
-  void reset() {
-    count = 0;
-    minValue = UINT32_MAX;
-    maxValue = 0;
-    sum = 0.0;
-  }
-
-  void add(uint32_t value) {
-    count++;
-    minValue = min(minValue, value);
-    maxValue = max(maxValue, value);
-    sum += value;
-  }
-
-  uint32_t minOrZero() const {
-    return count ? minValue : 0;
-  }
-
-  double average() const {
-    return count ? sum / count : 0.0;
-  }
-};
-
-struct AnalyzerFrame {
-  uint8_t startCode = 0;
-  uint16_t slots = 0;
-  uint32_t breakUs = 0;
-  uint32_t mabUs = 0;
-  uint32_t frameToFrameUs = 0;
-  uint32_t dataUs = 0;
-  uint32_t completedAtMs = 0;
-};
-
-struct AnalyzerStats {
-  uint32_t frames = 0;
-  uint32_t shortFrames = 0;
-  uint32_t longFrames = 0;
-  uint32_t framingBreaks = 0;
-  float fps = 0.0f;
-  uint32_t fpsWindowFrames = 0;
-  uint32_t fpsWindowStartMs = 0;
-  RunningStats breakUs;
-  RunningStats mabUs;
-  RunningStats frameToFrameUs;
-  RunningStats dataUs;
-  RunningStats slots;
-
-  void reset() {
-    frames = 0;
-    shortFrames = 0;
-    longFrames = 0;
-    framingBreaks = 0;
-    fps = 0.0f;
-    fpsWindowFrames = 0;
-    fpsWindowStartMs = millis();
-    breakUs.reset();
-    mabUs.reset();
-    frameToFrameUs.reset();
-    dataUs.reset();
-    slots.reset();
-  }
-};
-
-static ToolMode mode = MODE_RX;
+static ToolMode mode = MODE_IDLE;
 static TestPattern pattern = PATTERN_STATIC;
 
 static uint8_t rxPacket[DMX_MAX_PACKET_BYTES];
@@ -196,6 +91,19 @@ static void setDirectionPin(bool transmit) {
 #endif
 }
 
+static void releaseDmxPins() {
+  detachInterrupt(digitalPinToInterrupt(DMX_RX_PIN));
+  Serial1.end();
+  delay(2);
+
+#if DMX_DIR_PIN >= 0
+  pinMode(DMX_DIR_PIN, INPUT);
+#endif
+
+  pinMode(DMX_TX_PIN, INPUT);
+  pinMode(DMX_RX_PIN, INPUT);
+}
+
 static const char* modeName() {
   switch (mode) {
     case MODE_RX: return "RX analyzer";
@@ -255,8 +163,7 @@ static void dmxEdgeIsr() {
 }
 
 static void configureDmxSerialForRx() {
-  Serial1.end();
-  delay(2);
+  releaseDmxPins();
   setDirectionPin(false);
   pinMode(DMX_RX_PIN, INPUT_PULLUP);
   Serial1.setRX(DMX_RX_PIN);
@@ -270,9 +177,7 @@ static void configureDmxSerialForRx() {
 }
 
 static void configureDmxSerialForTx() {
-  detachInterrupt(digitalPinToInterrupt(DMX_RX_PIN));
-  Serial1.end();
-  delay(2);
+  releaseDmxPins();
   Serial1.setTX(DMX_TX_PIN);
   Serial1.begin(txBaud, SERIAL_8N2);
   setDirectionPin(true);
@@ -809,11 +714,9 @@ static void enterTxMode(bool printLegacy) {
 static void enterIdleMode(bool printLegacy) {
   txEnabled = false;
   mode = MODE_IDLE;
-  detachInterrupt(digitalPinToInterrupt(DMX_RX_PIN));
-  Serial1.end();
-  setDirectionPin(false);
+  releaseDmxPins();
   if (printLegacy) {
-    Serial.println(F("OK mode=idle"));
+    Serial.println(F("OK mode=idle pins=released"));
   }
   dirtyDisplay = true;
 }
@@ -1125,11 +1028,12 @@ static void handleJsonTx(
     nextTxMs = millis();
     sendJsonOk("tx");
   } else if (actionText == "stop") {
-    txEnabled = false;
+    enterIdleMode(false);
     sendJsonOk("tx");
   } else if (actionText == "send") {
     enterTxMode(false);
     sendDmxFrame();
+    enterIdleMode(false);
     sendJsonOk("tx");
   } else {
     sendJsonError("invalid_action", "TX action must be start, stop, or send");
@@ -1224,8 +1128,8 @@ static void processCommand(
     nextTxMs = millis();
     Serial.println(F("OK tx started"));
   } else if (command == "stop") {
-    txEnabled = false;
-    Serial.println(F("OK tx stopped"));
+    enterIdleMode(false);
+    Serial.println(F("OK tx stopped; pins released"));
   } else if (command == "stats") {
     if (mode == MODE_TX) {
       printTxStatus();
@@ -1349,7 +1253,8 @@ static void processCommand(
   } else if (command == "send") {
     enterTxMode();
     sendDmxFrame();
-    Serial.println(F("OK one frame sent"));
+    enterIdleMode(false);
+    Serial.println(F("OK one frame sent; pins released"));
   } else {
     Serial.println(F("ERR unknown command; type help"));
   }
@@ -1427,7 +1332,7 @@ void setup() {
 
   stats.reset();
 
-  enterRxMode(false);
+  enterIdleMode(false);
   sendJsonReady();
 }
 
