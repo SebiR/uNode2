@@ -235,6 +235,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Add a Python serial client for the RP2040 DMX tool JSONL protocol.
 - [x] Add hardware-in-the-loop tests that verify uNode Art-Net-to-DMX output
       with the RP2040 analyzer.
+- [x] Add hardware-in-the-loop coverage for sparse DMX channel mapping, ArtSync
+      flush to real DMX output, and Art-Net timeout failsafe zero output.
 - [ ] Add hardware-in-the-loop tests that verify uNode DMX-to-Art-Net input
       with the RP2040 sender.
 - [x] Add initial host-side tests for Art-Net packet parsing and packet

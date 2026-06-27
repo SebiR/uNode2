@@ -88,8 +88,11 @@ provided.
 - The PollReply bit tests verify direction-dependent PortTypes, SwIn/SwOut,
   GoodOutputA/B, Status1 indicator bits, Status2 capability/squawk bits, and
   Status3 failsafe bits.
-- The DMX hardware-in-the-loop test sends ArtDmx to uNode, receives the real DMX
-  output with the RP2040 analyzer, and compares the channel values.
+- The DMX hardware-in-the-loop tests send ArtDmx to uNode, receive the real DMX
+  output with the RP2040 analyzer, and compare channel values across low,
+  middle, and high DMX channel ranges.
+- The DMX hardware-in-the-loop tests also verify ArtSync buffering/flush on the
+  real DMX output and All-to-Zero failsafe output after Art-Net timeout.
 - ArtPollReply tests bind UDP port `6454`, because uNode sends replies to the
   standard Art-Net port. Close other Art-Net software if the port is already in
   use.
