@@ -6,6 +6,8 @@ This repository is structured as a small multi-project workspace.
 
 ```text
 firmware/uNode_2/      ESP8266 Arduino sketch and LittleFS web assets
+firmware/rp2040_dmx_tool/
+                       RP2040 DMX analyzer / test sender firmware
 tests/                 Python host-side and integration tests
 tools/                 Build, release, and test helper scripts
 artifacts/             Generated release files
@@ -17,9 +19,8 @@ The ESP8266 firmware remains Arduino-IDE compatible: open
 `firmware/uNode_2/uNode_2.ino` as the sketch. The sketch folder name and the
 `.ino` file name intentionally match.
 
-Future helper firmware, such as an RP2040 DMX analyzer/test fixture, can live
-next to the ESP8266 firmware in its own folder, for example
-`firmware/rp2040_dmx_tool/`.
+The RP2040 DMX tool is intended as the hardware test fixture for future
+DMX-level integration tests.
 
 ## Common commands
 

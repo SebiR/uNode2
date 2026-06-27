@@ -1,0 +1,122 @@
+# RP2040 DMX Tool
+
+DMX analyzer and test sender firmware for uNode hardware-in-the-loop tests.
+
+The tool is designed as a small USB-serial controlled DMX instrument. It can
+still be used manually from a terminal, but the primary automation interface is
+JSON Lines: one JSON object per command, one JSON object per response.
+
+## Hardware
+
+Default pins are intended for Raspberry Pi Pico / Arduino-Pico `Serial1`:
+
+- `GPIO0`: DMX TX to RS-485 driver input.
+- `GPIO1`: DMX RX from RS-485 receiver output.
+- optional `DMX_DIR_PIN`: RS-485 DE/!RE direction control, disabled by default.
+
+Adjust the pin definitions at the top of `rp2040_dmx_tool.ino` if your
+transceiver uses different wiring.
+
+## Dependencies
+
+- Arduino-Pico core for RP2040 boards.
+- ArduinoJson.
+
+## Serial Protocol
+
+Open USB serial at `115200` baud. Every machine-readable command and response
+is one JSON object terminated by `\n`.
+
+The firmware prints a ready event after boot:
+
+```json
+{"ok":true,"event":"ready","tool":"rp2040_dmx_tool","fw":"0.1.0","protocol":"jsonl"}
+```
+
+Useful commands:
+
+```json
+{"cmd":"ping"}
+{"cmd":"mode","value":"rx"}
+{"cmd":"mode","value":"tx"}
+{"cmd":"mode","value":"idle"}
+{"cmd":"get","target":"stats"}
+{"cmd":"get","target":"frame","start":1,"count":16}
+{"cmd":"set","target":"slots","value":512}
+{"cmd":"set","target":"channel","channel":1,"value":255}
+{"cmd":"set","target":"channels","values":{"1":255,"2":128,"3":0}}
+{"cmd":"set","target":"frame","slots":6,"values":[0,93,112,173,148,93]}
+{"cmd":"set","target":"timing","breakUs":176,"mabUs":16,"mbbUs":0,"interSlotUs":0,"baud":250000,"fps":40}
+{"cmd":"set","target":"pattern","value":"ramp"}
+{"cmd":"tx","action":"start"}
+{"cmd":"tx","action":"stop"}
+{"cmd":"tx","action":"send"}
+{"cmd":"clear","target":"stats"}
+```
+
+Example responses:
+
+```json
+{"ok":true,"type":"pong","fw":"0.1.0","mode":"RX analyzer"}
+```
+
+```json
+{"ok":true,"type":"frame","mode":"RX analyzer","seq":123,"startCode":0,"slots":6,"start":1,"count":6,"values":[0,93,112,173,148,93]}
+```
+
+Errors are also JSON:
+
+```json
+{"ok":false,"error":"invalid_channel","message":"Channel must be 1..512"}
+```
+
+## Legacy terminal commands
+
+Plain-text commands from the previous terminal UI are still available for manual
+use:
+
+```text
+help
+rx
+tx
+stats
+reset
+view on
+view off
+window 1 64
+slots 6
+set 1 255
+pattern chase
+break 92
+mab 12
+fps 40
+inter 100
+start
+stop
+send
+```
+
+The live table is disabled by default so automated tests receive only JSON
+unless it is explicitly enabled with `view on`.
+
+## DMX timing baseline
+
+DMX512-A uses 250 kBd asynchronous serial data with 8 data bits, no parity, and
+two stop bits. A packet starts with Break, Mark-After-Break, start code, and up
+to 512 data slots.
+
+The sender defaults are deliberately conservative:
+
+- Break: `176 us`
+- Mark-After-Break: `16 us`
+- Baud: `250000`
+- Slots: `24`
+
+For receiver hardening tests, useful edge cases are:
+
+- very short packets such as `slots 6`;
+- minimum legal sender timings such as `break 92` and `mab 12`;
+- slightly below-minimum timings to confirm rejection/robustness;
+- long inter-slot gaps via `interSlotUs`;
+- long inter-packet gaps via `mbbUs`;
+- different slot counts from 0 to 512.

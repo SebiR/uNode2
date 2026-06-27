@@ -230,8 +230,13 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [ ] Verify both DMX-to-Art-Net and Art-Net-to-DMX directions automatically.
 - [ ] Cover signal-loss failsafe, refresh intervals, channel mapping, frame
       length, and direction changes in the hardware test suite.
-- [ ] Add RP2040 DMX analyzer/test-fixture firmware in a dedicated project
+- [x] Add RP2040 DMX analyzer/test-fixture firmware in a dedicated project
       folder, for example `firmware/rp2040_dmx_tool`.
+- [ ] Add a Python serial client for the RP2040 DMX tool JSONL protocol.
+- [ ] Add hardware-in-the-loop tests that verify uNode Art-Net-to-DMX output
+      with the RP2040 analyzer.
+- [ ] Add hardware-in-the-loop tests that verify uNode DMX-to-Art-Net input
+      with the RP2040 sender.
 - [x] Add initial host-side tests for Art-Net packet parsing and packet
       generation.
 - [x] Add live hardware integration coverage for REST configuration updates,
