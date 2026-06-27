@@ -1,0 +1,54 @@
+\doxysection{C:\+/\+\+Users/\+rieti/\+\+Documents/\+\+Arduino/\+u\+Node\+\_\+2/\+artnet.h}
+\hypertarget{artnet_8h_source}{}\label{artnet_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <Arduino.h>}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ "{}ArtnetnodeWifi.h"{}}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{keyword}{extern}\ \doxymbox{\hyperlink{class_artnetnode_wifi}{ArtnetnodeWifi}}\ artnet;}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{keyword}{struct\ }\doxymbox{\hyperlink{struct_art_net_subscriber_info}{ArtNetSubscriberInfo}}\ \{}
+\DoxyCodeLine{00010\ \ \ IPAddress\ ip;}
+\DoxyCodeLine{00011\ \ \ \textcolor{keywordtype}{char}\ name[19];}
+\DoxyCodeLine{00012\ \ \ uint8\_t\ bindIndex;}
+\DoxyCodeLine{00013\ \ \ uint8\_t\ inputPortMask;}
+\DoxyCodeLine{00014\ \ \ uint8\_t\ outputPortMask;}
+\DoxyCodeLine{00015\ \ \ uint32\_t\ lastSeenMillis;}
+\DoxyCodeLine{00016\ \};}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00019\ \textcolor{keywordtype}{bool}\ initArtNet();}
+\DoxyCodeLine{00021\ \textcolor{keywordtype}{void}\ updateArtNet();}
+\DoxyCodeLine{00023\ \textcolor{keywordtype}{void}\ handleArtNetNetworkChange();}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00026\ IPAddress\ getArtNetBroadcast();}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00029\ \textcolor{keywordtype}{void}\ startArtNetDiscovery();}
+\DoxyCodeLine{00031\ \textcolor{keywordtype}{bool}\ isArtNetDiscoveryActive();}
+\DoxyCodeLine{00033\ uint8\_t\ getArtNetSubscriberCount();}
+\DoxyCodeLine{00040\ \textcolor{keywordtype}{bool}\ getArtNetSubscriber(}
+\DoxyCodeLine{00041\ \ \ uint8\_t\ index,}
+\DoxyCodeLine{00042\ \ \ \doxymbox{\hyperlink{struct_art_net_subscriber_info}{ArtNetSubscriberInfo}}\&\ subscriber);}
+\DoxyCodeLine{00044\ uint32\_t\ getArtNetSubscriberVersion();}
+\DoxyCodeLine{00046\ uint32\_t\ getLastSubscriberPollMillis();}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00049\ uint16\_t\ getConfiguredUniverse();}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00052\ uint32\_t\ getArtDmxCounter();}
+\DoxyCodeLine{00054\ uint32\_t\ getArtNetFPS();}
+\DoxyCodeLine{00056\ uint32\_t\ getLastArtNetPacketAge();}
+\DoxyCodeLine{00058\ uint32\_t\ getArtPollCount();}
+\DoxyCodeLine{00060\ uint32\_t\ getLastArtPollMillis();}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00063\ \textcolor{keywordtype}{bool}\ isArtNetActive();}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00066\ \textcolor{keywordtype}{void}\ toggleArtNetLocate();}
+\DoxyCodeLine{00068\ \textcolor{keywordtype}{bool}\ isSquawking();}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00071\ \textcolor{keywordtype}{void}\ updateDirection();}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00074\ \textcolor{keywordtype}{bool}\ sendArtNetFrame();}
+\DoxyCodeLine{00075\ }
+
+\end{DoxyCode}

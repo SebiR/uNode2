@@ -1,0 +1,26 @@
+\doxysection{C:\+/\+\+Users/\+rieti/\+\+Documents/\+\+Arduino/\+u\+Node\+\_\+2/\+status\+\_\+led\+\_\+driver.h}
+\hypertarget{status__led__driver_8h_source}{}\label{status__led__driver_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <Arduino.h>}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{keyword}{enum\ class}\ StatusLedColor\ :\ uint8\_t\ \{}
+\DoxyCodeLine{00006\ \ \ OFF,}
+\DoxyCodeLine{00007\ \ \ RED,}
+\DoxyCodeLine{00008\ \ \ ORANGE,}
+\DoxyCodeLine{00009\ \ \ GREEN,}
+\DoxyCodeLine{00010\ \ \ BLUE,}
+\DoxyCodeLine{00011\ \ \ CYAN,}
+\DoxyCodeLine{00012\ \ \ YELLOW,}
+\DoxyCodeLine{00013\ \ \ MAGENTA}
+\DoxyCodeLine{00014\ \};}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00017\ \textcolor{keywordtype}{void}\ initStatusLedDriver();}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00025\ \textcolor{keywordtype}{void}\ renderStatusLeds(}
+\DoxyCodeLine{00026\ \ \ StatusLedColor\ statusColor,}
+\DoxyCodeLine{00027\ \ \ StatusLedColor\ artnetColor,}
+\DoxyCodeLine{00028\ \ \ uint8\_t\ brightness);}
+
+\end{DoxyCode}

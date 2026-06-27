@@ -1,0 +1,155 @@
+\doxysection{C:\+/\+\+Users/\+rieti/\+\+Documents/\+\+Arduino/\+u\+Node\+\_\+2/\+\+Poll\+Reply.h}
+\hypertarget{_poll_reply_8h_source}{}\label{_poll_reply_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ POLLREPLY\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ POLLREPLY\_H}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <Arduino.h>}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <WiFiUdp.h>}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <stddef.h>}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ "{}OpCodes.h"{}}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ "{}NodeReportCodes.h"{}}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}StyleCodes.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}PriorityCodes.h"{}}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}ProtocolSettings.h"{}}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{comment}{//\ Art-\/Net\ 4\ ArtPollReply,\ revision\ 1.4dp.\ Multi-\/byte\ fields\ are\ represented}}
+\DoxyCodeLine{00015\ \textcolor{comment}{//\ as\ explicit\ bytes\ so\ the\ wire\ format\ is\ independent\ of\ CPU\ endianness.}}
+\DoxyCodeLine{00016\ \textcolor{keyword}{struct\ }\_\_attribute\_\_((packed))\ replyPollPacket\ \{}
+\DoxyCodeLine{00017\ \ \ uint8\_t\ ID[8];\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 0}}
+\DoxyCodeLine{00018\ \ \ uint8\_t\ OpCodeLo;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 8}}
+\DoxyCodeLine{00019\ \ \ uint8\_t\ OpCodeHi;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 9}}
+\DoxyCodeLine{00020\ \ \ uint8\_t\ IPAddr[4];\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 10}}
+\DoxyCodeLine{00021\ \ \ uint8\_t\ PortLo;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 14}}
+\DoxyCodeLine{00022\ \ \ uint8\_t\ PortHi;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 15}}
+\DoxyCodeLine{00023\ \ \ uint8\_t\ VersionInfoHi;\ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 16}}
+\DoxyCodeLine{00024\ \ \ uint8\_t\ VersionInfoLo;\ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 17}}
+\DoxyCodeLine{00025\ \ \ uint8\_t\ NetSwitch;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 18}}
+\DoxyCodeLine{00026\ \ \ uint8\_t\ SubSwitch;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 19}}
+\DoxyCodeLine{00027\ \ \ uint8\_t\ OemHi;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 20}}
+\DoxyCodeLine{00028\ \ \ uint8\_t\ OemLo;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 21}}
+\DoxyCodeLine{00029\ \ \ uint8\_t\ UbeaVersion;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 22}}
+\DoxyCodeLine{00030\ \ \ uint8\_t\ Status1;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 23}}
+\DoxyCodeLine{00031\ \ \ uint8\_t\ EstaManLo;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 24}}
+\DoxyCodeLine{00032\ \ \ uint8\_t\ EstaManHi;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 25}}
+\DoxyCodeLine{00033\ \ \ \textcolor{keywordtype}{char}\ PortName[18];\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 26}}
+\DoxyCodeLine{00034\ \ \ \textcolor{keywordtype}{char}\ LongName[64];\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 44}}
+\DoxyCodeLine{00035\ \ \ \textcolor{keywordtype}{char}\ NodeReport[64];\ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 108}}
+\DoxyCodeLine{00036\ \ \ uint8\_t\ NumPortsHi;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 172}}
+\DoxyCodeLine{00037\ \ \ uint8\_t\ NumPortsLo;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 173}}
+\DoxyCodeLine{00038\ \ \ uint8\_t\ PortTypes[4];\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 174}}
+\DoxyCodeLine{00039\ \ \ uint8\_t\ GoodInput[4];\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 178}}
+\DoxyCodeLine{00040\ \ \ uint8\_t\ GoodOutputA[4];\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 182}}
+\DoxyCodeLine{00041\ \ \ uint8\_t\ SwIn[4];\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 186}}
+\DoxyCodeLine{00042\ \ \ uint8\_t\ SwOut[4];\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 190}}
+\DoxyCodeLine{00043\ \ \ uint8\_t\ AcnPriority;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 194}}
+\DoxyCodeLine{00044\ \ \ uint8\_t\ SwMacro;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 195}}
+\DoxyCodeLine{00045\ \ \ uint8\_t\ SwRemote;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 196}}
+\DoxyCodeLine{00046\ \ \ uint8\_t\ Spare[3];\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 197}}
+\DoxyCodeLine{00047\ \ \ uint8\_t\ Style;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 200}}
+\DoxyCodeLine{00048\ \ \ uint8\_t\ Mac[6];\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 201}}
+\DoxyCodeLine{00049\ \ \ uint8\_t\ BindIp[4];\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 207}}
+\DoxyCodeLine{00050\ \ \ uint8\_t\ BindIndex;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 211}}
+\DoxyCodeLine{00051\ \ \ uint8\_t\ Status2;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 212}}
+\DoxyCodeLine{00052\ \ \ uint8\_t\ GoodOutputB[4];\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 213}}
+\DoxyCodeLine{00053\ \ \ uint8\_t\ Status3;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 217}}
+\DoxyCodeLine{00054\ \ \ uint8\_t\ DefaultRespUID[6];\ \ \ \ \ \ \ \ \textcolor{comment}{//\ 218}}
+\DoxyCodeLine{00055\ \ \ uint8\_t\ UserHi;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 224}}
+\DoxyCodeLine{00056\ \ \ uint8\_t\ UserLo;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 225}}
+\DoxyCodeLine{00057\ \ \ uint8\_t\ RefreshRateHi;\ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 226}}
+\DoxyCodeLine{00058\ \ \ uint8\_t\ RefreshRateLo;\ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 227}}
+\DoxyCodeLine{00059\ \ \ uint8\_t\ BackgroundQueuePolicy;\ \ \ \ \textcolor{comment}{//\ 228}}
+\DoxyCodeLine{00060\ \ \ uint8\_t\ Filler[10];\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 229}}
+\DoxyCodeLine{00061\ \};}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \textcolor{keyword}{static\_assert}(\textcolor{keyword}{sizeof}(replyPollPacket)\ ==\ 239,}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ must\ be\ 239\ bytes"{}});}
+\DoxyCodeLine{00065\ \textcolor{keyword}{static\_assert}(offsetof(replyPollPacket,\ PortName)\ ==\ 26,}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ PortName\ offset\ mismatch"{}});}
+\DoxyCodeLine{00067\ \textcolor{keyword}{static\_assert}(offsetof(replyPollPacket,\ NodeReport)\ ==\ 108,}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ NodeReport\ offset\ mismatch"{}});}
+\DoxyCodeLine{00069\ \textcolor{keyword}{static\_assert}(offsetof(replyPollPacket,\ PortTypes)\ ==\ 174,}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ PortTypes\ offset\ mismatch"{}});}
+\DoxyCodeLine{00071\ \textcolor{keyword}{static\_assert}(offsetof(replyPollPacket,\ GoodInput)\ ==\ 178,}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ GoodInput\ offset\ mismatch"{}});}
+\DoxyCodeLine{00073\ \textcolor{keyword}{static\_assert}(offsetof(replyPollPacket,\ GoodOutputA)\ ==\ 182,}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ GoodOutputA\ offset\ mismatch"{}});}
+\DoxyCodeLine{00075\ \textcolor{keyword}{static\_assert}(offsetof(replyPollPacket,\ SwIn)\ ==\ 186,}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ SwIn\ offset\ mismatch"{}});}
+\DoxyCodeLine{00077\ \textcolor{keyword}{static\_assert}(offsetof(replyPollPacket,\ SwOut)\ ==\ 190,}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ SwOut\ offset\ mismatch"{}});}
+\DoxyCodeLine{00079\ \textcolor{keyword}{static\_assert}(offsetof(replyPollPacket,\ BindIp)\ ==\ 207,}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ BindIp\ offset\ mismatch"{}});}
+\DoxyCodeLine{00081\ \textcolor{keyword}{static\_assert}(offsetof(replyPollPacket,\ Status2)\ ==\ 212,}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ Status2\ offset\ mismatch"{}});}
+\DoxyCodeLine{00083\ \textcolor{keyword}{static\_assert}(offsetof(replyPollPacket,\ GoodOutputB)\ ==\ 213,}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ GoodOutputB\ offset\ mismatch"{}});}
+\DoxyCodeLine{00085\ \textcolor{keyword}{static\_assert}(offsetof(replyPollPacket,\ RefreshRateHi)\ ==\ 226,}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ArtPollReply\ RefreshRate\ offset\ mismatch"{}});}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \textcolor{keyword}{enum\ class}\ ArtNetIndicatorState\ :\ uint8\_t\ \{}
+\DoxyCodeLine{00089\ \ \ UNKNOWN\ =\ 0,}
+\DoxyCodeLine{00090\ \ \ LOCATE\ =\ 1,}
+\DoxyCodeLine{00091\ \ \ MUTE\ =\ 2,}
+\DoxyCodeLine{00092\ \ \ NORMAL\ =\ 3}
+\DoxyCodeLine{00093\ \};}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_poll_reply_ad91a7cbcf6723201c3aece5d5fcfdee4}{PollReply}}\ \{}
+\DoxyCodeLine{00096\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00098\ \ \ \doxymbox{\hyperlink{class_poll_reply_ad91a7cbcf6723201c3aece5d5fcfdee4}{PollReply}}();}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00101\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a7501409411853a609f21a4ba32488391}{setMac}}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{byte}\ mac[]);}
+\DoxyCodeLine{00103\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_ae69c9535d9a10fc65764c5fe0fc5fcc7}{setIP}}(IPAddress\ ip);}
+\DoxyCodeLine{00105\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a221c1c45c99f5459e8a6627b04f5cc57}{setBindIP}}(IPAddress\ ip);}
+\DoxyCodeLine{00107\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a22d9eae79555d56c2c7c4a6e20124e87}{setFirmwareVersion}}(uint8\_t\ high,\ uint8\_t\ low);}
+\DoxyCodeLine{00109\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_acc8681875c41bedf5ff31b219225887f}{setOemCode}}(uint16\_t\ code);}
+\DoxyCodeLine{00111\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a70f320c8899dfd6fe055cd3c914f0b68}{setEstaManufacturerCode}}(uint16\_t\ code);}
+\DoxyCodeLine{00113\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_ae6579900e05d5d5c50bfbd76f7b70ba2}{setShortName}}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ name[]);}
+\DoxyCodeLine{00115\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_afffbc78bf5085a3155fbae66b1fc0d93}{setLongName}}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ name[]);}
+\DoxyCodeLine{00117\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_aca54af6045fa040f09c43532a02c7062}{setNodeReport}}(uint16\_t\ code,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ text);}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00120\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a6697172275db3c045ee8f1af3b8b8320}{setNumPorts}}(uint8\_t\ num);}
+\DoxyCodeLine{00122\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a322a88d367602be540bb250d1ddbd9ed}{clearPorts}}();}
+\DoxyCodeLine{00124\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_ac99f0284ab16c998e58f60911202e8f4}{setPortType}}(uint8\_t\ port,\ uint8\_t\ type);}
+\DoxyCodeLine{00126\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a42ac2b10a3d49c8023acfd607e814722}{setSwIn}}(uint8\_t\ port,\ uint16\_t\ portAddress);}
+\DoxyCodeLine{00128\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_aa24b499e230349659378032d7b474e66}{setSwOut}}(uint8\_t\ port,\ uint16\_t\ portAddress);}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00131\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_aac9a9fdb575167ecb15a1f782edc4f3d}{setOutputEnabled}}(uint8\_t\ port);}
+\DoxyCodeLine{00133\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_aa457fec038cd03e4694d7f4c71eb1e77}{setOutputDisabled}}(uint8\_t\ port);}
+\DoxyCodeLine{00135\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_ab6bd60a09a4ced8b5de64b59c546e288}{setInputEnabled}}(uint8\_t\ port);}
+\DoxyCodeLine{00137\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_ae0314944e686d106adb814dff66acc87}{setInputDisabled}}(uint8\_t\ port);}
+\DoxyCodeLine{00139\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a21882cbea0945ae2d4c761bc0f2304dd}{setInputDataActive}}(uint8\_t\ port,\ \textcolor{keywordtype}{bool}\ active);}
+\DoxyCodeLine{00141\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a4d58f268e789f8d23832eccc787c6109}{setOutputDataActive}}(uint8\_t\ port,\ \textcolor{keywordtype}{bool}\ active);}
+\DoxyCodeLine{00142\ }
+\DoxyCodeLine{00144\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a90c13b9d3856d9e4012bbe2be8f3d15b}{canDHCP}}(\textcolor{keywordtype}{bool}\ can);}
+\DoxyCodeLine{00146\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a11dce19c2b8ffe06afe9180664034a98}{isDHCP}}(\textcolor{keywordtype}{bool}\ is);}
+\DoxyCodeLine{00148\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_aecad2c29ca048411dbfd61880a2bcb8e}{setWebConfig}}(\textcolor{keywordtype}{bool}\ enabled);}
+\DoxyCodeLine{00150\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a4fcdf44d05a4df0b88845308320478a6}{setIndicatorState}}(ArtNetIndicatorState\ state);}
+\DoxyCodeLine{00152\ \ \ ArtNetIndicatorState\ \doxymbox{\hyperlink{class_poll_reply_a44c972eadcaefaa1c492f6347f6a8f94}{getIndicatorState}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00154\ \ \ uint8\_t\ \doxymbox{\hyperlink{class_poll_reply_a17a4c035fcb8c304e27397bf452b7184}{getBindIndex}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00156\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a5b7b799bdb2c2b11ad35d5dfcfea772c}{setSquawking}}(\textcolor{keywordtype}{bool}\ enabled);}
+\DoxyCodeLine{00158\ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_poll_reply_ab9913805b9f6d1e4158569929a0fe02b}{isSquawking}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00159\ }
+\DoxyCodeLine{00161\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_poll_reply_a1aa58811727033f6cd34ec660c30b82b}{setStartingUniverse}}(uint16\_t\ startUniverse);}
+\DoxyCodeLine{00163\ \ \ uint16\_t\ \doxymbox{\hyperlink{class_poll_reply_a9bd4d8f1488064a639922b5416f28926}{getStartingUniverse}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00166\ \ \ uint8\_t*\ \doxymbox{\hyperlink{class_poll_reply_a3464abf5f426af60a0d0aab5beb3abe5}{printPacket}}();}
+\DoxyCodeLine{00168\ \ \ \textcolor{keyword}{const}\ uint8\_t*\ \doxymbox{\hyperlink{class_poll_reply_a07196e76070144d53367899ab1e81380}{data}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00170\ \ \ \textcolor{keywordtype}{size\_t}\ \doxymbox{\hyperlink{class_poll_reply_a00538d15030a7dd0839c627aa4024816}{size}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00172\ \ \ replyPollPacket\ packet;}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00174\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00175\ \ \ uint16\_t\ startingUniverse;}
+\DoxyCodeLine{00176\ \ \ uint16\_t\ reportCode;}
+\DoxyCodeLine{00177\ \ \ uint16\_t\ reportCounter;}
+\DoxyCodeLine{00178\ \ \ \textcolor{keywordtype}{char}\ reportText[48];}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00181\ \ \ \textcolor{keywordtype}{void}\ updatePortAddresses();}
+\DoxyCodeLine{00183\ \ \ \textcolor{keywordtype}{void}\ formatNodeReport();}
+\DoxyCodeLine{00184\ \};}
+\DoxyCodeLine{00185\ }
+\DoxyCodeLine{00186\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

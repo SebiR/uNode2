@@ -1,0 +1,243 @@
+\doxysection{C:\+/\+\+Users/\+rieti/\+\+Documents/\+\+Arduino/\+u\+Node\+\_\+2/\+\+Artnetnode\+Wifi.h}
+\hypertarget{_artnetnode_wifi_8h_source}{}\label{_artnetnode_wifi_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ ARTNETNODEWIFI\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ ARTNETNODEWIFI\_H}}
+\DoxyCodeLine{00003\ \textcolor{comment}{/*}}
+\DoxyCodeLine{00004\ \textcolor{comment}{}}
+\DoxyCodeLine{00005\ \textcolor{comment}{Copyright\ (c)\ Charles\ Yarnold\ charlesyarnold@gmail.com\ 2015}}
+\DoxyCodeLine{00006\ \textcolor{comment}{}}
+\DoxyCodeLine{00007\ \textcolor{comment}{Copyright\ (c)\ 2016\ Stephan\ Ruloff}}
+\DoxyCodeLine{00008\ \textcolor{comment}{https://github.com/rstephan}}
+\DoxyCodeLine{00009\ \textcolor{comment}{}}
+\DoxyCodeLine{00010\ \textcolor{comment}{This\ program\ is\ free\ software:\ you\ can\ redistribute\ it\ and/or\ modify}}
+\DoxyCodeLine{00011\ \textcolor{comment}{it\ under\ the\ terms\ of\ the\ GNU\ General\ Public\ License\ as\ published\ by}}
+\DoxyCodeLine{00012\ \textcolor{comment}{the\ Free\ Software\ Foundation,\ under\ version\ 2\ of\ the\ License.}}
+\DoxyCodeLine{00013\ \textcolor{comment}{}}
+\DoxyCodeLine{00014\ \textcolor{comment}{This\ program\ is\ distributed\ in\ the\ hope\ that\ it\ will\ be\ useful,}}
+\DoxyCodeLine{00015\ \textcolor{comment}{but\ WITHOUT\ ANY\ WARRANTY;\ without\ even\ the\ implied\ warranty\ of}}
+\DoxyCodeLine{00016\ \textcolor{comment}{MERCHANTABILITY\ or\ FITNESS\ FOR\ A\ PARTICULAR\ PURPOSE.\ \ See\ the}}
+\DoxyCodeLine{00017\ \textcolor{comment}{GNU\ General\ Public\ License\ for\ more\ details.}}
+\DoxyCodeLine{00018\ \textcolor{comment}{}}
+\DoxyCodeLine{00019\ \textcolor{comment}{You\ should\ have\ received\ a\ copy\ of\ the\ GNU\ General\ Public\ License}}
+\DoxyCodeLine{00020\ \textcolor{comment}{along\ with\ this\ program.\ \ If\ not,\ see\ <http://www.gnu.org/licenses/>.}}
+\DoxyCodeLine{00021\ \textcolor{comment}{}}
+\DoxyCodeLine{00022\ \textcolor{comment}{*/}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <Arduino.h>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#if\ defined(ARDUINO\_ARCH\_ESP32)\ ||\ defined(ESP32)}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <WiFi.h>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#elif\ defined(ARDUINO\_ARCH\_ESP8266)}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <ESP8266WiFi.h>}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#elif\ defined(ARDUINO\_ARCH\_SAMD)}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#if\ defined(ARDUINO\_SAMD\_MKR1000)}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <WiFi101.h>}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#include\ <WiFiNINA.h>}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#error\ "{}Architecture\ not\ supported!"{}}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00038\ \textcolor{preprocessor}{\#include\ <WiFiUdp.h>}}
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#include\ "{}OpCodes.h"{}}}
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#include\ "{}NodeReportCodes.h"{}}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#include\ "{}StyleCodes.h"{}}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#include\ "{}PriorityCodes.h"{}}}
+\DoxyCodeLine{00043\ \textcolor{preprocessor}{\#include\ "{}ProtocolSettings.h"{}}}
+\DoxyCodeLine{00044\ \textcolor{preprocessor}{\#include\ "{}PollReply.h"{}}}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \textcolor{keyword}{struct\ }\doxymbox{\hyperlink{struct_art_poll_reply_info}{ArtPollReplyInfo}}\ \{}
+\DoxyCodeLine{00047\ \ \ IPAddress\ senderIP;}
+\DoxyCodeLine{00048\ \ \ IPAddress\ reportedIP;}
+\DoxyCodeLine{00049\ \ \ \textcolor{keywordtype}{char}\ portName[19];}
+\DoxyCodeLine{00050\ \ \ uint8\_t\ bindIndex;}
+\DoxyCodeLine{00051\ \ \ uint8\_t\ netSwitch;}
+\DoxyCodeLine{00052\ \ \ uint8\_t\ subSwitch;}
+\DoxyCodeLine{00053\ \ \ uint8\_t\ numPorts;}
+\DoxyCodeLine{00054\ \ \ uint8\_t\ portTypes[4];}
+\DoxyCodeLine{00055\ \ \ uint8\_t\ swIn[4];}
+\DoxyCodeLine{00056\ \ \ uint8\_t\ swOut[4];}
+\DoxyCodeLine{00057\ \};}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \textcolor{keyword}{struct\ }\doxymbox{\hyperlink{struct_art_address_info}{ArtAddressInfo}}\ \{}
+\DoxyCodeLine{00060\ \ \ IPAddress\ senderIP;}
+\DoxyCodeLine{00061\ \ \ uint8\_t\ netSwitch;}
+\DoxyCodeLine{00062\ \ \ uint8\_t\ bindIndex;}
+\DoxyCodeLine{00063\ \ \ \textcolor{keywordtype}{char}\ portName[19];}
+\DoxyCodeLine{00064\ \ \ \textcolor{keywordtype}{char}\ longName[65];}
+\DoxyCodeLine{00065\ \ \ uint8\_t\ swIn[4];}
+\DoxyCodeLine{00066\ \ \ uint8\_t\ swOut[4];}
+\DoxyCodeLine{00067\ \ \ uint8\_t\ subSwitch;}
+\DoxyCodeLine{00068\ \ \ uint8\_t\ acnPriority;}
+\DoxyCodeLine{00069\ \ \ uint8\_t\ command;}
+\DoxyCodeLine{00070\ \};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_artnetnode_wifi_a279873274152124fd1480d5bb55393bc}{ArtnetnodeWifi}}\ \{}
+\DoxyCodeLine{00073\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00075\ \ \ \doxymbox{\hyperlink{class_artnetnode_wifi_a279873274152124fd1480d5bb55393bc}{ArtnetnodeWifi}}();}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00078\ \ \ uint8\_t\ \doxymbox{\hyperlink{class_artnetnode_wifi_ae8389491f957e2743e622755f391e240}{begin}}(String\ hostname\ =\ \textcolor{stringliteral}{"{}"{}});}
+\DoxyCodeLine{00080\ \ \ uint16\_t\ \doxymbox{\hyperlink{class_artnetnode_wifi_a829ea4c250fe31e37033553793c03985}{read}}();}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \ \ \textcolor{comment}{//\ Node\ identity}}
+\DoxyCodeLine{00084\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a6cb7108b59827f0ea713d2e9934a2422}{setShortName}}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ name[]);}
+\DoxyCodeLine{00086\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_ad44c13287df8661889511043ef4f6617}{setLongName}}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ name[]);}
+\DoxyCodeLine{00088\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a9721001459159835dbd49c0aa5bf0149}{setName}}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ name[]);}
+\DoxyCodeLine{00090\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_aaf180e0adf703b6aa5d81a139bc0e1a9}{setNumPorts}}(uint8\_t\ num);}
+\DoxyCodeLine{00092\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_aec5e7189065e4a3651a126f0b9469136}{setNodeReport}}(}
+\DoxyCodeLine{00093\ \ \ \ \ uint16\_t\ code,}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ text);}
+\DoxyCodeLine{00096\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a63c4717d05d27fb264e4afc1a0b0858d}{setStartingUniverse}}(uint16\_t\ startingUniverse);}
+\DoxyCodeLine{00098\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a092b27319cc162535347a14ab5f69673}{setFirmwareVersion}}(uint8\_t\ high,\ uint8\_t\ low);}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \textcolor{comment}{//\ Transmit}}
+\DoxyCodeLine{00102\ \ \ \textcolor{keywordtype}{int}\ \doxymbox{\hyperlink{class_artnetnode_wifi_ad4b6d360740da5302039b06b29f64042}{write}}(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00104\ \ \ \textcolor{keywordtype}{int}\ \doxymbox{\hyperlink{class_artnetnode_wifi_ad4b6d360740da5302039b06b29f64042}{write}}(IPAddress\ ip);}
+\DoxyCodeLine{00106\ \ \ uint8\_t\ \doxymbox{\hyperlink{class_artnetnode_wifi_ad4b6d360740da5302039b06b29f64042}{write}}(}
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keyword}{const}\ IPAddress\ targets[],}
+\DoxyCodeLine{00108\ \ \ \ \ uint8\_t\ targetCount);}
+\DoxyCodeLine{00110\ \ \ \textcolor{keywordtype}{int}\ \doxymbox{\hyperlink{class_artnetnode_wifi_abfedd72418ea29ef719817db1117513a}{sendArtPoll}}(IPAddress\ ip);}
+\DoxyCodeLine{00112\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_ab84705cca38c849e7bd9eb0ba7ee5a5b}{setByte}}(uint16\_t\ pos,\ uint8\_t\ value);}
+\DoxyCodeLine{00114\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a3723e22610ec56814b02479e10b27750}{setUniverse}}(uint16\_t\ universe);}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00117\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a2174ca670e591e38f690c5d5f38d5eaf}{setPhysical}}(uint8\_t\ port)\ \{}
+\DoxyCodeLine{00118\ \ \ \ \ physical\ =\ port;}
+\DoxyCodeLine{00119\ \ \ \}}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00122\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_acd74873d71a940cab7574744391decf1}{setLength}}(uint16\_t\ len);}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00125\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a0d7e99cce221d6cbf0c11e495769afa2}{setPortType}}(uint8\_t\ port,\ uint8\_t\ type)\ \{}
+\DoxyCodeLine{00126\ \ \ \ \ PollReplyPacket.setPortType(port,\ type);}
+\DoxyCodeLine{00127\ \ \ \}}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00130\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_aa18e6a25d340be57e3d27b9422372017}{canDHCP}}(\textcolor{keywordtype}{bool}\ can)\ \{}
+\DoxyCodeLine{00131\ \ \ \ \ PollReplyPacket.canDHCP(can);}
+\DoxyCodeLine{00132\ \ \ \}}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00135\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a600de261239c12ab5917f8dcfb7403cd}{isDHCP}}(\textcolor{keywordtype}{bool}\ is)\ \{}
+\DoxyCodeLine{00136\ \ \ \ \ PollReplyPacket.isDHCP(is);}
+\DoxyCodeLine{00137\ \ \ \}}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00139\ \ \ \textcolor{comment}{//\ DMX\ controls}}
+\DoxyCodeLine{00141\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a5ea007fb0f9b378fe21660f78bb5a9c0}{setDirection}}(\textcolor{keywordtype}{bool}\ outputMode);}
+\DoxyCodeLine{00143\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_af0e682db1bc3c4c3696a881aefe9b867}{setPortInputActive}}(\textcolor{keywordtype}{bool}\ active);}
+\DoxyCodeLine{00145\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_abe37ee1ac1be0ce0c4295cbc17072820}{setPortOutputActive}}(\textcolor{keywordtype}{bool}\ active);}
+\DoxyCodeLine{00147\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a9187ea8f08d04a0e6a8eb498a7e44c87}{setIndicatorState}}(ArtNetIndicatorState\ state);}
+\DoxyCodeLine{00149\ \ \ ArtNetIndicatorState\ \doxymbox{\hyperlink{class_artnetnode_wifi_ae6ec094a3cb039e655082fe5df751ccd}{getIndicatorState}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00151\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_aed7f1227cf809a81e4fedabcacd060a8}{enableDMX}}();}
+\DoxyCodeLine{00153\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_aadf84efd1c2bfcb99634ce45aefa53fa}{disableDMX}}();}
+\DoxyCodeLine{00155\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_aff85ed0947f3cdb3a31fb637d7d3a493}{enableDMXOutput}}(uint8\_t\ outputID);}
+\DoxyCodeLine{00157\ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a9a42bafc2ef6632abc6f727a0c2cbecc}{disableDMXOutput}}(uint8\_t\ outputID);}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00160\ \ \ uint8\_t\ \doxymbox{\hyperlink{class_artnetnode_wifi_ab937756599a868979c874e60f06d3f37}{setDMXOutput}}(uint8\_t\ outputID,\ uint8\_t\ uartNum,\ uint16\_t\ attachedUniverse);}
+\DoxyCodeLine{00161\ }
+\DoxyCodeLine{00162\ \ \ \textcolor{comment}{//\ Return\ a\ pointer\ to\ the\ start\ of\ the\ DMX\ data}}
+\DoxyCodeLine{00164\ \ \ \textcolor{keyword}{inline}\ uint8\_t*\ \doxymbox{\hyperlink{class_artnetnode_wifi_a02f4c42200d43b3db6a371a87fb5129c}{getDmxFrame}}(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keywordflow}{return}\ artnetPacket\ +\ ARTNET\_DMX\_START\_LOC;}
+\DoxyCodeLine{00166\ \ \ \}}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00169\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a5ca14664c9dda1ef7584d733bd82ec40}{setArtDmxCallback}}(\textcolor{keywordtype}{void}\ (*fptr)(uint16\_t\ universe,\ uint16\_t\ length,\ uint8\_t\ sequence,\ uint8\_t*\ data))\ \{}
+\DoxyCodeLine{00170\ \ \ \ \ artDmxCallback\ =\ fptr;}
+\DoxyCodeLine{00171\ \ \ \}}
+\DoxyCodeLine{00172\ }
+\DoxyCodeLine{00174\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a85fd0005465d7e11133b170f4b89c95d}{setArtNzsCallback}}(\textcolor{keywordtype}{void}\ (*fptr)(uint16\_t\ universe,\ uint16\_t\ length,\ uint8\_t\ sequence,\ uint8\_t\ startCode,\ uint8\_t*\ data))\ \{}
+\DoxyCodeLine{00175\ \ \ \ \ artNzsCallback\ =\ fptr;}
+\DoxyCodeLine{00176\ \ \ \}}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00179\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a2c1538ccc8c5ede9d14ceee06d248d32}{setArtPollReplyCallback}}(}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ (*fptr)(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_art_poll_reply_info}{ArtPollReplyInfo}}\&\ info))\ \{}
+\DoxyCodeLine{00181\ \ \ \ \ artPollReplyCallback\ =\ fptr;}
+\DoxyCodeLine{00182\ \ \ \}}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00185\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_ae6c19903f0550b0a98869a2ba968be15}{setArtAddressCallback}}(}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ (*fptr)(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_art_address_info}{ArtAddressInfo}}\&\ info))\ \{}
+\DoxyCodeLine{00187\ \ \ \ \ artAddressCallback\ =\ fptr;}
+\DoxyCodeLine{00188\ \ \ \}}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00191\ \ \ \textcolor{keyword}{inline}\ IPAddress\&\ \doxymbox{\hyperlink{class_artnetnode_wifi_a74a2a0db7f546047d027978f456a1dca}{getSenderIp}}(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{keywordflow}{return}\ senderIp;}
+\DoxyCodeLine{00193\ \ \ \}}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00196\ \ \ \textcolor{keyword}{inline}\ uint32\_t\ \doxymbox{\hyperlink{class_artnetnode_wifi_a9b9511266ff251852e7b2764955b2617}{getPollCount}}()\ \{}
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keywordflow}{return}\ artPollCounter;}
+\DoxyCodeLine{00198\ \ \ \}}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00201\ \ \ \textcolor{keyword}{inline}\ uint16\_t\ \doxymbox{\hyperlink{class_artnetnode_wifi_ae54de0d31677ed1f0d69aa197fa02744}{getStartingUniverse}}()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keywordflow}{return}\ startingUniverse;}
+\DoxyCodeLine{00203\ \ \ \}}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00206\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_artnetnode_wifi_ae3a53d3e1e9eed06d0cd4d76d51f6610}{setSquawking}}(\textcolor{keywordtype}{bool}\ enabled)\ \{}
+\DoxyCodeLine{00207\ \ \ \ \ PollReplyPacket.setSquawking(enabled);}
+\DoxyCodeLine{00208\ \ \ \}}
+\DoxyCodeLine{00209\ }
+\DoxyCodeLine{00211\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_artnetnode_wifi_a59e62a2ab69af018979eaaf40120c80c}{isSquawking}}(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{keywordflow}{return}\ PollReplyPacket.isSquawking();}
+\DoxyCodeLine{00213\ \ \ \}}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00216\ \ \ \textcolor{keyword}{inline}\ uint32\_t\ \doxymbox{\hyperlink{class_artnetnode_wifi_a7f6c9e0ef07eb36d5f6e0fa340f9178e}{getLastPollMillis}}()\ \{}
+\DoxyCodeLine{00217\ \ \ \ \ \textcolor{keywordflow}{return}\ lastPollMillis;}
+\DoxyCodeLine{00218\ \ \ \}}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00220\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ artnetId[];}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00222\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00223\ \ \ WiFiUDP\ Udp;}
+\DoxyCodeLine{00224\ \ \ \doxymbox{\hyperlink{class_poll_reply}{PollReply}}\ PollReplyPacket;}
+\DoxyCodeLine{00225\ \ \ String\ host;}
+\DoxyCodeLine{00226\ \ \ IPAddress\ senderIp;}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00228\ \ \ \textcolor{comment}{//\ Packet\ handlers}}
+\DoxyCodeLine{00230\ \ \ uint16\_t\ handleDMX(uint8\_t\ nzs);}
+\DoxyCodeLine{00232\ \ \ uint16\_t\ sendPollReply(IPAddress\ requester);}
+\DoxyCodeLine{00234\ \ \ uint16\_t\ handlePollReply();}
+\DoxyCodeLine{00236\ \ \ uint16\_t\ handleArtAddress();}
+\DoxyCodeLine{00238\ \ \ \textcolor{keywordtype}{void}\ queuePollReply(IPAddress\ requester);}
+\DoxyCodeLine{00240\ \ \ \textcolor{keywordtype}{void}\ processPendingPollReplies();}
+\DoxyCodeLine{00242\ \ \ \textcolor{keywordtype}{void}\ discardUdpPacket(\textcolor{keywordtype}{int}\ length);}
+\DoxyCodeLine{00244\ \ \ \textcolor{keywordtype}{bool}\ hasSupportedProtocolVersion()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00246\ \ \ \textcolor{keywordtype}{bool}\ isTargetedPollForThisNode()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00247\ }
+\DoxyCodeLine{00248\ \ \ \textcolor{comment}{//\ Packet\ vars}}
+\DoxyCodeLine{00249\ \ \ uint8\_t\ artnetPacket[ARTNET\_MAX\_BUFFER];}
+\DoxyCodeLine{00250\ \ \ uint16\_t\ packetSize;}
+\DoxyCodeLine{00251\ \ \ uint16\_t\ opcode;}
+\DoxyCodeLine{00252\ \ \ uint8\_t\ sequence;}
+\DoxyCodeLine{00253\ \ \ uint8\_t\ physical;}
+\DoxyCodeLine{00254\ \ \ uint16\_t\ outgoingUniverse;}
+\DoxyCodeLine{00255\ \ \ uint16\_t\ dmxDataLength;}
+\DoxyCodeLine{00256\ \ \ IPAddress\ localIP;}
+\DoxyCodeLine{00257\ }
+\DoxyCodeLine{00258\ \ \ \textcolor{comment}{//\ Packet\ functions}}
+\DoxyCodeLine{00260\ \ \ uint16\_t\ makePacket(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00261\ }
+\DoxyCodeLine{00262\ \ \ \textcolor{keyword}{struct\ }PendingPollReply\ \{}
+\DoxyCodeLine{00263\ \ \ \ \ IPAddress\ requester;}
+\DoxyCodeLine{00264\ \ \ \ \ uint32\_t\ dueMillis;}
+\DoxyCodeLine{00265\ \ \ \ \ \textcolor{keywordtype}{bool}\ active;}
+\DoxyCodeLine{00266\ \ \ \};}
+\DoxyCodeLine{00267\ }
+\DoxyCodeLine{00268\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint8\_t\ MAX\_PENDING\_POLL\_REPLIES\ =\ 4;}
+\DoxyCodeLine{00269\ \ \ PendingPollReply\ pendingPollReplies[MAX\_PENDING\_POLL\_REPLIES];}
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00271\ \ \ \textcolor{comment}{//\ DMX\ settings}}
+\DoxyCodeLine{00272\ \ \ \textcolor{keywordtype}{bool}\ DMXOutputStatus;}
+\DoxyCodeLine{00273\ \ \ uint16\_t\ DMXOutputs[DMX\_MAX\_OUTPUTS][3];}
+\DoxyCodeLine{00274\ \ \ uint8\_t\ DMXBuffer[DMX\_MAX\_OUTPUTS][DMX\_MAX\_BUFFER];}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00276\ \ \ uint16\_t\ startingUniverse;}
+\DoxyCodeLine{00277\ }
+\DoxyCodeLine{00278\ \ \ \textcolor{comment}{//\ DMX\ tick}}
+\DoxyCodeLine{00280\ \ \ uint8\_t*\ \doxymbox{\hyperlink{class_artnetnode_wifi_a02f4c42200d43b3db6a371a87fb5129c}{getDmxFrame}}(uint8\_t\ outputID);}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00282\ \ \ uint32\_t\ artPollCounter\ =\ 0;}
+\DoxyCodeLine{00283\ \ \ uint32\_t\ lastPollMillis\ =\ 0;}
+\DoxyCodeLine{00284\ }
+\DoxyCodeLine{00285\ \ \ void\ (*artDmxCallback)(uint16\_t\ universe,\ uint16\_t\ length,\ uint8\_t\ sequence,\ uint8\_t*\ data);}
+\DoxyCodeLine{00286\ \ \ void\ (*artNzsCallback)(uint16\_t\ universe,\ uint16\_t\ length,\ uint8\_t\ sequence,\ uint8\_t\ startCode,\ uint8\_t*\ data);}
+\DoxyCodeLine{00287\ \ \ void\ (*artPollReplyCallback)(\textcolor{keyword}{const}\ ArtPollReplyInfo\&\ info);}
+\DoxyCodeLine{00288\ \ \ void\ (*artAddressCallback)(\textcolor{keyword}{const}\ ArtAddressInfo\&\ info);}
+\DoxyCodeLine{00289\ \};}
+\DoxyCodeLine{00290\ }
+\DoxyCodeLine{00291\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

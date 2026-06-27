@@ -1,0 +1,52 @@
+\doxysection{C:\+/\+\+Users/\+rieti/\+\+Documents/\+\+Arduino/\+u\+Node\+\_\+2/\+leds.h}
+\hypertarget{leds_8h_source}{}\label{leds_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <Arduino.h>}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}status\_led\_driver.h"{}}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{keyword}{enum}\ StatusLedMode}
+\DoxyCodeLine{00007\ \{}
+\DoxyCodeLine{00008\ \ \ \ \ LED\_OFF\ =\ 0,}
+\DoxyCodeLine{00009\ \ \ \ \ LED\_CONNECTING,}
+\DoxyCodeLine{00010\ \ \ \ \ LED\_CONFIG\_PORTAL,}
+\DoxyCodeLine{00011\ \ \ \ \ LED\_READY}
+\DoxyCodeLine{00012\ \};}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{keyword}{enum}\ NetworkLedState}
+\DoxyCodeLine{00015\ \{}
+\DoxyCodeLine{00016\ \ \ \ \ NETWORK\_DISCONNECTED\ =\ 0,}
+\DoxyCodeLine{00017\ \ \ \ \ NETWORK\_ACCESS\_POINT,}
+\DoxyCodeLine{00018\ \ \ \ \ NETWORK\_CONNECTED}
+\DoxyCodeLine{00019\ \};}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{enum}\ LedIndicatorMode}
+\DoxyCodeLine{00022\ \{}
+\DoxyCodeLine{00023\ \ \ \ \ INDICATORS\_NORMAL\ =\ 0,}
+\DoxyCodeLine{00024\ \ \ \ \ INDICATORS\_MUTE,}
+\DoxyCodeLine{00025\ \ \ \ \ INDICATORS\_LOCATE}
+\DoxyCodeLine{00026\ \};}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00029\ \textcolor{keywordtype}{void}\ initLEDs();}
+\DoxyCodeLine{00031\ \textcolor{keywordtype}{void}\ updateLEDs();}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00034\ \textcolor{keywordtype}{void}\ setStatusLedMode(StatusLedMode\ mode);}
+\DoxyCodeLine{00036\ \textcolor{keywordtype}{void}\ setNetworkLedState(NetworkLedState\ state);}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00039\ \textcolor{keywordtype}{void}\ flashArtNetLED();}
+\DoxyCodeLine{00041\ \textcolor{keywordtype}{void}\ flashDMXInputLED();}
+\DoxyCodeLine{00043\ \textcolor{keywordtype}{void}\ flashDMXOutputLED();}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00046\ \textcolor{keywordtype}{void}\ setLEDBrightness(uint8\_t\ brightness);}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00049\ \textcolor{keywordtype}{void}\ setLocate(\textcolor{keywordtype}{bool}\ enabled);}
+\DoxyCodeLine{00051\ \textcolor{keywordtype}{bool}\ isLocateActive();}
+\DoxyCodeLine{00053\ \textcolor{keywordtype}{void}\ setLedIndicatorMode(LedIndicatorMode\ mode);}
+\DoxyCodeLine{00055\ LedIndicatorMode\ getLedIndicatorMode();}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00058\ \textcolor{keywordtype}{void}\ getRenderedLedColors(}
+\DoxyCodeLine{00059\ \ \ StatusLedColor\&\ networkColor,}
+\DoxyCodeLine{00060\ \ \ StatusLedColor\&\ activityColor);}
+
+\end{DoxyCode}

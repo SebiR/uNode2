@@ -1,0 +1,46 @@
+\doxysection{C:\+/\+\+Users/\+rieti/\+\+Documents/\+\+Arduino/\+u\+Node\+\_\+2/\+\+Op\+Codes.h}
+\hypertarget{_op_codes_8h_source}{}\label{_op_codes_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ OPCODES\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ OPCODES\_H}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ List\ of\ hex\ values\ and\ discriptions\ of\ Opcodes}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#define\ OpPoll\ \ \ \ \ \ \ \ \ \ \ \ \ 0x2000\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtPoll\ packet,\ no\ other\ data\ is\ contained\ in\ this\ UDP\ packet}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ OpPollReply\ \ \ \ \ \ \ \ 0x2100\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtPollReply\ Packet.\ It\ contains\ device\ status\ information.}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ OpDiagData\ \ \ \ \ \ \ \ \ 0x2300\ \ }\textcolor{comment}{//\ Diagnostics\ and\ data\ logging\ packet.}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ OpCommand\ \ \ \ \ \ \ \ \ \ 0x2400\ \ }\textcolor{comment}{//\ Used\ to\ send\ text\ based\ parameter\ commands.}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#define\ OpOutput\ \ \ \ \ \ \ \ \ \ \ 0x5000\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtDmx\ data\ packet.\ It\ contains\ zero\ start\ code\ DMX512\ information\ for\ a\ single\ Universe.}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#define\ OpDmx\ \ \ \ \ \ \ \ \ \ \ \ \ \ 0x5000\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtDmx\ data\ packet.\ It\ contains\ zero\ start\ code\ DMX512\ information\ for\ a\ single\ Universe.}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#define\ OpNzs\ \ \ \ \ \ \ \ \ \ \ \ \ \ 0x5100\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtNzs\ data\ packet.\ It\ contains\ non-\/zero\ start\ code\ (except\ RDM)\ DMX512\ information\ for\ a\ single\ Universe.}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#define\ OpAddress\ \ \ \ \ \ \ \ \ \ 0x6000\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtAddress\ packet.\ It\ contains\ remote\ programming\ information\ for\ a\ Node.}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#define\ OpInput\ \ \ \ \ \ \ \ \ \ \ \ 0x7000\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtInput\ packet.\ It\ contains\ enable\ –\ disable\ data\ for\ DMX\ inputs.}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#define\ OpTodRequest\ \ \ \ \ \ \ 0x8000\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtTodRequest\ packet.\ It\ is\ used\ to\ request\ a\ Table\ of\ Devices\ (ToD)\ for\ RDM\ discovery.}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#define\ OpTodData\ \ \ \ \ \ \ \ \ \ 0x8100\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtTodData\ packet.\ It\ is\ used\ to\ send\ a\ Table\ of\ Devices\ (ToD)\ for\ RDM\ discovery.}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#define\ OpTodControl\ \ \ \ \ \ \ 0x8200\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtTodControl\ packet.\ It\ is\ used\ to\ send\ RDM\ discovery\ control\ messages.}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#define\ OpRdm\ \ \ \ \ \ \ \ \ \ \ \ \ \ 0x8300\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtRdm\ packet.\ It\ is\ used\ to\ send\ all\ non\ discovery\ RDM\ messages.}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#define\ OpRdmSub\ \ \ \ \ \ \ \ \ \ \ 0x8400\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtRdmSub\ packet.\ It\ is\ used\ to\ send\ compressed,\ RDM\ Sub-\/Device\ data.}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#define\ OpVideoSetup\ \ \ \ \ \ \ 0xa010\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtVideoSetup\ packet.\ It\ contains\ video\ screen\ setup\ information\ for\ nodes\ that\ implement\ the\ extended\ video\ features.}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#define\ OpVideoPalette\ \ \ \ \ 0xa020\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtVideoPalette\ packet.\ It\ contains\ colour\ palette\ setup\ information\ for\ nodes\ that\ implement\ the\ extended\ video\ features.}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#define\ OpVideoData\ \ \ \ \ \ \ \ 0xa040\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtVideoData\ packet.\ It\ contains\ display\ data\ for\ nodes\ that\ implement\ the\ extended\ video\ features.}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#define\ OpMacMaster\ \ \ \ \ \ \ \ 0xf000\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtMacMaster\ packet.\ It\ is\ used\ to\ program\ the\ Node’s\ MAC\ address,\ Oem\ device\ type\ and\ ESTA\ manufacturer\ code.\ This\ is\ for\ factory\ initialisation\ of\ a\ Node.\ It\ is\ not\ to\ be\ used\ by\ applications.}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#define\ OpMacSlave\ \ \ \ \ \ \ \ \ 0xf100\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtMacSlave\ packet.\ It\ is\ returned\ by\ the\ node\ to\ acknowledge\ receipt\ of\ an\ ArtMacMaster\ packet.}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#define\ OpFirmwareMaster\ \ \ 0xf200\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtFirmwareMaster\ packet.\ It\ is\ used\ to\ upload\ new\ firmware\ or\ firmware\ extensions\ to\ the\ Node.}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#define\ OpFirmwareReply\ \ \ \ 0xf300\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtFirmwareReply\ packet.\ It\ is\ returned\ by\ the\ node\ to\ acknowledge\ receipt\ of\ an\ ArtFirmwareMaster\ packet\ or\ ArtFileTnMaster\ packet.}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#define\ OpFileTnMaster\ \ \ \ \ 0xf400\ \ }\textcolor{comment}{//\ Uploads\ user\ file\ to\ node.}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#define\ OpFileFnMaster\ \ \ \ \ 0xf500\ \ }\textcolor{comment}{//\ Downloads\ user\ file\ from\ node.}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#define\ OpFileFnReply\ \ \ \ \ \ 0xf600\ \ }\textcolor{comment}{//\ Node\ acknowledge\ for\ downloads.}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#define\ OpIpProg\ \ \ \ \ \ \ \ \ \ \ 0xf800\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtIpProg\ packet.\ It\ is\ used\ to\ reprogramme\ the\ IP,\ Mask\ and\ Port\ address\ of\ the\ Node.}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#define\ OpIpProgReply\ \ \ \ \ \ 0xf900\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtIpProgReply\ packet.\ It\ is\ returned\ by\ the\ node\ to\ acknowledge\ receipt\ of\ an\ ArtIpProg\ packet.}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#define\ OpMedia\ \ \ \ \ \ \ \ \ \ \ \ 0x9000\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtMedia\ packet.\ It\ is\ Unicast\ by\ a\ Media\ Server\ and\ acted\ upon\ by\ a\ Controller.}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#define\ OpMediaPatch\ \ \ \ \ \ \ 0x9100\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtMediaPatch\ packet.\ It\ is\ Unicast\ by\ a\ Controller\ and\ acted\ upon\ by\ a\ Media\ Server.}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#define\ OpMediaControl\ \ \ \ \ 0x9200\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtMediaControl\ packet.\ It\ is\ Unicast\ by\ a\ Controller\ and\ acted\ upon\ by\ a\ Media\ Server.}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#define\ OpMediaContrlReply\ 0x9300\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtMediaControlReply\ packet.\ It\ is\ Unicast\ by\ a\ Media\ Server\ and\ acted\ upon\ by\ a\ Controller.}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#define\ OpTimeCode\ \ \ \ \ \ \ \ \ 0x9700\ \ }\textcolor{comment}{//\ This\ is\ an\ ArtTimeCode\ packet.\ It\ is\ used\ to\ transport\ time\ code\ over\ the\ network.}}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#define\ OpTimeSync\ \ \ \ \ \ \ \ \ 0x9800\ \ }\textcolor{comment}{//\ Used\ to\ synchronise\ real\ time\ date\ and\ clock}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#define\ OpTrigger\ \ \ \ \ \ \ \ \ \ 0x9900\ \ }\textcolor{comment}{//\ Used\ to\ send\ trigger\ macros}}
+\DoxyCodeLine{00038\ \textcolor{preprocessor}{\#define\ OpDirectory\ \ \ \ \ \ \ \ 0x9a00\ \ }\textcolor{comment}{//\ Requests\ a\ node's\ file\ list}}
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#define\ OpDirectoryReply\ \ \ 0x9b00\ \ }\textcolor{comment}{//\ Replies\ to\ OpDirectory\ with\ file\ list}}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

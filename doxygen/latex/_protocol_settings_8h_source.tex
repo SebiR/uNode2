@@ -1,0 +1,43 @@
+\doxysection{C:\+/\+\+Users/\+rieti/\+\+Documents/\+\+Arduino/\+u\+Node\+\_\+2/\+\+Protocol\+Settings.h}
+\hypertarget{_protocol_settings_8h_source}{}\label{_protocol_settings_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ PROTOCOLSETTINGS\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ PROTOCOLSETTINGS\_H}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ UDP\ port}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#define\ ARTNET\_PORT\ 6454}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ ARTNET\_PROTOCOL\_VERSION\ 14}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ Buffers}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#define\ ARTNET\_MAX\_BUFFER\ 530}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#define\ DMX\_MAX\_BUFFER\ 512}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{comment}{//\ Packet\ constants}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#define\ ARTNET\_ID\ "{}Art-\/Net"{}}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#define\ ARTNET\_DMX\_START\_LOC\ 18}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#define\ ARTNET\_POLL\_MIN\_LENGTH\ 14}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#define\ ARTNET\_POLL\_REPLY\_MIN\_LENGTH\ 207}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#define\ ARTNET\_ADDRESS\_MIN\_LENGTH\ 107}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#define\ ARTNET\_AC\_LED\_NORMAL\ 0x02}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#define\ ARTNET\_AC\_LED\_MUTE\ 0x03}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#define\ ARTNET\_AC\_LED\_LOCATE\ 0x04}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{static\_assert}(}
+\DoxyCodeLine{00024\ \ \ ARTNET\_MAX\_BUFFER\ >=\ ARTNET\_DMX\_START\_LOC\ +\ DMX\_MAX\_BUFFER,}
+\DoxyCodeLine{00025\ \ \ \textcolor{stringliteral}{"{}Art-\/Net\ buffer\ is\ too\ small\ for\ a\ full\ ArtDmx\ packet"{}});}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{comment}{//\ Packet\ confines}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#define\ ARTNET\_SHORT\_NAME\_MAX\_LENGTH\ 17}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#define\ ARTNET\_LONG\_NAME\_MAX\_LENGTH\ 63}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{comment}{//\ DMX\ settings}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#define\ DMX\_MAX\_OUTPUTS\ 4}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#define\ DMX\_MS\_BETWEEN\_TICKS\ 25}}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \textcolor{comment}{//\ RDM}}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#define\ DMX\_RDM\_STARTCODE\ 0xCC}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

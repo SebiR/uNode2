@@ -1,0 +1,163 @@
+\doxysection{C:\+/\+\+Users/\+rieti/\+\+Documents/\+\+Arduino/\+u\+Node\+\_\+2/\+config.h}
+\hypertarget{config_8h_source}{}\label{config_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <Arduino.h>}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//\ Firmware}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#define\ FW\_VERSION\ "{}0.2.0"{}}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#define\ FW\_BUILD\_DATE\ \_\_DATE\_\_}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#define\ FW\_BUILD\_TIME\ \_\_TIME\_\_}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00015\ \textcolor{comment}{//\ Feature\ Switches}}
+\DoxyCodeLine{00016\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#define\ ENABLE\_DEBUG\ 0}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{comment}{//\ 0:\ two\ classic\ status\ LEDs,\ 1:\ two\ WS2812/SK6812-\/compatible\ pixels}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#ifndef\ USE\_WS2812}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#define\ USE\_WS2812\ 1}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{comment}{//\ Legacy\ LEDs\ only:\ 0\ saves\ IRAM\ and\ uses\ digital\ on/off,\ 1\ enables\ brightness}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#ifndef\ USE\_LED\_PWM}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#define\ USE\_LED\_PWM\ 1}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00031\ \textcolor{comment}{//\ GPIO\ Assignment}}
+\DoxyCodeLine{00032\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#define\ PIN\_RS485\_DIR\ 5}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#define\ LED\_ARTNET\_PIN\ 12}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#define\ LED\_STATUS\_PIN\ 13}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#define\ LED\_WS2812\_PIN\ 4}}
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#define\ LED\_WS2812\_COUNT\ 2}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#define\ LED\_WS2812\_STATUS\_INDEX\ 0}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#define\ LED\_WS2812\_ARTNET\_INDEX\ 1}}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \textcolor{comment}{//\ Adafruit\ NeoPixel\ color\ order,\ e.g.\ NEO\_GRB,\ NEO\_RGB\ or\ NEO\_BRG}}
+\DoxyCodeLine{00045\ \textcolor{preprocessor}{\#ifndef\ LED\_WS2812\_COLOR\_ORDER}}
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\#define\ LED\_WS2812\_COLOR\_ORDER\ NEO\_RGB}}
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \textcolor{comment}{//\#define\ DIRECTION\_ARTNET\_TO\_DMX\ 0}}
+\DoxyCodeLine{00050\ \textcolor{comment}{//\#define\ DIRECTION\_DMX\_TO\_ARTNET\ 1}}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00053\ \textcolor{comment}{//\ Debug\ Macros}}
+\DoxyCodeLine{00054\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \textcolor{preprocessor}{\#if\ ENABLE\_DEBUG}}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \textcolor{preprocessor}{\#define\ DBG\_BEGIN(x)\ Serial.begin(x)}}
+\DoxyCodeLine{00059\ \textcolor{preprocessor}{\#define\ DBG\_PRINT(x)\ Serial.print(x)}}
+\DoxyCodeLine{00060\ \textcolor{preprocessor}{\#define\ DBG\_PRINTLN(x)\ Serial.println(x)}}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \textcolor{preprocessor}{\#define\ DBG\_BEGIN(x)}}
+\DoxyCodeLine{00065\ \textcolor{preprocessor}{\#define\ DBG\_PRINT(x)}}
+\DoxyCodeLine{00066\ \textcolor{preprocessor}{\#define\ DBG\_PRINTLN(x)}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00071\ \textcolor{comment}{//\ Enums}}
+\DoxyCodeLine{00072\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \textcolor{keyword}{enum}\ WifiMode\ \{}
+\DoxyCodeLine{00075\ \ \ WIFI\_MODE\_CLIENT\ =\ 0,}
+\DoxyCodeLine{00076\ \ \ WIFI\_MODE\_AP\ =\ 1,}
+\DoxyCodeLine{00077\ \ \ WIFI\_MODE\_AP\_CLIENT\ =\ 2}
+\DoxyCodeLine{00078\ \};}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \textcolor{keyword}{enum}\ Direction\ \{}
+\DoxyCodeLine{00081\ \ \ ARTNET\_TO\_DMX\ =\ 0,}
+\DoxyCodeLine{00082\ \ \ DMX\_TO\_ARTNET\ =\ 1}
+\DoxyCodeLine{00083\ \};}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00086\ \textcolor{comment}{//\ Configuration\ Structure}}
+\DoxyCodeLine{00087\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \textcolor{keyword}{struct\ }\doxymbox{\hyperlink{struct_config}{Config}}\ \{}
+\DoxyCodeLine{00090\ \ \ \textcolor{comment}{//\ Network}}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \ \ String\ hostname;}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00094\ \ \ WifiMode\ wifiMode;}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \ \ \textcolor{keywordtype}{bool}\ dhcp;}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \ \ String\ ip;}
+\DoxyCodeLine{00099\ \ \ String\ subnet;}
+\DoxyCodeLine{00100\ \ \ String\ gateway;}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \ \ \textcolor{comment}{//\ LEDs}}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \ \ uint8\_t\ ledBrightness;}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \ \ \textcolor{comment}{//\ ArtNet}}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ String\ shortName;}
+\DoxyCodeLine{00109\ \ \ String\ longName;}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00111\ \ \ Direction\ direction;}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00113\ \ \ uint8\_t\ net;}
+\DoxyCodeLine{00114\ \ \ uint8\_t\ subnetId;}
+\DoxyCodeLine{00115\ \ \ uint8\_t\ universe;}
+\DoxyCodeLine{00116\ \};}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ \textcolor{keyword}{enum\ class}\ ConfigResult\ :\ uint8\_t\ \{}
+\DoxyCodeLine{00119\ \ \ OK,}
+\DoxyCodeLine{00120\ \ \ INVALID,}
+\DoxyCodeLine{00121\ \ \ STORAGE\_ERROR}
+\DoxyCodeLine{00122\ \};}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00125\ \textcolor{comment}{//\ Global\ Config\ Instance}}
+\DoxyCodeLine{00126\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00128\ \textcolor{keyword}{extern}\ \doxymbox{\hyperlink{struct_config}{Config}}\ config;}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00131\ \textcolor{comment}{//\ Functions}}
+\DoxyCodeLine{00132\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00135\ \textcolor{keywordtype}{void}\ loadDefaults();}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00138\ \textcolor{keywordtype}{bool}\ loadConfig();}
+\DoxyCodeLine{00140\ \textcolor{keywordtype}{bool}\ saveConfig();}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00147\ \textcolor{keywordtype}{bool}\ serializeConfig(String\&\ json);}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00155\ ConfigResult\ updateConfigFromJson(}
+\DoxyCodeLine{00156\ \ \ \textcolor{keyword}{const}\ String\&\ json,}
+\DoxyCodeLine{00157\ \ \ String\&\ error);}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00168\ ConfigResult\ updateArtNetNames(}
+\DoxyCodeLine{00169\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ portName,}
+\DoxyCodeLine{00170\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ longName,}
+\DoxyCodeLine{00171\ \ \ \textcolor{keywordtype}{bool}\&\ portNameChanged,}
+\DoxyCodeLine{00172\ \ \ \textcolor{keywordtype}{bool}\&\ longNameChanged,}
+\DoxyCodeLine{00173\ \ \ String\&\ error);}
+\DoxyCodeLine{00174\ }
+\DoxyCodeLine{00181\ ConfigResult\ importConfigFile(}
+\DoxyCodeLine{00182\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ path,}
+\DoxyCodeLine{00183\ \ \ String\&\ error);}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00190\ ConfigResult\ resetConfig(String\&\ error);}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00193\ String\ getFirmwareString();}
+
+\end{DoxyCode}

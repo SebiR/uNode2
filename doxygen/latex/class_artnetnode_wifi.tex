@@ -1,0 +1,250 @@
+\doxysection{Artnetnode\+Wifi Class Reference}
+\hypertarget{class_artnetnode_wifi}{}\label{class_artnetnode_wifi}\index{ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{class_artnetnode_wifi_a279873274152124fd1480d5bb55393bc}\label{class_artnetnode_wifi_a279873274152124fd1480d5bb55393bc} 
+{\bfseries Artnetnode\+Wifi} ()
+\begin{DoxyCompactList}\small\item\em Initializes protocol state and internal DMX buffers. \end{DoxyCompactList}\item 
+uint8\+\_\+t \doxymbox{\hyperlink{class_artnetnode_wifi_ae8389491f957e2743e622755f391e240}{begin}} (String hostname="{}"{})
+\begin{DoxyCompactList}\small\item\em Binds the Art-\/\+Net UDP socket and refreshes interface identity. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a829ea4c250fe31e37033553793c03985}\label{class_artnetnode_wifi_a829ea4c250fe31e37033553793c03985} 
+uint16\+\_\+t {\bfseries read} ()
+\begin{DoxyCompactList}\small\item\em Processes one pending Art-\/\+Net datagram and deferred replies. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a6cb7108b59827f0ea713d2e9934a2422}\label{class_artnetnode_wifi_a6cb7108b59827f0ea713d2e9934a2422} 
+void {\bfseries set\+Short\+Name} (const char name\+[$\,$]\+)
+\begin{DoxyCompactList}\small\item\em Sets the advertised Art-\/\+Net Port Name. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_ad44c13287df8661889511043ef4f6617}\label{class_artnetnode_wifi_ad44c13287df8661889511043ef4f6617} 
+void {\bfseries set\+Long\+Name} (const char name\+[$\,$]\+)
+\begin{DoxyCompactList}\small\item\em Sets the advertised Art-\/\+Net Long Name. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a9721001459159835dbd49c0aa5bf0149}\label{class_artnetnode_wifi_a9721001459159835dbd49c0aa5bf0149} 
+void {\bfseries set\+Name} (const char name\+[$\,$]\+)
+\begin{DoxyCompactList}\small\item\em Sets both advertised names to the same value. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_aaf180e0adf703b6aa5d81a139bc0e1a9}\label{class_artnetnode_wifi_aaf180e0adf703b6aa5d81a139bc0e1a9} 
+void {\bfseries set\+Num\+Ports} (uint8\+\_\+t num)
+\begin{DoxyCompactList}\small\item\em Sets the advertised number of ports. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_aec5e7189065e4a3651a126f0b9469136}\label{class_artnetnode_wifi_aec5e7189065e4a3651a126f0b9469136} 
+void {\bfseries set\+Node\+Report} (uint16\+\_\+t code, const char \texorpdfstring{$\ast$}{*}text)
+\begin{DoxyCompactList}\small\item\em Sets the Art\+Poll\+Reply Node\+Report status. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a63c4717d05d27fb264e4afc1a0b0858d}\label{class_artnetnode_wifi_a63c4717d05d27fb264e4afc1a0b0858d} 
+void {\bfseries set\+Starting\+Universe} (uint16\+\_\+t starting\+Universe)
+\begin{DoxyCompactList}\small\item\em Sets the starting 15-\/bit Port-\/\+Address. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a092b27319cc162535347a14ab5f69673}\label{class_artnetnode_wifi_a092b27319cc162535347a14ab5f69673} 
+void {\bfseries set\+Firmware\+Version} (uint8\+\_\+t high, uint8\+\_\+t low)
+\begin{DoxyCompactList}\small\item\em Sets the advertised firmware version bytes. \end{DoxyCompactList}\item 
+int \doxymbox{\hyperlink{class_artnetnode_wifi_ad4b6d360740da5302039b06b29f64042}{write}} (void)
+\item 
+int \doxymbox{\hyperlink{class_artnetnode_wifi_a30e1d0ef307d47cfc3cfc3b2dc1a7e0f}{write}} (IPAddress ip)
+\item 
+uint8\+\_\+t \doxymbox{\hyperlink{class_artnetnode_wifi_a7042a2ad009fb9dc1af7fdbaad25a081}{write}} (const IPAddress targets\+[$\,$]\+, uint8\+\_\+t target\+Count)
+\item 
+int \doxymbox{\hyperlink{class_artnetnode_wifi_abfedd72418ea29ef719817db1117513a}{send\+Art\+Poll}} (IPAddress ip)
+\item 
+\Hypertarget{class_artnetnode_wifi_ab84705cca38c849e7bd9eb0ba7ee5a5b}\label{class_artnetnode_wifi_ab84705cca38c849e7bd9eb0ba7ee5a5b} 
+void {\bfseries set\+Byte} (uint16\+\_\+t pos, uint8\+\_\+t value)
+\begin{DoxyCompactList}\small\item\em Sets one zero-\/based byte in the outgoing Art\+Dmx payload. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a3723e22610ec56814b02479e10b27750}\label{class_artnetnode_wifi_a3723e22610ec56814b02479e10b27750} 
+void {\bfseries set\+Universe} (uint16\+\_\+t universe)
+\begin{DoxyCompactList}\small\item\em Sets the outgoing Art\+Dmx Port-\/\+Address. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a2174ca670e591e38f690c5d5f38d5eaf}\label{class_artnetnode_wifi_a2174ca670e591e38f690c5d5f38d5eaf} 
+void {\bfseries set\+Physical} (uint8\+\_\+t port)
+\begin{DoxyCompactList}\small\item\em Sets the Art\+Dmx physical input port field. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_acd74873d71a940cab7574744391decf1}\label{class_artnetnode_wifi_acd74873d71a940cab7574744391decf1} 
+void {\bfseries set\+Length} (uint16\+\_\+t len)
+\begin{DoxyCompactList}\small\item\em Sets outgoing Art\+Dmx payload length, clamped to 512. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a0d7e99cce221d6cbf0c11e495769afa2}\label{class_artnetnode_wifi_a0d7e99cce221d6cbf0c11e495769afa2} 
+void {\bfseries set\+Port\+Type} (uint8\+\_\+t port, uint8\+\_\+t type)
+\begin{DoxyCompactList}\small\item\em Sets one raw Art\+Poll\+Reply Port\+Types entry. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_aa18e6a25d340be57e3d27b9422372017}\label{class_artnetnode_wifi_aa18e6a25d340be57e3d27b9422372017} 
+void {\bfseries can\+DHCP} (bool can)
+\begin{DoxyCompactList}\small\item\em Updates the advertised DHCP-\/capable flag. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a600de261239c12ab5917f8dcfb7403cd}\label{class_artnetnode_wifi_a600de261239c12ab5917f8dcfb7403cd} 
+void {\bfseries is\+DHCP} (bool is)
+\begin{DoxyCompactList}\small\item\em Updates the advertised DHCP-\/configured flag. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a5ea007fb0f9b378fe21660f78bb5a9c0}\label{class_artnetnode_wifi_a5ea007fb0f9b378fe21660f78bb5a9c0} 
+void {\bfseries set\+Direction} (bool output\+Mode)
+\begin{DoxyCompactList}\small\item\em Configures the single advertised port direction. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_af0e682db1bc3c4c3696a881aefe9b867}\label{class_artnetnode_wifi_af0e682db1bc3c4c3696a881aefe9b867} 
+void {\bfseries set\+Port\+Input\+Active} (bool active)
+\begin{DoxyCompactList}\small\item\em Updates physical DMX input activity status. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_abe37ee1ac1be0ce0c4295cbc17072820}\label{class_artnetnode_wifi_abe37ee1ac1be0ce0c4295cbc17072820} 
+void {\bfseries set\+Port\+Output\+Active} (bool active)
+\begin{DoxyCompactList}\small\item\em Updates physical DMX output activity status. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a9187ea8f08d04a0e6a8eb498a7e44c87}\label{class_artnetnode_wifi_a9187ea8f08d04a0e6a8eb498a7e44c87} 
+void {\bfseries set\+Indicator\+State} (Art\+Net\+Indicator\+State state)
+\begin{DoxyCompactList}\small\item\em Updates Art\+Poll\+Reply indicator state. \end{DoxyCompactList}\item 
+Art\+Net\+Indicator\+State \doxymbox{\hyperlink{class_artnetnode_wifi_ae6ec094a3cb039e655082fe5df751ccd}{get\+Indicator\+State}} () const
+\item 
+\Hypertarget{class_artnetnode_wifi_aed7f1227cf809a81e4fedabcacd060a8}\label{class_artnetnode_wifi_aed7f1227cf809a81e4fedabcacd060a8} 
+void {\bfseries enable\+DMX} ()
+\begin{DoxyCompactList}\small\item\em Enables legacy internal DMX processing. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_aadf84efd1c2bfcb99634ce45aefa53fa}\label{class_artnetnode_wifi_aadf84efd1c2bfcb99634ce45aefa53fa} 
+void {\bfseries disable\+DMX} ()
+\begin{DoxyCompactList}\small\item\em Disables legacy internal DMX processing. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_aff85ed0947f3cdb3a31fb637d7d3a493}\label{class_artnetnode_wifi_aff85ed0947f3cdb3a31fb637d7d3a493} 
+void {\bfseries enable\+DMXOutput} (uint8\+\_\+t output\+ID)
+\begin{DoxyCompactList}\small\item\em Enables one configured legacy DMX output. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a9a42bafc2ef6632abc6f727a0c2cbecc}\label{class_artnetnode_wifi_a9a42bafc2ef6632abc6f727a0c2cbecc} 
+void {\bfseries disable\+DMXOutput} (uint8\+\_\+t output\+ID)
+\begin{DoxyCompactList}\small\item\em Disables one configured legacy DMX output. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_ab937756599a868979c874e60f06d3f37}\label{class_artnetnode_wifi_ab937756599a868979c874e60f06d3f37} 
+uint8\+\_\+t {\bfseries set\+DMXOutput} (uint8\+\_\+t output\+ID, uint8\+\_\+t uart\+Num, uint16\+\_\+t attached\+Universe)
+\begin{DoxyCompactList}\small\item\em Associates a legacy DMX output with a UART and Port-\/\+Address. \end{DoxyCompactList}\item 
+uint8\+\_\+t \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_artnetnode_wifi_a02f4c42200d43b3db6a371a87fb5129c}{get\+Dmx\+Frame}} (void)
+\item 
+\Hypertarget{class_artnetnode_wifi_a5ca14664c9dda1ef7584d733bd82ec40}\label{class_artnetnode_wifi_a5ca14664c9dda1ef7584d733bd82ec40} 
+void {\bfseries set\+Art\+Dmx\+Callback} (void(\texorpdfstring{$\ast$}{*}fptr)(uint16\+\_\+t universe, uint16\+\_\+t length, uint8\+\_\+t sequence, uint8\+\_\+t \texorpdfstring{$\ast$}{*}data))
+\begin{DoxyCompactList}\small\item\em Registers the zero-\/start-\/code Art\+Dmx callback. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a85fd0005465d7e11133b170f4b89c95d}\label{class_artnetnode_wifi_a85fd0005465d7e11133b170f4b89c95d} 
+void {\bfseries set\+Art\+Nzs\+Callback} (void(\texorpdfstring{$\ast$}{*}fptr)(uint16\+\_\+t universe, uint16\+\_\+t length, uint8\+\_\+t sequence, uint8\+\_\+t start\+Code, uint8\+\_\+t \texorpdfstring{$\ast$}{*}data))
+\begin{DoxyCompactList}\small\item\em Registers the non-\/zero-\/start-\/code Art\+Nzs callback. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_a2c1538ccc8c5ede9d14ceee06d248d32}\label{class_artnetnode_wifi_a2c1538ccc8c5ede9d14ceee06d248d32} 
+void {\bfseries set\+Art\+Poll\+Reply\+Callback} (void(\texorpdfstring{$\ast$}{*}fptr)(const \doxymbox{\hyperlink{struct_art_poll_reply_info}{Art\+Poll\+Reply\+Info}} \&info))
+\begin{DoxyCompactList}\small\item\em Registers the parsed Art\+Poll\+Reply callback. \end{DoxyCompactList}\item 
+\Hypertarget{class_artnetnode_wifi_ae6c19903f0550b0a98869a2ba968be15}\label{class_artnetnode_wifi_ae6c19903f0550b0a98869a2ba968be15} 
+void {\bfseries set\+Art\+Address\+Callback} (void(\texorpdfstring{$\ast$}{*}fptr)(const \doxymbox{\hyperlink{struct_art_address_info}{Art\+Address\+Info}} \&info))
+\begin{DoxyCompactList}\small\item\em Registers the parsed Art\+Address callback. \end{DoxyCompactList}\item 
+IPAddress \& \doxymbox{\hyperlink{class_artnetnode_wifi_a74a2a0db7f546047d027978f456a1dca}{get\+Sender\+Ip}} (void)
+\item 
+uint32\+\_\+t \doxymbox{\hyperlink{class_artnetnode_wifi_a9b9511266ff251852e7b2764955b2617}{get\+Poll\+Count}} ()
+\item 
+uint16\+\_\+t \doxymbox{\hyperlink{class_artnetnode_wifi_ae54de0d31677ed1f0d69aa197fa02744}{get\+Starting\+Universe}} () const
+\item 
+\Hypertarget{class_artnetnode_wifi_ae3a53d3e1e9eed06d0cd4d76d51f6610}\label{class_artnetnode_wifi_ae3a53d3e1e9eed06d0cd4d76d51f6610} 
+void {\bfseries set\+Squawking} (bool enabled)
+\begin{DoxyCompactList}\small\item\em Selects Locate or Normal indicator state. \end{DoxyCompactList}\item 
+bool \doxymbox{\hyperlink{class_artnetnode_wifi_a59e62a2ab69af018979eaaf40120c80c}{is\+Squawking}} (void)
+\item 
+uint32\+\_\+t \doxymbox{\hyperlink{class_artnetnode_wifi_a7f6c9e0ef07eb36d5f6e0fa340f9178e}{get\+Last\+Poll\+Millis}} ()
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{class_artnetnode_wifi_a2886067d108c64b762bd17a740cd3427}\label{class_artnetnode_wifi_a2886067d108c64b762bd17a740cd3427} 
+static const char {\bfseries artnet\+Id} \+[$\,$]\+ = ARTNET\+\_\+\+ID
+\end{DoxyCompactItemize}
+
+
+\label{class_artnetnode_wifi_doc-func-members}
+\Hypertarget{class_artnetnode_wifi_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_artnetnode_wifi_ae8389491f957e2743e622755f391e240}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!begin@{begin}}
+\index{begin@{begin}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{begin()}{begin()}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_ae8389491f957e2743e622755f391e240} 
+uint8\+\_\+t Artnetnode\+Wifi::\+begin (\begin{DoxyParamCaption}\item[{String}]{hostname}{ = {\ttfamily "{}"{}}}\end{DoxyParamCaption})}
+
+
+
+Binds the Art-\/\+Net UDP socket and refreshes interface identity. 
+
+
+\begin{DoxyRetVals}{Return values}
+{\em 0} & Ok \\
+\hline
+\end{DoxyRetVals}
+\Hypertarget{class_artnetnode_wifi_a02f4c42200d43b3db6a371a87fb5129c}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!getDmxFrame@{getDmxFrame}}
+\index{getDmxFrame@{getDmxFrame}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{getDmxFrame()}{getDmxFrame()}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_a02f4c42200d43b3db6a371a87fb5129c} 
+uint8\+\_\+t \texorpdfstring{$\ast$}{*} Artnetnode\+Wifi::\+get\+Dmx\+Frame (\begin{DoxyParamCaption}\item[{void}]{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\begin{DoxyReturn}{Returns}
+Pointer to the current incoming Art\+Dmx payload buffer. 
+\end{DoxyReturn}
+\Hypertarget{class_artnetnode_wifi_ae6ec094a3cb039e655082fe5df751ccd}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!getIndicatorState@{getIndicatorState}}
+\index{getIndicatorState@{getIndicatorState}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{getIndicatorState()}{getIndicatorState()}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_ae6ec094a3cb039e655082fe5df751ccd} 
+Art\+Net\+Indicator\+State Artnetnode\+Wifi::\+get\+Indicator\+State (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const}
+
+\begin{DoxyReturn}{Returns}
+Current Art\+Poll\+Reply indicator state. 
+\end{DoxyReturn}
+\Hypertarget{class_artnetnode_wifi_a7f6c9e0ef07eb36d5f6e0fa340f9178e}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!getLastPollMillis@{getLastPollMillis}}
+\index{getLastPollMillis@{getLastPollMillis}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{getLastPollMillis()}{getLastPollMillis()}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_a7f6c9e0ef07eb36d5f6e0fa340f9178e} 
+uint32\+\_\+t Artnetnode\+Wifi::\+get\+Last\+Poll\+Millis (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\begin{DoxyReturn}{Returns}
+millis() timestamp of the last Art\+Poll\+Reply attempt. 
+\end{DoxyReturn}
+\Hypertarget{class_artnetnode_wifi_a9b9511266ff251852e7b2764955b2617}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!getPollCount@{getPollCount}}
+\index{getPollCount@{getPollCount}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{getPollCount()}{getPollCount()}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_a9b9511266ff251852e7b2764955b2617} 
+uint32\+\_\+t Artnetnode\+Wifi::\+get\+Poll\+Count (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\begin{DoxyReturn}{Returns}
+Number of attempted Art\+Poll\+Reply transmissions. 
+\end{DoxyReturn}
+\Hypertarget{class_artnetnode_wifi_a74a2a0db7f546047d027978f456a1dca}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!getSenderIp@{getSenderIp}}
+\index{getSenderIp@{getSenderIp}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{getSenderIp()}{getSenderIp()}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_a74a2a0db7f546047d027978f456a1dca} 
+IPAddress \& Artnetnode\+Wifi::\+get\+Sender\+Ip (\begin{DoxyParamCaption}\item[{void}]{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\begin{DoxyReturn}{Returns}
+IP address that sent the most recently parsed datagram. 
+\end{DoxyReturn}
+\Hypertarget{class_artnetnode_wifi_ae54de0d31677ed1f0d69aa197fa02744}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!getStartingUniverse@{getStartingUniverse}}
+\index{getStartingUniverse@{getStartingUniverse}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{getStartingUniverse()}{getStartingUniverse()}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_ae54de0d31677ed1f0d69aa197fa02744} 
+uint16\+\_\+t Artnetnode\+Wifi::\+get\+Starting\+Universe (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\begin{DoxyReturn}{Returns}
+Current starting 15-\/bit Port-\/\+Address. 
+\end{DoxyReturn}
+\Hypertarget{class_artnetnode_wifi_a59e62a2ab69af018979eaaf40120c80c}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!isSquawking@{isSquawking}}
+\index{isSquawking@{isSquawking}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{isSquawking()}{isSquawking()}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_a59e62a2ab69af018979eaaf40120c80c} 
+bool Artnetnode\+Wifi::\+is\+Squawking (\begin{DoxyParamCaption}\item[{void}]{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\begin{DoxyReturn}{Returns}
+True when Locate/\+squawking state is active. 
+\end{DoxyReturn}
+\Hypertarget{class_artnetnode_wifi_abfedd72418ea29ef719817db1117513a}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!sendArtPoll@{sendArtPoll}}
+\index{sendArtPoll@{sendArtPoll}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{sendArtPoll()}{sendArtPoll()}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_abfedd72418ea29ef719817db1117513a} 
+int Artnetnode\+Wifi::\+send\+Art\+Poll (\begin{DoxyParamCaption}\item[{IPAddress}]{ip}{}\end{DoxyParamCaption})}
+
+\begin{DoxyReturn}{Returns}
+UDP result for an Art\+Poll sent to the given IP address. 
+\end{DoxyReturn}
+\Hypertarget{class_artnetnode_wifi_a7042a2ad009fb9dc1af7fdbaad25a081}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!write@{write}}
+\index{write@{write}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{write()}{write()}\hspace{0.1cm}{\footnotesize\ttfamily [1/3]}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_a7042a2ad009fb9dc1af7fdbaad25a081} 
+uint8\+\_\+t Artnetnode\+Wifi::\+write (\begin{DoxyParamCaption}\item[{const IPAddress}]{targets}{\+[$\,$]\+, }\item[{uint8\+\_\+t}]{target\+Count}{}\end{DoxyParamCaption})}
+
+\begin{DoxyReturn}{Returns}
+Number of IP targets that accepted the same Art\+Dmx frame. 
+\end{DoxyReturn}
+\Hypertarget{class_artnetnode_wifi_a30e1d0ef307d47cfc3cfc3b2dc1a7e0f}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!write@{write}}
+\index{write@{write}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{write()}{write()}\hspace{0.1cm}{\footnotesize\ttfamily [2/3]}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_a30e1d0ef307d47cfc3cfc3b2dc1a7e0f} 
+int Artnetnode\+Wifi::\+write (\begin{DoxyParamCaption}\item[{IPAddress}]{ip}{}\end{DoxyParamCaption})}
+
+\begin{DoxyReturn}{Returns}
+UDP result for Art\+Dmx sent to one IP address. 
+\end{DoxyReturn}
+\Hypertarget{class_artnetnode_wifi_ad4b6d360740da5302039b06b29f64042}\index{ArtnetnodeWifi@{ArtnetnodeWifi}!write@{write}}
+\index{write@{write}!ArtnetnodeWifi@{ArtnetnodeWifi}}
+\doxysubsubsection{\texorpdfstring{write()}{write()}\hspace{0.1cm}{\footnotesize\ttfamily [3/3]}}
+{\footnotesize\ttfamily \label{class_artnetnode_wifi_ad4b6d360740da5302039b06b29f64042} 
+int Artnetnode\+Wifi::\+write (\begin{DoxyParamCaption}\item[{void}]{}{}\end{DoxyParamCaption})}
+
+\begin{DoxyReturn}{Returns}
+UDP result for Art\+Dmx sent to the configured host name. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files:\+\begin{DoxyCompactItemize}
+\item 
+C:\+/\+\+Users/\+rieti/\+\+Documents/\+\+Arduino/\+u\+Node\+\_\+2/\+Artnetnode\+Wifi.\+h\item 
+C:\+/\+\+Users/\+rieti/\+\+Documents/\+\+Arduino/\+u\+Node\+\_\+2/\+Artnetnode\+Wifi.\+cpp\end{DoxyCompactItemize}

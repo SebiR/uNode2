@@ -1,0 +1,27 @@
+\doxysection{C:\+/\+\+Users/\+rieti/\+\+Documents/\+\+Arduino/\+u\+Node\+\_\+2/\+\+Node\+Report\+Codes.h}
+\hypertarget{_node_report_codes_8h_source}{}\label{_node_report_codes_8h_source}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ NODEREPORTCODES\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ NODEREPORTCODES\_H}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ List\ of\ hex\ values\ and\ discriptions\ of\ Node\ Report\ Codes}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#define\ RcDebug\ \ \ \ \ \ \ \ 0x0000\ \ }\textcolor{comment}{//\ Booted\ in\ debug\ mode\ (Only\ used\ in\ development)}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ RcPowerOk\ \ \ \ \ \ 0x0001\ \ }\textcolor{comment}{//\ Power\ On\ Tests\ successful}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ RcPowerFail\ \ \ \ 0x0002\ \ }\textcolor{comment}{//\ Hardware\ tests\ failed\ at\ Power\ On}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ RcSocketWr1\ \ \ \ 0x0003\ \ }\textcolor{comment}{//\ Last\ UDP\ from\ Node\ failed\ due\ to\ truncated\ length,\ Most\ likely\ caused\ by\ a\ collision.}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#define\ RcParseFail\ \ \ \ 0x0004\ \ }\textcolor{comment}{//\ Unable\ to\ identify\ last\ UDP\ transmission.\ Check\ OpCode\ and\ \(\backslash\)packet\ length.}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#define\ RcUdpFail\ \ \ \ \ \ 0x0005\ \ }\textcolor{comment}{//\ Unable\ to\ open\ Udp\ Socket\ in\ last\ transmission\ attempt}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#define\ RcShNameOk\ \ \ \ \ 0x0006\ \ }\textcolor{comment}{//\ Confirms\ that\ Short\ Name\ programming\ via\ ArtAddress,\ was\ successful.}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#define\ RcLoNameOk\ \ \ \ \ 0x0007\ \ }\textcolor{comment}{//\ Confirms\ that\ Long\ Name\ programming\ via\ ArtAddress,\ was\ successful.}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#define\ RcDmxError\ \ \ \ \ 0x0008\ \ }\textcolor{comment}{//\ DMX512\ receive\ errors\ detected.}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#define\ RcDmxUdpFull\ \ \ 0x0009\ \ }\textcolor{comment}{//\ Ran\ out\ of\ internal\ DMX\ transmit\ buffers.}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#define\ RcDmxRxFull\ \ \ \ 0x000a\ \ }\textcolor{comment}{//\ Ran\ out\ of\ internal\ DMX\ Rx\ buffers.}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#define\ RcSwitchErr\ \ \ \ 0x000b\ \ }\textcolor{comment}{//\ Rx\ Universe\ switches\ conflict.}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#define\ RcConfigErr\ \ \ \ 0x000c\ \ }\textcolor{comment}{//\ Product\ configuration\ does\ not\ match\ firmware.}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#define\ RcDmxShort\ \ \ \ \ 0x000d\ \ }\textcolor{comment}{//\ DMX\ output\ short\ detected.\ See\ GoodOutput\ field.}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#define\ RcFirmwareFail\ 0x000e\ \ }\textcolor{comment}{//\ Last\ attempt\ to\ upload\ new\ firmware\ failed.}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#define\ RcUserFail\ \ \ \ \ 0x000f\ \ }\textcolor{comment}{//\ User\ changed\ switch\ settings\ when\ address\ locked\ by\ remote\ programming.\ User\ changes\ ignored.}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

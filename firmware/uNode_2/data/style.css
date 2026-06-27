@@ -1,0 +1,618 @@
+:root {
+    --page-bg: #f2f2f2;
+    --card-bg: #ffffff;
+    --text: #1f2933;
+    --muted: #667788;
+    --header-bg: #2c3e50;
+    --status-bg: #34495e;
+    --menu-bg: #3f5871;
+    --menu-hover-bg: #4f6d8a;
+    --card-shadow: rgba(0,0,0,0.15);
+    --section-border: #e1e6eb;
+    --field-bg: #ffffff;
+    --field-text: #1f2933;
+    --field-border: #b8c2cc;
+    --button-bg: #e5e7eb;
+    --button-text: #111827;
+    --button-border: #cbd5e1;
+    --radio-bg: #f8fafc;
+    --radio-border: #d7dee6;
+    --button-secondary-bg: #555555;
+    --warning-bg: #fff3cd;
+    --warning-text: #7a4b00;
+    --warning-border: #d97706;
+    --invalid-bg: #fff3f3;
+    --invalid-border: #b00020;
+    --override-bg: #e8e8e8;
+    --override-text: #444444;
+    --dmx-monitor-bg: #6785a3;
+    --overlay-bg: rgba(20, 30, 40, 0.78);
+    --spinner-track: #d9e1e8;
+    --spinner-accent: #3f5871;
+}
+
+:root[data-theme="dark"] {
+    --page-bg: #111827;
+    --card-bg: #1f2937;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --header-bg: #0f172a;
+    --status-bg: #1e293b;
+    --menu-bg: #26364a;
+    --menu-hover-bg: #33465f;
+    --card-shadow: rgba(0,0,0,0.4);
+    --section-border: #374151;
+    --field-bg: #111827;
+    --field-text: #e5e7eb;
+    --field-border: #4b5563;
+    --button-bg: #374151;
+    --button-text: #e5e7eb;
+    --button-border: #4b5563;
+    --radio-bg: #111827;
+    --radio-border: #4b5563;
+    --button-secondary-bg: #374151;
+    --warning-bg: #422006;
+    --warning-text: #fde68a;
+    --warning-border: #f59e0b;
+    --invalid-bg: #3b1117;
+    --invalid-border: #ef4444;
+    --override-bg: #374151;
+    --override-text: #e5e7eb;
+    --dmx-monitor-bg: #31506e;
+    --overlay-bg: rgba(2, 6, 23, 0.82);
+    --spinner-track: #374151;
+    --spinner-accent: #93c5fd;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--text);
+}
+
+.header {
+    background: var(--header-bg);
+    color: white;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 10px 15px;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.logo {
+    height: 48px;
+    width: auto;
+}
+
+.statusbar {
+    background: var(--status-bg);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+.statusInfo {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.unsavedChanges {
+    flex: 0 0 auto;
+    color: #ffd166;
+    font-weight: bold;
+    text-align: right;
+}
+
+.statusWarning {
+    flex: 0 1 auto;
+    color: #ffd166;
+    font-weight: bold;
+}
+
+.statusWarning[hidden] {
+    display: none;
+}
+
+.unsavedChanges[hidden] {
+    display: none;
+}
+
+.statusSaveButton {
+    margin-left: 10px;
+    padding: 5px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 4px;
+    background: #ffd166;
+    color: #263645;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.statusSaveButton:hover {
+    background: #ffe08a;
+}
+
+.statusSaveButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.warningBox {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--warning-border);
+    background: var(--warning-bg);
+    color: var(--warning-text);
+    font-weight: bold;
+}
+
+.authButton {
+    margin-left: 0;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: #444;
+    color: #fff;
+    cursor: pointer;
+}
+
+.authButton.unlocked {
+    background: #1f7a3a;
+}
+
+.authButton.unconfigured {
+    background: #666;
+}
+
+.themeSelector {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.themeSelector select {
+    width: auto;
+    max-width: none;
+    padding: 5px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+}
+
+.themeSelector option {
+    color: var(--field-text);
+    background: var(--field-bg);
+}
+
+.locateButton {
+    padding: 7px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.locateButton:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.locateButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.locateButton.activeLocate {
+    background: #f59e0b;
+    color: #1f2937;
+    border-color: #fbbf24;
+}
+
+.menu {
+    background: var(--menu-bg);
+    overflow: hidden;
+}
+
+.menu button {
+    border: none;
+    background: none;
+    color: white;
+    padding: 14px 20px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.menu button:hover {
+    background: var(--menu-hover-bg);
+}
+
+.content {
+    padding: 20px;
+}
+
+.card {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px var(--card-shadow);
+}
+
+.card h2 {
+    margin-top: 0;
+}
+
+.settingsSection {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--section-border);
+}
+
+.settingsSection h3 {
+    margin: 0 0 12px;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.prominentSection {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.subduedSection h3 {
+    font-size: 15px;
+}
+
+.helpText {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.radioCards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.radioCard {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px;
+    border: 1px solid var(--radio-border);
+    border-radius: 8px;
+    background: var(--radio-bg);
+}
+
+.radioCard strong,
+.radioCard small {
+    display: block;
+}
+
+.radioCard small {
+    margin-top: 3px;
+    color: var(--muted);
+}
+
+.compactFields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(90px, 140px));
+    gap: 12px;
+    align-items: end;
+}
+
+.compactFields label,
+.formRows label {
+    display: grid;
+    gap: 5px;
+}
+
+.compactFields span,
+.formRows span {
+    font-weight: bold;
+}
+
+.compactFields input[type=number] {
+    max-width: none;
+}
+
+.ipFields {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+    max-width: 720px;
+}
+
+.staticIpFields {
+    margin-top: 14px;
+}
+
+.validationMessage {
+    margin: 10px 0 0;
+    color: var(--invalid-border);
+    font-weight: bold;
+}
+
+input.invalid {
+    border: 2px solid var(--invalid-border);
+    background: var(--invalid-bg);
+}
+
+.formRows {
+    display: grid;
+    gap: 12px;
+    max-width: 420px;
+}
+
+.wideControl {
+    max-width: 420px;
+}
+
+.checkboxRow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.statusgrid {
+    display: grid;
+    grid-template-columns: 220px auto;
+    row-gap: 8px;
+    column-gap: 12px;
+    align-items: center;
+}
+
+.label {
+    font-weight: bold;
+}
+
+input[type=text],
+input[type=number],
+input[type=password],
+input[type=file],
+select {
+    width: 100%;
+    max-width: 400px;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--field-border);
+    background: var(--field-bg);
+    color: var(--field-text);
+}
+
+button,
+input[type=file]::file-selector-button {
+    border: 1px solid var(--button-border);
+    border-radius: 6px;
+    background: var(--button-bg);
+    color: var(--button-text);
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
+}
+
+input[type=range] {
+    width: 300px;
+}
+
+.statusgrid select {
+    max-width: 220px;
+}
+
+.action {
+    margin-top: 15px;
+    padding: 10px 20px;
+}
+
+.action.secondary {
+    background: var(--button-secondary-bg);
+}
+
+.action:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.buttonRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.buttonRow .action {
+    margin-top: 0;
+}
+
+.testToolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 16px;
+    margin: 16px 0;
+}
+
+.startAddressControl {
+    display: grid;
+    gap: 5px;
+    font-weight: bold;
+    max-width: 180px;
+}
+
+.overrideStatus {
+    padding: 9px 12px;
+    border-radius: 999px;
+    background: var(--override-bg);
+    color: var(--override-text);
+    font-weight: bold;
+}
+
+.overrideStatus.active {
+    background: var(--warning-bg);
+    color: var(--warning-text);
+}
+
+.dmxFaders {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(110px, 1fr));
+    gap: 14px;
+    max-width: 760px;
+}
+
+.dmxFader {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--section-border);
+    border-radius: 10px;
+    background: var(--radio-bg);
+}
+
+.dmxFader label {
+    font-weight: bold;
+}
+
+.dmxFader input[type=range] {
+    width: 100%;
+}
+
+.faderValue {
+    font-family: monospace;
+    font-size: 1.2em;
+    text-align: right;
+}
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+.dmxMonitor
+{
+    display: grid;
+
+	grid-template-columns:
+		repeat(8, 1fr);
+
+    gap: 8px;
+
+    margin-top: 10px;
+}
+
+.dmxChannel
+{
+    padding: 8px;
+
+    border-radius: 4px;
+
+    background: var(--dmx-monitor-bg);
+
+    font-family: monospace;
+}
+
+.indicator
+{
+    color: #666;
+
+    font-size: 14px;
+
+    margin-left: 4px;
+}
+
+.activeLocate
+{
+    background: orange;
+}
+
+.restartOverlay
+{
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--overlay-bg);
+}
+
+.restartOverlay[hidden]
+{
+    display: none;
+}
+
+.restartDialog
+{
+    width: min(360px, 100%);
+    padding: 28px;
+    border-radius: 8px;
+    background: var(--card-bg);
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.restartDialog h2
+{
+    margin: 16px 0 8px;
+}
+
+.restartDialog p
+{
+    margin: 0;
+}
+
+.restartSpinner
+{
+    width: 36px;
+    height: 36px;
+    margin: 0 auto;
+    border: 4px solid var(--spinner-track);
+    border-top-color: var(--spinner-accent);
+    border-radius: 50%;
+    animation: restartSpin 0.8s linear infinite;
+}
+
+@keyframes restartSpin
+{
+    to
+    {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 560px)
+{
+    .compactFields
+    {
+        grid-template-columns: 1fr;
+    }
+}

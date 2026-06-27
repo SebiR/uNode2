@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>&micro;Node Configuration</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="icon" href="images/favicon.ico">
+    <link rel="manifest" href="images/site.webmanifest">
+    <script>
+        (function()
+        {
+            const storedTheme =
+                localStorage.getItem('uNodeTheme') || 'auto';
+            const prefersDark =
+                window.matchMedia
+                && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            document.documentElement.dataset.theme =
+                storedTheme === 'dark'
+                    || (storedTheme === 'auto' && prefersDark)
+                        ? 'dark'
+                        : 'light';
+        })();
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div
+        id="restartOverlay"
+        class="restartOverlay"
+        hidden>
+        <div class="restartDialog">
+            <div class="restartSpinner"></div>
+            <h2 id="connectionOverlayTitle">Node is restarting</h2>
+            <p id="restartStatus">
+                Connection will be interrupted...
+            </p>
+        </div>
+    </div>
+
+    <div class="header">
+		<div class="title">
+			&micro;Node 2.0 - 
+			<span id="chipId"></span>
+			<button
+				id="detectNodeButton"
+				class="locateButton"
+				onclick="detectNode()">
+				Locate
+			</button>
+		</div>
+
+        <img src="images/logo.png" class="logo" alt="Logo">
+    </div>
+
+    <div class="statusbar">
+
+		<div class="statusInfo">
+		<span id="statusName">Node01</span>
+
+		<span
+			id="wifiIndicator"
+			class="indicator">
+			&#9679;
+		</span>
+
+		<span
+			id="artnetIndicator"
+			class="indicator">
+			&#9679;
+		</span>
+        | IP:
+		<span id="statusIP">0.0.0.0</span>
+		| WiFi:
+		<span id="statusRSSI">---</span>
+		| 
+		<span id="dmxMode">
+		[Direction]
+		</span>
+		</div>
+
+		<div
+			id="statusWarning"
+			class="statusWarning"
+			hidden>
+			&#9888; <span id="statusWarningText">---</span>
+		</div>
+
+		<div
+			id="unsavedChanges"
+			class="unsavedChanges"
+			hidden>
+			&#9888; <span id="unsavedChangesText">0 unsaved changes</span>
+			<button
+				id="saveRestartButton"
+				type="button"
+				class="statusSaveButton"
+				onclick="saveConfig()">
+				Save & Restart
+			</button>
+		</div>
+
+		<label class="themeSelector">
+			<span>Theme</span>
+			<select
+				id="themeMode"
+				onchange="setThemeMode(this.value)">
+				<option value="auto">Auto</option>
+				<option value="light">Light</option>
+				<option value="dark">Dark</option>
+			</select>
+		</label>
+
+		<button
+			id="authButton"
+			type="button"
+			class="authButton"
+			onclick="toggleAuth()">
+			Login
+		</button>
+    </div>
+
+    <div class="menu">
+        <button onclick="showPage('dashboard')">Dashboard</button>
+        <button onclick="showPage('artnet')">Art-Net</button>
+        <button onclick="showPage('network')">Network</button>
+        <button onclick="showPage('hardware')">Hardware</button>
+        <button onclick="showPage('test')">DMX Test</button>
+        <button onclick="showPage('system')">System</button>
+    </div>
+
+    <div class="content">
+
+        <!-- Dashboard -->
+
+        <div id="dashboard" class="page active">
+
+            <div class="card">
+                <h2>General</h2>
+
+                <div class="statusgrid">
+                    <div class="label">Name</div>
+                    <div id="name">Node01</div>
+
+                    <div class="label">Firmware</div>
+                    <div id="firmware">0.1.0</div>
+
+                    <div class="label">Hostname</div>
+                    <div id="hostname">artnetnode</div>
+
+                    <div class="label">IP Address</div>
+                    <div id="ip">0.0.0.0</div>
+					
+					<div class="label">MAC Address</div>
+					<div id="mac">---</div>
+
+					<div class="label">Signal Quality</div>
+					<div id="wifiInfo">---</div>
+
+                    <div class="label">Uptime</div>
+                    <div id="uptime">0 ms</div>
+                </div>
+
+                <div
+                    id="webAssetWarning"
+                    class="warningBox"
+                    hidden>
+                    Web interface files do not match this firmware.
+                    Upload the matching LittleFS image.
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Art-Net Input</h2>
+
+                <div class="statusgrid">
+                    <div class="label">ArtDmx Packets</div>
+                    <div id="artnetPackets">0</div>
+
+                    <div class="label">Frames per Second</div>
+                    <div id="artnetFPS">0</div>
+
+					<div class="label">Last Packet</div>
+					<div id="lastPacket">0 ms</div>
+
+					<div class="label">ArtSync Packets</div>
+					<div id="artSyncs">0</div>
+
+					<div class="label">Last Sync</div>
+					<div id="lastSyncAge">---</div>
+
+					<div class="label">Sync State</div>
+					<div id="artSyncState">Async</div>
+					
+					<div class="label">ArtPolls</div>
+					<div id="artPolls">0</div>
+
+					<div class="label">Last Poll</div>
+					<div id="lastPollAge">---</div>
+
+					<div class="label">Subscriber</div>
+					<div id="artnetSubscribers">0</div>
+
+					<div class="label">Output Failsafe</div>
+					<div id="failsafeStatus">---</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>DMX Input</h2>
+
+                <div class="statusgrid">
+                    <div class="label">DMX-Frames</div>
+                    <div id="dmxFrames">0</div>
+
+                    <div class="label">Frames per Second</div>
+                    <div id="dmxFPS">0</div>
+
+                    <div class="label">Last Frame</div>
+                    <div id="lastDMXFrameAge">0 ms</div>
+                </div>
+            </div>
+			
+        </div>
+
+        <!-- ArtNet -->
+
+        <div id="artnet" class="page">
+
+            <div class="card">
+
+                <h2>Art-Net Settings</h2>
+
+				<div class="settingsSection prominentSection">
+
+				<h3>Direction</h3>
+
+				<div class="radioCards">
+
+				<label class="radioCard">
+					<input
+						type="radio"
+						id="artnetToDmx"
+						name="direction"
+						value="0">
+					<span>
+						<strong>Art-Net &rarr; DMX</strong>
+						<small>Receive ArtDmx and output physical DMX.</small>
+					</span>
+				</label>
+
+				<label class="radioCard">
+					<input
+						type="radio"
+						id="dmxToArtnet"
+						name="direction"
+						value="1">
+					<span>
+						<strong>DMX &rarr; Art-Net</strong>
+						<small>Receive physical DMX and send ArtDmx.</small>
+					</span>
+				</label>
+
+				</div>
+
+				</div>
+
+				<div class="settingsSection">
+
+				<h3>Port-Address</h3>
+
+				<div class="compactFields">
+
+				<label>
+					<span>Net</span>
+					<input
+						id="net"
+						type="number"
+						min="0"
+						max="127">
+				</label>
+
+				<label>
+					<span>Sub-Net</span>
+					<input
+						id="subnetId"
+						type="number"
+						min="0"
+						max="15">
+				</label>
+
+				<label>
+					<span>Universe</span>
+					<input
+						id="universe"
+						type="number"
+						min="0"
+						max="15">
+				</label>
+
+				</div>
+
+				</div>
+
+				<div class="settingsSection">
+
+				<h3>Node Names</h3>
+
+				<div class="formRows">
+
+				<label>
+					<span>Port Name / Short Name</span>
+					<input id="shortName" type="text" value="Node01">
+				</label>
+
+				<label>
+					<span>Long Name</span>
+					<input id="longName" type="text" value="ESP8266 Art-Net Node">
+				</label>
+
+				</div>
+
+				</div>
+				
+				
+				<div
+					id="artnetSubscriberSettings"
+					class="settingsSection">
+
+				<h3>Art-Net Subscriber</h3>
+
+				<p>
+					ArtDmx is sent by unicast to all subscribers of Universe
+					<span id="subscriberUniverse">0</span>.
+				</p>
+
+				<button
+					type="button"
+					onclick="pollArtNetSubscribers()">
+					Poll Now
+				</button>
+
+				<p id="artnetSubscriberStatus"></p>
+
+				<div
+					id="artnetSubscriberList"
+					class="statusgrid">
+				</div>
+
+				</div>
+
+				<div
+					id="failsafeSettings"
+					class="settingsSection subduedSection">
+
+				<h3>Output Failsafe</h3>
+
+				<p>
+					Action after incoming ArtDmx for this Universe times out.
+				</p>
+
+				<select id="failsafeMode">
+					<option value="0">Hold last look</option>
+					<option value="1">All to zero</option>
+					<option value="2">All to full</option>
+					<option value="3">Failsafe scene</option>
+				</select>
+
+				<br>
+
+				<button
+					type="button"
+					onclick="recordFailsafeScene()">
+					Record Current Output as Scene
+				</button>
+
+				<p id="failsafeMessage"></p>
+
+				</div>
+
+				<div
+					id="mergeSettings"
+					class="settingsSection subduedSection">
+
+				<h3>Output Merge</h3>
+
+				<p>
+					How two active ArtDmx sources for this Port-Address are merged.
+				</p>
+
+				<select id="mergeMode">
+					<option value="0">HTP - Highest Takes Precedence</option>
+					<option value="1">LTP - Latest Takes Precedence</option>
+				</select>
+
+				</div>
+
+				<div class="settingsSection subduedSection">
+
+				<h3>Compatibility</h3>
+
+				<label class="checkboxRow">
+					<input
+						type="checkbox"
+						id="legacyArtPollReply">
+					<span>Use legacy ArtPollReply for Art-Net 3 tools</span>
+				</label>
+
+				<p class="helpText">
+					Use this only if older software has trouble discovering
+					the node. ArtDmx remains unchanged.
+				</p>
+
+				</div>
+
+            </div>
+
+        </div>
+
+        <!-- Network -->
+
+        <div id="network" class="page">
+
+            <div class="card">
+
+                <h2>Network</h2>
+
+				<div class="settingsSection prominentSection">
+
+				<h3>Wi-Fi Mode</h3>
+
+				<select id="wifiMode" class="wideControl">
+
+					<option value="0">
+						Client
+					</option>
+
+					<option value="1">
+						Access Point
+					</option>
+
+					<option value="2">
+						AP + Client
+					</option>
+
+				</select>
+
+				<p class="helpText">
+					Client joins an existing Wi-Fi network. Access Point creates
+					the uNode setup network at 2.0.0.1.
+				</p>
+
+				</div>
+
+				<div class="settingsSection">
+
+				<h3>Identity</h3>
+
+				<div class="formRows">
+
+				<label>
+					<span>Hostname</span>
+					<input id="hostnameInput" type="text" value="artnetnode">
+				</label>
+
+				</div>
+
+				</div>
+
+				<div class="settingsSection">
+
+				<h3>IP Configuration</h3>
+
+				<div class="radioCards">
+
+				<label class="radioCard">
+					<input
+						type="radio"
+						id="dhcp"
+						name="ipMode"
+						value="dhcp">
+					<span>
+						<strong>DHCP</strong>
+						<small>Receive address, subnet, and gateway automatically.</small>
+					</span>
+				</label>
+
+				<label class="radioCard">
+					<input
+						type="radio"
+						id="staticIp"
+						name="ipMode"
+						value="static">
+					<span>
+						<strong>Static IP</strong>
+						<small>Use the fixed IPv4 settings below.</small>
+					</span>
+				</label>
+
+				</div>
+
+				<div
+					id="staticSettings"
+					class="staticIpFields">
+
+				<div class="compactFields ipFields">
+
+				<label>
+					<span>IP Address</span>
+					<input
+						id="ipAddress"
+						type="text"
+						inputmode="numeric"
+						autocomplete="off">
+				</label>
+
+				<label>
+					<span>Subnet Mask</span>
+					<input
+						id="subnetMask"
+						type="text"
+						inputmode="numeric"
+						autocomplete="off">
+				</label>
+
+				<label>
+					<span>Gateway</span>
+					<input
+						id="gateway"
+						type="text"
+						inputmode="numeric"
+						autocomplete="off">
+				</label>
+
+				</div>
+
+				<p
+					id="staticIpValidation"
+					class="validationMessage"
+					hidden>
+				</p>
+
+				</div>
+
+				</div>
+
+            </div>
+
+        </div>
+
+        <!-- DMX Test -->
+
+        <div id="test" class="page">
+
+            <div class="card">
+
+                <h2>DMX Test</h2>
+
+				<p class="helpText">
+					Moving a fader starts a temporary local override. The node
+					returns to the real Art-Net/DMX source after 10 seconds without
+					test activity.
+				</p>
+
+				<div class="testToolbar">
+
+				<label class="startAddressControl">
+					<span>Start Address</span>
+					<input
+						id="dmxStartAddress"
+						type="number"
+						min="1"
+						max="509"
+						value="1">
+				</label>
+
+				<div
+					id="dmxOverrideStatus"
+					class="overrideStatus">
+					Override idle
+				</div>
+
+				</div>
+
+				<div class="dmxFaders">
+
+				<div class="dmxFader">
+					<label id="dmxCh1Label" for="dmxCh1">Ch 001</label>
+					<input id="dmxCh1" type="range" min="0" max="255" value="0">
+					<div id="dmxCh1Value" class="faderValue">0</div>
+				</div>
+
+				<div class="dmxFader">
+					<label id="dmxCh2Label" for="dmxCh2">Ch 002</label>
+					<input id="dmxCh2" type="range" min="0" max="255" value="0">
+					<div id="dmxCh2Value" class="faderValue">0</div>
+				</div>
+
+				<div class="dmxFader">
+					<label id="dmxCh3Label" for="dmxCh3">Ch 003</label>
+					<input id="dmxCh3" type="range" min="0" max="255" value="0">
+					<div id="dmxCh3Value" class="faderValue">0</div>
+				</div>
+
+				<div class="dmxFader">
+					<label id="dmxCh4Label" for="dmxCh4">Ch 004</label>
+					<input id="dmxCh4" type="range" min="0" max="255" value="0">
+					<div id="dmxCh4Value" class="faderValue">0</div>
+				</div>
+
+				</div>
+
+				<div class="buttonRow">
+
+                <button
+					class="action"
+					onclick="setVisibleDmxTestValues(0)">
+                    Blackout Visible
+                </button>
+
+                <button
+					class="action"
+					onclick="setVisibleDmxTestValues(255)">
+                    Full On Visible
+                </button>
+
+                <button
+					id="releaseDmxOverrideButton"
+					class="action secondary"
+					onclick="releaseDmxOverride()">
+                    Release Override
+                </button>
+
+				</div>
+
+            </div>
+			
+			<div class="card">
+
+				<h2>DMX Monitor</h2>
+
+				<div id="dmxMonitor" class="dmxMonitor">
+			</div>
+
+</div>
+
+        </div>
+
+        <!-- Hardware -->
+
+        <div id="hardware" class="page">
+
+            <div class="card">
+                <h2>Indicator LEDs</h2>
+
+				<div id="ledBrightnessSettings">
+
+				<div class="formRows">
+					<label>
+						<span>LED Brightness</span>
+						<input
+							id="ledBrightness"
+							type="range"
+							min="0"
+							max="100"
+							value="50">
+					</label>
+				</div>
+
+                <p id="ledBrightnessValue">50 %</p>
+
+				<p class="helpText">
+					Locate is available globally in the page header and can also
+					be controlled by ArtAddress.
+				</p>
+
+				</div>
+            </div>
+
+            <div class="card">
+                <h2>RS-485 Bus Hardware</h2>
+
+				<p class="helpText">
+					Controls for the physical DMX transceiver and the switchable
+					bus termination. Auto termination is enabled in DMX input mode
+					and disabled in DMX output mode.
+				</p>
+
+				<div class="statusgrid">
+					<div class="label">Termination Mode</div>
+					<div>
+						<select id="terminationMode">
+							<option value="0">Off</option>
+							<option value="1">On</option>
+							<option value="2">Auto</option>
+						</select>
+					</div>
+
+					<div class="label">Bus Guarding</div>
+					<div id="rs485GuardStatus">---</div>
+
+					<div class="label">Effective Termination</div>
+					<div id="terminationStatus">---</div>
+
+					<div class="label">Driver</div>
+					<div id="rs485DriverStatus">---</div>
+
+					<div class="label">Receiver</div>
+					<div id="rs485ReceiverStatus">---</div>
+				</div>
+            </div>
+
+        </div>
+
+        <!-- System -->
+
+        <div id="system" class="page">
+		
+		    <div class="card">
+                <h2>Storage</h2>
+				<div class="statusgrid">
+
+					<div class="label">Total Flash</div>
+					<div id="flashTotal">---</div>
+
+					<div class="label">Firmware Size</div>
+					<div id="flashSketch">---</div>
+
+					<div class="label">Free OTA Space</div>
+					<div id="flashFree">---</div>
+
+					<div class="label">LittleFS Used</div>
+					<div id="fsUsed">---</div>
+
+					<div class="label">LittleFS Free</div>
+					<div id="fsFree">---</div>
+
+				</div>
+            </div>
+
+		    <div class="card">
+                <h2>Runtime Diagnostics</h2>
+				<div class="statusgrid">
+
+					<div class="label">Free Heap</div>
+					<div id="freeHeap">---</div>
+
+					<div class="label">Minimum Free Heap</div>
+					<div id="minimumFreeHeap">---</div>
+
+					<div class="label">Largest Free Block</div>
+					<div id="maxFreeBlock">---</div>
+
+					<div class="label">Heap Fragmentation</div>
+					<div id="heapFragmentation">---</div>
+
+					<div class="label">Reset Reason</div>
+					<div id="resetReason">---</div>
+
+					<div class="label">Boot Count</div>
+					<div id="bootCount">---</div>
+
+					<div class="label">Config Schema</div>
+					<div id="configSchemaVersion">---</div>
+
+					<div class="label">Web Assets</div>
+					<div id="webAssetVersionInfo">---</div>
+
+				</div>
+
+				<button
+					class="action secondary"
+					onclick="showPage('diagnostics')">
+					Open Detailed Diagnostics
+				</button>
+            </div>
+
+            <div class="card">
+
+                <h2>Firmware Update</h2>
+
+                <p>
+                    Upload a firmware binary built for the 4M1M flash layout.
+                </p>
+
+                <input
+                    id="firmwareFile"
+                    type="file"
+                    accept=".bin,.bin.gz">
+
+                <br>
+
+                <button
+                    class="action"
+                    onclick="uploadFirmware()">
+                    Update Firmware
+                </button>
+
+            </div>
+
+            <div class="card">
+
+                <h2>LittleFS Update</h2>
+
+                <p>
+                    This replaces the complete filesystem, including the
+                    stored configuration. Download the configuration first if
+                    you want to restore it afterwards.
+                </p>
+
+                <input
+                    id="filesystemFile"
+                    type="file"
+                    accept=".bin,.img">
+
+                <br>
+
+                <button
+                    class="action"
+                    onclick="uploadFilesystem()">
+                    Update LittleFS
+                </button>
+
+            </div>
+
+            <div class="card">
+
+                <h2>Configuration</h2>
+
+				<button
+					class="action"
+					onclick="downloadConfig()">
+					Download Configuration
+				</button>
+
+				<input
+					id="configFile"
+					type="file"
+					accept=".json">
+				<button
+					class="action"
+					onclick="uploadConfig()">
+					Upload Configuration
+				</button>
+
+            </div>
+
+            <div class="card">
+
+                <h2>System</h2>
+
+				<div class="formRows">
+
+				<label>
+					<span>Admin Password</span>
+					<input
+						id="adminPassword"
+						type="password"
+						autocomplete="new-password"
+						placeholder="Leave empty to disable password">
+				</label>
+
+				</div>
+
+				<p class="helpText">
+					When a password is set, the interface stays readable but
+					changes require login. Leave empty and apply to disable the
+					password.
+				</p>
+
+				<button
+					class="action"
+					onclick="setAdminPassword()">
+					Apply Password
+				</button>
+
+				<button
+					id="rebootButton"
+					class="action"
+					onclick="restartAndReload()">
+					Restart
+				</button>
+
+            </div>
+
+        </div>
+
+        <!-- Diagnostics -->
+
+        <div id="diagnostics" class="page">
+
+            <div class="card">
+                <h2>Detailed Diagnostics</h2>
+
+				<p class="helpText">
+					Low-level counters for protocol and runtime hardening. These
+					values are mainly useful while debugging controllers, networks,
+					and edge cases.
+				</p>
+
+				<button
+					class="action secondary"
+					onclick="showPage('system')">
+					Back to System
+				</button>
+            </div>
+
+            <div class="card">
+                <h2>Art-Net Parser</h2>
+
+				<div class="statusgrid">
+					<div class="label">Oversized UDP Packets</div>
+					<div id="diagArtOversizedPackets">0</div>
+
+					<div class="label">Short Packets</div>
+					<div id="diagArtShortPackets">0</div>
+
+					<div class="label">Invalid Art-Net ID</div>
+					<div id="diagArtInvalidIdPackets">0</div>
+
+					<div class="label">Unsupported Protocol</div>
+					<div id="diagArtUnsupportedProtocolPackets">0</div>
+
+					<div class="label">Malformed Packets</div>
+					<div id="diagArtMalformedPackets">0</div>
+
+					<div class="label">Unsupported Opcodes</div>
+					<div id="diagArtUnsupportedOpcodes">0</div>
+				</div>
+            </div>
+
+            <div class="card">
+                <h2>Art-Net Runtime</h2>
+
+				<div class="statusgrid">
+					<div class="label">Wrong Port-Address</div>
+					<div id="diagArtWrongUniversePackets">0</div>
+
+					<div class="label">Last Wrong Port-Address</div>
+					<div id="diagArtLastWrongUniverse">---</div>
+
+					<div class="label">Wrong Port-Address Age</div>
+					<div id="diagArtLastWrongUniverseAge">---</div>
+
+					<div class="label">Direction Drops</div>
+					<div id="diagArtDirectionDrops">0</div>
+
+					<div class="label">Sequence Drops</div>
+					<div id="diagArtSequenceDrops">0</div>
+
+					<div class="label">Merge Lock Drops</div>
+					<div id="diagArtMergeLockDrops">0</div>
+
+					<div class="label">Third Merge Source Drops</div>
+					<div id="diagArtMergeThirdSourceDrops">0</div>
+
+					<div class="label">ArtSync Timeouts</div>
+					<div id="diagArtSyncTimeouts">0</div>
+				</div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+
+</body>
+
+</html>
