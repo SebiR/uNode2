@@ -4,6 +4,7 @@ import pytest
 
 from artnet_packets import (
     ARTNET_ID,
+    ARTNET_AC_FAIL_RECORD,
     ARTNET_IP_PROG_COMMAND_DHCP,
     ARTNET_PORT,
     ARTNET_PROTOCOL_VERSION,
@@ -88,6 +89,9 @@ def test_artaddress_wire_format() -> None:
     assert packet[104] == 0
     assert packet[106] == ARTNET_AC_LED_LOCATE
     assert len(packet) == 107
+
+    record_packet = make_artaddress(command=ARTNET_AC_FAIL_RECORD)
+    assert record_packet[106] == ARTNET_AC_FAIL_RECORD
 
 
 def test_artipprog_wire_format() -> None:

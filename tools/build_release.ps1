@@ -45,6 +45,24 @@ function Get-FirmwareVersionPart {
     return $match.Groups[1].Value
 }
 
+function Write-Utf8NoBom {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Content
+    )
+
+    $encoding =
+        New-Object System.Text.UTF8Encoding($false)
+
+    [System.IO.File]::WriteAllText(
+        $Path,
+        $Content,
+        $encoding)
+}
+
 $version =
     "$(Get-FirmwareVersionPart "FW_VERSION_MAJOR").$(Get-FirmwareVersionPart "FW_VERSION_MINOR").$(Get-FirmwareVersionPart "FW_VERSION_PATCH")"
 
@@ -104,6 +122,16 @@ $artifactPrefix =
 $webVersionPath =
     Join-Path $dataDir "version.json"
 
+$webVersionOriginalExists =
+    Test-Path $webVersionPath
+
+$webVersionOriginalBytes =
+    if ($webVersionOriginalExists) {
+        [System.IO.File]::ReadAllBytes($webVersionPath)
+    } else {
+        $null
+    }
+
 $webVersion = [ordered]@{
     project = "uNode"
     version = $version
@@ -113,9 +141,11 @@ $webVersion = [ordered]@{
 
 $webVersion |
     ConvertTo-Json -Depth 3 |
-    Set-Content `
-        -LiteralPath $webVersionPath `
-        -Encoding UTF8
+    ForEach-Object {
+        Write-Utf8NoBom `
+            -Path $webVersionPath `
+            -Content $_
+    }
 
 $firmwareArtifact =
     Join-Path $OutputDir "$artifactPrefix-firmware.bin"
@@ -142,15 +172,27 @@ $filesystemArtifact =
 
 Write-Host "Building LittleFS image"
 
-& $mklittlefs.FullName `
-    -c $dataDir `
-    -b 8192 `
-    -p 256 `
-    -s 1024000 `
-    $filesystemArtifact
+try {
+    & $mklittlefs.FullName `
+        -c $dataDir `
+        -b 8192 `
+        -p 256 `
+        -s 1024000 `
+        $filesystemArtifact
 
-if ($LASTEXITCODE -ne 0) {
-    throw "LittleFS image build failed"
+    if ($LASTEXITCODE -ne 0) {
+        throw "LittleFS image build failed"
+    }
+} finally {
+    if ($webVersionOriginalExists) {
+        [System.IO.File]::WriteAllBytes(
+            $webVersionPath,
+            $webVersionOriginalBytes)
+    } else {
+        Remove-Item `
+            -LiteralPath $webVersionPath `
+            -ErrorAction SilentlyContinue
+    }
 }
 
 $firmwareHash =
@@ -188,9 +230,11 @@ $manifestPath =
 
 $manifest |
     ConvertTo-Json -Depth 5 |
-    Set-Content `
-        -LiteralPath $manifestPath `
-        -Encoding UTF8
+    ForEach-Object {
+        Write-Utf8NoBom `
+            -Path $manifestPath `
+            -Content $_
+    }
 
 Write-Host ""
 Write-Host "Artifacts written to $OutputDir"

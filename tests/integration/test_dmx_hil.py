@@ -7,7 +7,9 @@ import pytest
 
 from artnet_packets import (
     ARTNET_PORT,
+    ARTNET_AC_FAIL_RECORD,
     make_artdmx,
+    make_artaddress,
     make_artpollreply_for_subscriber,
     make_artsync,
     parse_artdmx,
@@ -514,14 +516,12 @@ def test_artnet_output_failsafe_scene_reaches_real_dmx_output(
         scene,
     )
 
-    step("Recording current DMX output as persistent failsafe scene")
-    unode_client.ensure_authenticated()
-    status_code, body = unode_client.post_json("/api/failsafe/record")
-    if status_code != 200:
-        raise AssertionError(
-            "Recording failsafe scene failed with "
-            f"HTTP {status_code}: {body.decode(errors='replace')}"
-        )
+    step("Recording current DMX output as persistent failsafe scene via ArtAddress")
+    send_artnet_packet(
+        unode_ip,
+        make_artaddress(command=ARTNET_AC_FAIL_RECORD),
+    )
+    time.sleep(0.2)
 
     step(f"Sending different live ArtDmx before Failsafe-Scene timeout: {live}")
     _send_artdmx_repeated(

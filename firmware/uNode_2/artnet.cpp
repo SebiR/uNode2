@@ -86,6 +86,7 @@ static bool discoveryActive = false;
 static uint32_t discoveryStartedMillis = 0;
 static bool artIpProgRestartPending = false;
 static uint32_t artIpProgRestartMillis = 0;
+static bool failsafeSceneRecordPending = false;
 
 /** @brief Removes all currently known subscribers. */
 static void clearSubscribers();
@@ -157,6 +158,8 @@ bool recordFailsafeScene(
     scene,
     DMX_CHANNEL_COUNT);
 
+  yield();
+
   File file =
     LittleFS.open(
       FAILSAFE_SCENE_PATH,
@@ -171,6 +174,8 @@ bool recordFailsafeScene(
     file.write(
       scene,
       sizeof(scene));
+
+  yield();
 
   file.close();
 
@@ -193,6 +198,8 @@ static bool loadFailsafeScene(
     return false;
   }
 
+  yield();
+
   File file =
     LittleFS.open(
       FAILSAFE_SCENE_PATH,
@@ -211,6 +218,8 @@ static bool loadFailsafeScene(
     file.read(
       scene,
       DMX_CHANNEL_COUNT);
+
+  yield();
 
   file.close();
   return bytesRead == DMX_CHANNEL_COUNT;
@@ -301,6 +310,27 @@ static void setFailsafeModeFromArtAddress(
     artnet.setNodeReport(
       RcConfigErr,
       "Failsafe mode programming failed");
+  }
+}
+
+/** @brief Performs a deferred ArtAddress failsafe-scene recording request. */
+static void handleFailsafeSceneRecordPending() {
+  if (!failsafeSceneRecordPending) {
+    return;
+  }
+
+  failsafeSceneRecordPending = false;
+
+  String recordError;
+
+  if (recordFailsafeScene(recordError)) {
+    artnet.setNodeReport(
+      RcPowerOk,
+      "Failsafe scene recorded");
+  } else {
+    artnet.setNodeReport(
+      RcConfigErr,
+      "Failsafe scene recording failed");
   }
 }
 
@@ -1435,21 +1465,11 @@ static void onArtAddress(
       break;
 
     case ARTNET_AC_FAIL_RECORD:
-      {
-        String recordError;
-
-        if (recordFailsafeScene(recordError)) {
-          artnet.setNodeReport(
-            RcPowerOk,
-            "Failsafe scene recorded");
-        } else {
-          artnet.setNodeReport(
-            RcConfigErr,
-            "Failsafe scene recording failed");
-        }
-
-        break;
-      }
+      failsafeSceneRecordPending = true;
+      artnet.setNodeReport(
+        RcPowerOk,
+        "Failsafe scene record pending");
+      break;
 
     case ARTNET_AC_MERGE_LTP_0:
       setMergeModeFromArtAddress(
@@ -1596,6 +1616,8 @@ void updateArtNet() {
 
   const uint16_t opcode = artnet.read();
   now = millis();
+
+  handleFailsafeSceneRecordPending();
 
   if (opcode != 0
       && opcode != OpDmx
