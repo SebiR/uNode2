@@ -9,8 +9,7 @@ The tests are split into two groups:
 
 ## Requirements
 
-Python 3.12 and `pytest` are expected. The helper code itself uses only the
-Python standard library.
+Python 3.12, `pytest`, and `pyserial` are expected.
 
 Run offline tests:
 
@@ -40,7 +39,9 @@ Or:
 ```
 
 The PowerShell runner uses verbose pytest output for integration tests, so the
-terminal shows each major hardware interaction while the tests run.
+terminal shows each major hardware interaction while the tests run. At the end
+it prints a compact test certificate and removes `.pytest_cache` /
+`__pycache__` directories.
 
 If the web interface is password-protected, also set:
 

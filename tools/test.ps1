@@ -85,4 +85,32 @@ if ($Integration)
 Write-Host ""
 
 python -m pytest @pytestArgs
-exit $LASTEXITCODE
+$exitCode = $LASTEXITCODE
+
+Write-Host ""
+Write-Host "Cleaning pytest caches" -ForegroundColor DarkGray
+$cacheDirs =
+    Get-ChildItem `
+        -Path $projectRoot `
+        -Recurse `
+        -Directory `
+        -Force `
+        -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.Name -eq "__pycache__" -or
+        $_.Name -eq ".pytest_cache"
+    } |
+    Sort-Object {
+        $_.FullName.Length
+    } -Descending
+
+foreach ($cacheDir in $cacheDirs)
+{
+    Remove-Item `
+        -LiteralPath $cacheDir.FullName `
+        -Recurse `
+        -Force `
+        -ErrorAction SilentlyContinue
+}
+
+exit $exitCode
