@@ -196,6 +196,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       include decoder-friendly details such as EPC and exception address.
 - [x] Expose SoftAP health diagnostics, including active state, SoftAP IP, and
       associated station count.
+- [x] Print reset reason and raw ESP8266 reset information on the Serial1/GPIO2
+      debug interface during boot.
 - [x] Apply web-saved Art-Net/DMX runtime settings live without rebooting when
       no network or hostname setting changed.
 - [ ] Add optional capture/printing guidance for serial exception stack traces

@@ -61,6 +61,14 @@ void setup() {
 
   LOG_SECTION("uNode Boot");
   LOG_INFO(getFirmwareString());
+  LOG_INFO_PRINT("Reset reason: ");
+  LOG_PRINTLN(
+    LOG_LEVEL_INFO,
+    ESP.getResetReason());
+  LOG_INFO_PRINT("Reset info: ");
+  LOG_PRINTLN(
+    LOG_LEVEL_INFO,
+    ESP.getResetInfo());
 
   initLEDs();
 

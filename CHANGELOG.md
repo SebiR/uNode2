@@ -23,6 +23,8 @@ explicitly in each release entry.
 - Added SoftAP diagnostics to `/api/status` and the System diagnostics card,
   including whether SoftAP is active, the SoftAP IP address, and the number of
   associated stations.
+- Added reset reason and raw ESP8266 reset information to the Serial1/GPIO2
+  boot log for crash diagnosis when Wi-Fi is unavailable.
 
 ## [0.18.2] - 2026-06-27
 
