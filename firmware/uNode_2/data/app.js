@@ -446,52 +446,7 @@ async function loadStatus()
                 + ' / expected '
                 + (data.webAssetExpectedVersion || data.firmware));
 
-        document.getElementById('artnetPackets').textContent =
-            data.artnetPackets;
-
-        document.getElementById('artnetFPS').textContent =
-            data.artnetFPS;
-
-        document.getElementById('lastPacket').textContent =
-            data.lastPacketAge + " ms";
-
-        document.getElementById('artSyncs').textContent =
-            data.artSyncs;
-
-        document.getElementById('lastSyncAge').textContent =
-            data.lastSyncAge + " ms";
-
-        document.getElementById('artSyncState').textContent =
-            data.artSyncActive
-                ? (data.artSyncPending ? 'Sync pending' : 'Sync active')
-                : 'Async';
-			
-		document.getElementById('artPolls').textContent =
-			data.artPolls;
-			
-		document.getElementById('lastPollAge').textContent =
-			data.lastPollAge + " ms";	
-
-		document.getElementById('artnetSubscribers').textContent =
-			data.artnetSubscribers;
-
-        document.getElementById('failsafeStatus').textContent =
-            data.direction == 0
-                ? (data.failsafeActive
-                    ? 'Active: ' + data.failsafeModeName
-                    : 'Armed: ' + data.failsafeModeName)
-                : 'Not used in DMX input mode';
-
-		document.getElementById('dmxFrames').textContent =
-			data.dmxFrames;
-
-		document.getElementById('dmxFPS').textContent =
-			data.dmxFPS;
-
-		document.getElementById('lastDMXFrameAge').textContent =
-			data.lastDMXFrameAge + " ms";
-
-        updateDashboardModeLabels(data);
+        updateDashboardRuntime(data);
 		
     }
     catch(error)
@@ -515,6 +470,30 @@ function setTextIfPresent(id, value)
     }
 }
 
+function formatAge(ageMs)
+{
+    if (ageMs === undefined
+        || ageMs === null
+        || ageMs === 0)
+    {
+        return 'never';
+    }
+
+    if (ageMs < 1000)
+    {
+        return ageMs + ' ms ago';
+    }
+
+    return (ageMs / 1000).toFixed(1) + ' s ago';
+}
+
+function getArtSyncStateText(data)
+{
+    return data.artSyncActive
+        ? (data.artSyncPending ? 'sync pending' : 'sync active')
+        : 'async';
+}
+
 function updateDashboardModeLabels(data)
 {
     const artnetToDmx =
@@ -524,14 +503,8 @@ function updateDashboardModeLabels(data)
         'artnetCardTitle',
         artnetToDmx ? 'Art-Net Input' : 'Art-Net Output');
     setTextIfPresent(
-        'artnetPacketsLabel',
-        artnetToDmx ? 'Received ArtDmx Packets' : 'Sent ArtDmx Status');
-    setTextIfPresent(
-        'artnetFpsLabel',
-        artnetToDmx ? 'Received FPS' : 'Target Refresh');
-    setTextIfPresent(
-        'lastPacketLabel',
-        artnetToDmx ? 'Last ArtDmx Packet' : 'Last ArtDmx Sent');
+        'artnetSummaryLabel',
+        artnetToDmx ? 'ArtDmx Packets' : 'ArtDmx Output');
     setTextIfPresent(
         'artnetSubscribersLabel',
         artnetToDmx ? 'Subscribers' : 'Art-Net Subscribers');
@@ -539,50 +512,86 @@ function updateDashboardModeLabels(data)
         'dmxCardTitle',
         artnetToDmx ? 'DMX Output' : 'DMX Input');
     setTextIfPresent(
-        'dmxFramesLabel',
-        artnetToDmx ? 'Output State' : 'Received DMX Frames');
+        'dmxSummaryLabel',
+        artnetToDmx ? 'DMX Output' : 'DMX Frames');
     setTextIfPresent(
-        'dmxFpsLabel',
-        artnetToDmx ? 'DMX Source' : 'Received FPS');
+        'dmxStatusLabel',
+        artnetToDmx ? 'Source' : 'Input Status');
+}
+
+function updateDashboardRuntime(data)
+{
+    const artnetToDmx =
+        data.direction == 0;
+
+    updateDashboardModeLabels(data);
+
     setTextIfPresent(
-        'lastDmxFrameLabel',
-        artnetToDmx ? 'Output Activity' : 'Last DMX Frame');
+        'artSyncSummary',
+        (data.artSyncs ?? 0)
+            + ' packets (last '
+            + formatAge(data.lastSyncAge)
+            + ', '
+            + getArtSyncStateText(data)
+            + ')');
+    setTextIfPresent(
+        'artPollSummary',
+        (data.artPolls ?? 0)
+            + ' polls (last '
+            + formatAge(data.lastPollAge)
+            + ')');
+    setTextIfPresent(
+        'artnetSubscribers',
+        data.artnetSubscribers ?? 0);
+    setTextIfPresent(
+        'failsafeStatus',
+        artnetToDmx
+            ? (data.failsafeActive
+                ? 'Active: ' + data.failsafeModeName
+                : 'Armed: ' + data.failsafeModeName)
+            : 'Not used in DMX input mode');
 
     if (artnetToDmx)
     {
         setTextIfPresent(
-            'dmxFrames',
+            'artnetSummary',
+            (data.artnetPackets ?? 0)
+                + ' packets, '
+                + (data.artnetFPS ?? 0)
+                + ' fps (last '
+                + formatAge(data.lastPacketAge)
+                + ')');
+        setTextIfPresent(
+            'dmxSummary',
             data.failsafeActive
                 ? 'Failsafe active'
                 : (data.dmxTestOverride
                     ? 'Test override'
                     : (data.artnetActive ? 'Sending DMX' : 'Idle')));
         setTextIfPresent(
-            'dmxFPS',
+            'dmxStatus',
             data.dmxTestOverride
                 ? 'DMX Test'
                 : (data.artnetActive ? 'Art-Net' : 'None'));
-        setTextIfPresent(
-            'lastDMXFrameAge',
-            data.artnetActive
-                ? 'active'
-                : 'no recent ArtDmx');
     }
     else
     {
         setTextIfPresent(
-            'artnetPackets',
+            'artnetSummary',
             data.dmxActive ? 'Sending ArtDmx' : 'Idle');
         setTextIfPresent(
-            'artnetFPS',
-            data.dmxActive
-                ? 'on DMX changes / 1s refresh'
-                : 'waiting for DMX');
+            'dmxSummary',
+            (data.dmxFrames ?? 0)
+                + ' frames, '
+                + (data.dmxFPS ?? 0)
+                + ' fps (last '
+                + formatAge(data.lastDMXFrameAge)
+                + ')');
         setTextIfPresent(
-            'lastPacket',
+            'dmxStatus',
             data.dmxActive
-                ? 'subscriber refresh active'
-                : 'no recent DMX');
+                ? 'Receiving physical DMX'
+                : 'No recent DMX');
     }
 }
 
@@ -3106,74 +3115,7 @@ ws.onmessage =
 		return;
 	}
 
-    document.getElementById(
-        'artnetPackets')
-        .textContent =
-            data.artnetPackets;
-
-    document.getElementById(
-        'artnetFPS')
-        .textContent =
-            data.artnetFPS;
-
-    document.getElementById(
-        'lastPacket')
-        .textContent =
-            data.lastPacketAge + " ms";
-
-    if (data.artSyncs !== undefined)
-    {
-        document.getElementById(
-            'artSyncs')
-            .textContent =
-                data.artSyncs;
-
-        document.getElementById(
-            'lastSyncAge')
-            .textContent =
-                data.lastSyncAge + " ms";
-
-        document.getElementById(
-            'artSyncState')
-            .textContent =
-                data.artSyncActive
-                    ? (data.artSyncPending ? 'Sync pending' : 'Sync active')
-                    : 'Async';
-    }
-
-    document.getElementById(
-        'artnetSubscribers')
-        .textContent =
-            data.artnetSubscribers;
-
-    if(data.failsafeModeName !== undefined)
-    {
-        document.getElementById(
-            'failsafeStatus')
-            .textContent =
-                data.direction == 0
-                    ? (data.failsafeActive
-                        ? 'Active: ' + data.failsafeModeName
-                        : 'Armed: ' + data.failsafeModeName)
-                    : 'Not used in DMX input mode';
-    }
-
-    document.getElementById(
-        'dmxFrames')
-        .textContent =
-            data.dmxFrames;
-
-    document.getElementById(
-        'dmxFPS')
-        .textContent =
-            data.dmxFPS;
-
-    document.getElementById(
-        'lastDMXFrameAge')
-        .textContent =
-            data.lastDMXFrameAge + " ms";
-
-    updateDashboardModeLabels(data);
+    updateDashboardRuntime(data);
 
     document.getElementById(
         'uptime')

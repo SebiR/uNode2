@@ -11,6 +11,14 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+## [0.19.4] - 2026-06-28
+
+### Changed
+
+- Made the dashboard more compact by combining related counters and "last seen"
+  ages into single status rows for ArtDmx, ArtSync, ArtPoll, and DMX runtime
+  information.
+
 ## [0.19.3] - 2026-06-28
 
 ### Added
