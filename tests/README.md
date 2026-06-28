@@ -98,7 +98,8 @@ provided.
   middle, and high DMX channel ranges.
 - The DMX hardware-in-the-loop tests also verify ArtSync buffering/flush on the
   real DMX output and all four output failsafe modes after Art-Net timeout:
-  Hold, All-to-Zero, All-to-Full, and Failsafe Scene.
+  Hold, All-to-Zero, All-to-Full, and Failsafe Scene. The Failsafe Scene test
+  records and verifies all 512 DMX slots.
 - The DMX input hardware-in-the-loop test uses the RP2040 as a physical DMX
   sender, advertises the Python test process as an Art-Net subscriber, and
   verifies that uNode forwards the received DMX slots as ArtDmx.

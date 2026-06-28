@@ -651,10 +651,13 @@ def test_artnet_output_failsafe_scene_reaches_real_dmx_output(
     rp2040_tool.mode("rx")
     rp2040_tool.clear_stats()
 
-    scene = [5, 25, 50, 100, 150, 250]
-    live = [210, 190, 170, 150, 130, 110]
+    scene = _full_frame_pattern()
+    live = [255 - value for value in scene]
 
-    step(f"Sending scene ArtDmx before recording failsafe scene: {scene}")
+    step(
+        "Sending full 512-slot scene ArtDmx before recording failsafe scene: "
+        f"first={scene[:4]}, last={scene[-4:]}"
+    )
     _send_artdmx_repeated(
         unode_ip,
         universe,
@@ -664,6 +667,7 @@ def test_artnet_output_failsafe_scene_reaches_real_dmx_output(
     _wait_for_rp2040_frame_values(
         rp2040_tool,
         scene,
+        count=512,
     )
 
     step("Recording current DMX output as persistent failsafe scene via ArtAddress")
@@ -673,7 +677,10 @@ def test_artnet_output_failsafe_scene_reaches_real_dmx_output(
     )
     time.sleep(0.2)
 
-    step(f"Sending different live ArtDmx before Failsafe-Scene timeout: {live}")
+    step(
+        "Sending different full 512-slot live ArtDmx before Failsafe-Scene "
+        f"timeout: first={live[:4]}, last={live[-4:]}"
+    )
     _send_artdmx_repeated(
         unode_ip,
         universe,
@@ -683,6 +690,7 @@ def test_artnet_output_failsafe_scene_reaches_real_dmx_output(
     _wait_for_rp2040_frame_values(
         rp2040_tool,
         live,
+        count=512,
     )
 
     step("Waiting for uNode Art-Net output timeout / Failsafe Scene")
@@ -692,12 +700,15 @@ def test_artnet_output_failsafe_scene_reaches_real_dmx_output(
     frame = _wait_for_rp2040_frame_values(
         rp2040_tool,
         scene,
+        count=512,
         timeout=3.0,
     )
     step(
-        "RP2040 analyzer confirmed recorded failsafe scene output: "
-        f"values={frame['values']}"
+        "RP2040 analyzer confirmed recorded 512-slot failsafe scene output: "
+        f"slots={frame['slots']}, first={frame['values'][:4]}, "
+        f"last={frame['values'][-4:]}"
     )
+    assert frame["slots"] == 512
 
 
 def test_dmx_input_from_rp2040_reaches_artnet_receiver(
