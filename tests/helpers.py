@@ -59,6 +59,17 @@ def send_artnet_packet(unode_ip: str, packet: bytes) -> None:
         sock.close()
 
 
+def local_ipv4_for_target(target_ip: str) -> str:
+    """Return the local IPv4 address used to reach `target_ip`."""
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.connect((target_ip, ARTNET_PORT))
+        return sock.getsockname()[0]
+    finally:
+        sock.close()
+
+
 def request_artpoll_reply(
     unode_ip: str,
     *,
@@ -70,7 +81,7 @@ def request_artpoll_reply(
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         try:
-            sock.bind(("", ARTNET_PORT))
+            sock.bind((local_ipv4_for_target(unode_ip), ARTNET_PORT))
         except OSError as error:
             pytest.skip(f"UDP {ARTNET_PORT} is unavailable: {error}")
 

@@ -187,10 +187,11 @@ private:
   uint16_t reportCode;
   uint16_t reportCounter;
   bool legacyArtNet3Mode;
+  replyPollPacket transmitPacket;
   char reportText[48];
 
   /** @brief Clears Art-Net 4 extension fields for conservative legacy replies. */
-  void applyLegacyArtNet3Profile();
+  void applyLegacyArtNet3Profile(replyPollPacket& target);
   /** @brief Recomputes per-port SwIn and SwOut fields. */
   void updatePortAddresses();
   /** @brief Formats NodeReport from code, counter, and stored text. */

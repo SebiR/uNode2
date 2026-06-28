@@ -374,6 +374,12 @@ def test_artnet_to_dmx_output_timing_matches_dmx512_limits(
 
     step("Clearing startup/transient analyzer stats before timing window")
     rp2040_tool.clear_stats()
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        values,
+        count=512,
+    )
+    rp2040_tool.clear_stats()
 
     step("Collecting RP2040 timing statistics from live uNode DMX output")
     time.sleep(2.0)

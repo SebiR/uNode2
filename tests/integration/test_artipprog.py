@@ -10,7 +10,7 @@ from artnet_packets import (
     make_artipprog,
     parse_artipprogreply,
 )
-from helpers import step
+from helpers import local_ipv4_for_target, step
 from unode_client import UNodeClient
 
 
@@ -23,7 +23,7 @@ def _request_artipprog_reply(
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         try:
-            sock.bind(("", ARTNET_PORT))
+            sock.bind((local_ipv4_for_target(unode_ip), ARTNET_PORT))
         except OSError as error:
             pytest.skip(f"UDP {ARTNET_PORT} is unavailable: {error}")
 

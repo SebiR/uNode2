@@ -244,29 +244,29 @@ void PollReply::setLegacyArtNet3Mode(
   legacyArtNet3Mode = enabled;
 }
 
-void PollReply::applyLegacyArtNet3Profile() {
+void PollReply::applyLegacyArtNet3Profile(replyPollPacket& target) {
   memset(
-    packet.GoodOutputB,
+    target.GoodOutputB,
     0,
-    sizeof(packet.GoodOutputB));
+    sizeof(target.GoodOutputB));
 
-  packet.Status3 = 0;
-
-  memset(
-    packet.DefaultRespUID,
-    0,
-    sizeof(packet.DefaultRespUID));
-
-  packet.UserHi = 0;
-  packet.UserLo = 0;
-  packet.RefreshRateHi = 0;
-  packet.RefreshRateLo = 0;
-  packet.BackgroundQueuePolicy = 0;
+  target.Status3 = 0;
 
   memset(
-    packet.Filler,
+    target.DefaultRespUID,
     0,
-    sizeof(packet.Filler));
+    sizeof(target.DefaultRespUID));
+
+  target.UserHi = 0;
+  target.UserLo = 0;
+  target.RefreshRateHi = 0;
+  target.RefreshRateLo = 0;
+  target.BackgroundQueuePolicy = 0;
+
+  memset(
+    target.Filler,
+    0,
+    sizeof(target.Filler));
 }
 
 void PollReply::setFailsafeStatus(
@@ -341,7 +341,12 @@ uint8_t* PollReply::printPacket() {
   formatNodeReport();
 
   if (legacyArtNet3Mode) {
-    applyLegacyArtNet3Profile();
+    memcpy(
+      &transmitPacket,
+      &packet,
+      sizeof(transmitPacket));
+    applyLegacyArtNet3Profile(transmitPacket);
+    return reinterpret_cast<uint8_t*>(&transmitPacket);
   }
 
   return reinterpret_cast<uint8_t*>(&packet);

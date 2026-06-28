@@ -94,7 +94,10 @@ def test_artpollreply_port_and_status_bits_follow_runtime_config(
     assert reply.status2 & STATUS2_DHCP_CAPABLE
     assert reply.status2 & STATUS2_15_BIT_PORT_ADDRESS
     assert not (reply.status2 & STATUS2_SQUAWKING)
-    assert not (reply.status2 & STATUS2_DHCP_CONFIGURED)
+    if output_config.get("dhcp") is True:
+        assert reply.status2 & STATUS2_DHCP_CONFIGURED
+    else:
+        assert not (reply.status2 & STATUS2_DHCP_CONFIGURED)
     assert (reply.status3 & STATUS3_FAILSAFE_MASK) == (
         output_config["failsafeMode"] << 6
     )

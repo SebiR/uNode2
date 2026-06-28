@@ -11,6 +11,20 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+## [0.19.6] - 2026-06-28
+
+### Fixed
+
+- Legacy Art-Net 3 PollReply generation now clears Art-Net 4 extension fields
+  only in the transmitted legacy copy instead of mutating the persistent
+  ArtPollReply state.
+- Integration UDP reply helpers now bind to the local IPv4 interface used to
+  reach the node, improving reliability on multi-interface Windows hosts.
+- PollReply bit integration tests now accept DHCP-configured nodes when the
+  temporary test configuration uses DHCP.
+- DMX output timing HIL test now avoids counting a partial analyzer frame
+  captured immediately after clearing RP2040 timing statistics.
+
 ## [0.19.5] - 2026-06-28
 
 ### Fixed
