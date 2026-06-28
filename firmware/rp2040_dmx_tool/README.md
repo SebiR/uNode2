@@ -55,6 +55,7 @@ Useful commands:
 {"cmd":"tx","action":"start"}
 {"cmd":"tx","action":"stop"}
 {"cmd":"tx","action":"send"}
+{"cmd":"noise","durationMs":100,"minPulseUs":2,"maxPulseUs":200}
 {"cmd":"clear","target":"stats"}
 ```
 
@@ -124,6 +125,7 @@ For receiver hardening tests, useful edge cases are:
 - very short packets such as `slots 6`;
 - minimum legal sender timings such as `break 92` and `mab 12`;
 - slightly below-minimum timings to confirm rejection/robustness;
+- random line-noise bursts that simulate cable plug/unplug transients;
 - long inter-slot gaps via `interSlotUs`;
 - long inter-packet gaps via `mbbUs`;
 - different slot counts from 0 to 512.

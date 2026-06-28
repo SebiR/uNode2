@@ -105,9 +105,10 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
   changes. It is intentionally excluded from normal quick runs unless selected
   by path.
 - The DMX hardware-in-the-loop soak test uses the RP2040 as a physical DMX
-  sender, varies Break/MAB/baud/slot timing, injects below-spec frames, and
-  verifies that uNode recovers to valid DMX input and keeps forwarding ArtDmx
-  without rebooting.
+  sender, varies Break/MAB/baud/slot timing, injects below-spec/random frames,
+  optionally injects random line-noise bursts when the RP2040 firmware supports
+  the `noise` JSON command, and verifies that uNode recovers to valid DMX input
+  and keeps forwarding ArtDmx without rebooting.
 - The live-configuration integration test currently changes Art-Net direction,
   Net, Sub-Net, and Universe, verifies `/api/status`, verifies ArtPollReply, and
   then restores the previous configuration.

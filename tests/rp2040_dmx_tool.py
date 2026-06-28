@@ -83,6 +83,9 @@ class Rp2040DmxTool:
     def ping(self) -> dict[str, Any]:
         return self.command({"cmd": "ping"})
 
+    def help(self) -> dict[str, Any]:
+        return self.command({"cmd": "help"})
+
     def mode(self, value: str) -> dict[str, Any]:
         return self.command({"cmd": "mode", "value": value})
 
@@ -140,3 +143,20 @@ class Rp2040DmxTool:
 
     def tx(self, action: str) -> dict[str, Any]:
         return self.command({"cmd": "tx", "action": action})
+
+    def noise(
+        self,
+        *,
+        duration_ms: int = 100,
+        min_pulse_us: int = 2,
+        max_pulse_us: int = 200,
+    ) -> dict[str, Any]:
+        return self.command(
+            {
+                "cmd": "noise",
+                "durationMs": duration_ms,
+                "minPulseUs": min_pulse_us,
+                "maxPulseUs": max_pulse_us,
+            },
+            timeout=max(2.0, duration_ms / 1000.0 + 1.0),
+        )

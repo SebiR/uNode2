@@ -79,6 +79,10 @@ static void flushDmxRx();
 static void processJsonCommand(const String& line);
 static void sendJsonReady();
 static void sendJsonError(const char* error, const char* message);
+static void sendLineNoise(
+  uint32_t durationMs,
+  uint32_t minPulseUs,
+  uint32_t maxPulseUs);
 
 static void setDirectionPin(bool transmit) {
 #if DMX_DIR_PIN >= 0
@@ -441,6 +445,35 @@ static void sendDmxFrame() {
   }
 
   txFrames++;
+}
+
+static void sendLineNoise(
+  uint32_t durationMs,
+  uint32_t minPulseUs,
+  uint32_t maxPulseUs) {
+  txEnabled = false;
+  releaseDmxPins();
+  setDirectionPin(true);
+
+  pinMode(DMX_TX_PIN, OUTPUT);
+
+  const uint32_t durationUs =
+    durationMs * 1000UL;
+  const uint32_t startUs =
+    micros();
+
+  while ((uint32_t)(micros() - startUs) < durationUs) {
+    digitalWrite(
+      DMX_TX_PIN,
+      random(0, 2) ? HIGH : LOW);
+
+    delayMicroseconds(
+      random(minPulseUs, maxPulseUs + 1));
+  }
+
+  digitalWrite(DMX_TX_PIN, HIGH);
+  delayMicroseconds(100);
+  releaseDmxPins();
 }
 
 static void pollTx() {
@@ -1040,6 +1073,32 @@ static void handleJsonTx(
   }
 }
 
+static void handleJsonNoise(
+  JsonDocument& doc) {
+  const uint32_t durationMs =
+    clampU32(doc["durationMs"] | 100, 1, 5000);
+  uint32_t minPulseUs =
+    clampU32(doc["minPulseUs"] | 2, 1, 100000);
+  uint32_t maxPulseUs =
+    clampU32(doc["maxPulseUs"] | 200, 1, 100000);
+
+  if (maxPulseUs < minPulseUs) {
+    const uint32_t temp =
+      maxPulseUs;
+    maxPulseUs =
+      minPulseUs;
+    minPulseUs =
+      temp;
+  }
+
+  sendLineNoise(
+    durationMs,
+    minPulseUs,
+    maxPulseUs);
+
+  sendJsonOk("noise");
+}
+
 static void processJsonCommand(
   const String& line) {
   JsonDocument doc;
@@ -1070,6 +1129,8 @@ static void processJsonCommand(
     handleJsonSet(doc);
   } else if (commandText == "tx") {
     handleJsonTx(doc);
+  } else if (commandText == "noise") {
+    handleJsonNoise(doc);
   } else if (commandText == "clear") {
     const char* target = doc["target"] | "";
     if (String(target) == "stats") {
@@ -1092,6 +1153,7 @@ static void processJsonCommand(
     commands.add("{\"cmd\":\"set\",\"target\":\"channels\",\"values\":{\"1\":255}}");
     commands.add("{\"cmd\":\"set\",\"target\":\"timing\",\"breakUs\":176,\"mabUs\":16}");
     commands.add("{\"cmd\":\"tx\",\"action\":\"start|stop|send\"}");
+    commands.add("{\"cmd\":\"noise\",\"durationMs\":100,\"minPulseUs\":2,\"maxPulseUs\":200}");
     writeJsonLine(reply);
   } else {
     sendJsonError("unknown_command", "Unknown JSON command");

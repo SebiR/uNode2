@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import random
 import socket
 import time
 from dataclasses import dataclass
@@ -26,6 +27,7 @@ class DmxInputScenario:
     inter_slot_us: int = 0
     mbb_us: int = 0
     expect_forwarded_artdmx: bool = True
+    noise: bool = False
 
 
 def _dmx_soak_duration_seconds() -> float:
@@ -108,6 +110,19 @@ def _configure_unode_input(unode_client: UNodeClient, preserved_config: dict) ->
     return config, universe
 
 
+def _rp2040_supports_noise(tool: Rp2040DmxTool) -> bool:
+    try:
+        help_response = tool.help()
+    except AssertionError:
+        return False
+
+    commands = [
+        str(command)
+        for command in help_response.get("commands", [])
+    ]
+    return any('"cmd":"noise"' in command for command in commands)
+
+
 def _advertise_subscriber(
     sock: socket.socket,
     *,
@@ -172,7 +187,16 @@ def test_dmx_input_hil_soak_survives_timing_faults(
             baud=200000,
             expect_forwarded_artdmx=False,
         ),
+        DmxInputScenario(
+            "random-line-noise",
+            0,
+            176,
+            16,
+            expect_forwarded_artdmx=False,
+            noise=True,
+        ),
     ]
+    rng = random.Random(0xD111_50A5)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -192,6 +216,9 @@ def test_dmx_input_hil_soak_survives_timing_faults(
         initial_status = unode_client.get_json("/api/status")
         initial_boot_count = int(initial_status["bootCount"])
         initial_reset_reason = str(initial_status.get("resetReason", ""))
+        noise_supported = _rp2040_supports_noise(rp2040_tool)
+        if not noise_supported:
+            step("RP2040 firmware does not support noise command; skipping line-noise bursts")
 
         rp2040_tool.mode("tx")
 
@@ -201,7 +228,20 @@ def test_dmx_input_hil_soak_survives_timing_faults(
         )
 
         while time.time() < deadline:
-            scenario = scenarios[iterations % len(scenarios)]
+            if iterations % 5 == 4:
+                scenario = DmxInputScenario(
+                    "random-uart-garbage",
+                    rng.randint(0, 512),
+                    rng.randint(44, 5000),
+                    rng.randint(0, 2000),
+                    baud=rng.randint(200000, 300000),
+                    fps=rng.randint(5, 80),
+                    inter_slot_us=rng.randint(0, 500),
+                    mbb_us=rng.randint(0, 5000),
+                    expect_forwarded_artdmx=False,
+                )
+            else:
+                scenario = scenarios[iterations % len(scenarios)]
             iterations += 1
             values = _scenario_values(iterations, scenario.slots)
 
@@ -213,17 +253,33 @@ def test_dmx_input_hil_soak_survives_timing_faults(
             )
 
             _drain_udp(sock)
-            rp2040_tool.mode("tx")
-            rp2040_tool.set_timing(
-                break_us=scenario.break_us,
-                mab_us=scenario.mab_us,
-                fps=scenario.fps,
-                inter_slot_us=scenario.inter_slot_us,
-                mbb_us=scenario.mbb_us,
-                baud=scenario.baud,
+            _advertise_subscriber(
+                sock,
+                unode_ip=unode_ip,
+                config=config,
+                receiver_ip=receiver_ip,
             )
-            rp2040_tool.set_frame(values, slots=scenario.slots)
-            rp2040_tool.tx("start")
+            if scenario.noise:
+                if noise_supported:
+                    rp2040_tool.noise(
+                        duration_ms=rng.randint(50, 250),
+                        min_pulse_us=rng.randint(1, 10),
+                        max_pulse_us=rng.randint(20, 500),
+                    )
+                else:
+                    time.sleep(0.1)
+            else:
+                rp2040_tool.mode("tx")
+                rp2040_tool.set_timing(
+                    break_us=scenario.break_us,
+                    mab_us=scenario.mab_us,
+                    fps=scenario.fps,
+                    inter_slot_us=scenario.inter_slot_us,
+                    mbb_us=scenario.mbb_us,
+                    baud=scenario.baud,
+                )
+                rp2040_tool.set_frame(values, slots=scenario.slots)
+                rp2040_tool.tx("start")
 
             if scenario.expect_forwarded_artdmx:
                 _wait_for_artdmx_from_unode(
@@ -240,6 +296,12 @@ def test_dmx_input_hil_soak_survives_timing_faults(
 
                 recovery_values = _scenario_values(iterations + 1000, 6)
                 _drain_udp(sock)
+                _advertise_subscriber(
+                    sock,
+                    unode_ip=unode_ip,
+                    config=config,
+                    receiver_ip=receiver_ip,
+                )
                 rp2040_tool.set_timing(
                     break_us=176,
                     mab_us=16,

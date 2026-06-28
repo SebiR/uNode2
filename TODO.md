@@ -289,8 +289,9 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [ ] Add a hardware-in-the-loop soak mode with RP2040 DMX input/output traffic
       and timing variation during long runs.
 - [x] Add an initial RP2040 hardware-in-the-loop DMX input soak with timing
-      variation, below-spec frame injection, valid-frame recovery checks,
-      ArtDmx forwarding checks, and reboot/reset monitoring.
+      variation, random UART garbage, optional line-noise bursts, below-spec
+      frame injection, valid-frame recovery checks, ArtDmx forwarding checks,
+      and reboot/reset monitoring.
 - [ ] Extend the RP2040 soak with simultaneous Art-Net output/DMX output
       monitoring and longer mixed-direction runs.
 - [ ] Test power loss during firmware, LittleFS, and configuration updates.
