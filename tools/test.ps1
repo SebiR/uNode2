@@ -5,6 +5,7 @@ param(
     [string]$Password = "",
     [string]$Rp2040Port = "",
     [int]$SoakSeconds = 0,
+    [int]$DmxSoakSeconds = 0,
     [double]$SoakInterval = 0,
     [double]$SoakGrace = 0,
     [string]$Path = ""
@@ -56,6 +57,11 @@ if ($Integration)
         $env:UNODE_SOAK_SECONDS = "$SoakSeconds"
     }
 
+    if ($DmxSoakSeconds -gt 0)
+    {
+        $env:UNODE_DMX_SOAK_SECONDS = "$DmxSoakSeconds"
+    }
+
     if ($SoakInterval -gt 0)
     {
         $env:UNODE_SOAK_INTERVAL = "$SoakInterval"
@@ -84,11 +90,16 @@ if ($Integration)
     {
         Write-Host "Soak    : $env:UNODE_SOAK_SECONDS seconds"
     }
+    if ($env:UNODE_DMX_SOAK_SECONDS)
+    {
+        Write-Host "DMX Soak: $env:UNODE_DMX_SOAK_SECONDS seconds"
+    }
 }
 else
 {
     Remove-Item Env:\UNODE_RUN_INTEGRATION -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_SOAK_SECONDS -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_DMX_SOAK_SECONDS -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_SOAK_INTERVAL -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_SOAK_REACHABILITY_GRACE -ErrorAction SilentlyContinue
 

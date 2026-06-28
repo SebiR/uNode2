@@ -82,6 +82,12 @@ Optional soak tuning:
 .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Path tests/integration/test_soak.py -SoakSeconds 3600 -SoakInterval 1 -SoakGrace 8
 ```
 
+Run the RP2040 hardware-in-the-loop DMX input soak with timing/fault injection:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Rp2040Port auto -Path tests/integration/test_dmx_soak_hil.py -DmxSoakSeconds 600
+```
+
 Capture Serial1/GPIO2 debug output in a second terminal while soak tests run:
 
 ```powershell
@@ -98,6 +104,10 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
   ArtSync, malformed Art-Net parser probes, and live runtime configuration
   changes. It is intentionally excluded from normal quick runs unless selected
   by path.
+- The DMX hardware-in-the-loop soak test uses the RP2040 as a physical DMX
+  sender, varies Break/MAB/baud/slot timing, injects below-spec frames, and
+  verifies that uNode recovers to valid DMX input and keeps forwarding ArtDmx
+  without rebooting.
 - The live-configuration integration test currently changes Art-Net direction,
   Net, Sub-Net, and Universe, verifies `/api/status`, verifies ArtPollReply, and
   then restores the previous configuration.

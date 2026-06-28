@@ -32,6 +32,9 @@ explicitly in each release entry.
 - Recovery network startup now explicitly keeps saved Wi-Fi credentials instead
   of relying on the ESP8266 one-argument disconnect overload, which erases
   credentials.
+- Added an initial RP2040 hardware-in-the-loop DMX input soak test with timing
+  variation, below-spec frame injection, valid-frame recovery checks, ArtDmx
+  forwarding checks, and reboot/reset monitoring.
 
 ## [0.18.2] - 2026-06-27
 

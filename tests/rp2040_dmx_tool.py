@@ -123,6 +123,7 @@ class Rp2040DmxTool:
         fps: int = 40,
         inter_slot_us: int = 0,
         mbb_us: int = 0,
+        baud: int = 250000,
     ) -> dict[str, Any]:
         return self.command(
             {
@@ -133,6 +134,7 @@ class Rp2040DmxTool:
                 "fps": fps,
                 "interSlotUs": inter_slot_us,
                 "mbbUs": mbb_us,
+                "baud": baud,
             }
         )
 
