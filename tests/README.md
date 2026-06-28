@@ -82,6 +82,13 @@ Optional soak tuning:
 .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Path tests/integration/test_soak.py -SoakSeconds 3600 -SoakInterval 1 -SoakGrace 8
 ```
 
+Capture Serial1/GPIO2 debug output in a second terminal while soak tests run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -List
+powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -Output logs\soak-serial.log
+```
+
 ## Notes
 
 - Integration tests may change the node configuration temporarily. They try to
