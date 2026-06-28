@@ -422,6 +422,7 @@ async function loadStatus()
             'heapFragmentation',
             (data.heapFragmentation ?? 0) + ' %');
         setTextIfPresent('resetReason', data.resetReason || '---');
+        setTextIfPresent('resetInfo', data.resetInfo || '---');
         setTextIfPresent('bootCount', data.bootCount ?? '---');
         setTextIfPresent(
             'configSchemaVersion',

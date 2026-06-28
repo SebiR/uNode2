@@ -979,6 +979,9 @@ static void handleStatus() {
   doc["resetReason"] =
     ESP.getResetReason();
 
+  doc["resetInfo"] =
+    ESP.getResetInfo();
+
   doc["bootCount"] =
     bootCount;
 

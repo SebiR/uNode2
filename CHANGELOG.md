@@ -18,6 +18,8 @@ explicitly in each release entry.
   `firmware/uNode_2`.
 - Updated the release build script and project documentation for the new
   firmware path.
+- Exposed raw ESP8266 reset information in `/api/status` and the System
+  diagnostics card to make future exception resets easier to decode.
 
 ## [0.18.2] - 2026-06-27
 
