@@ -11,6 +11,15 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+## [0.19.5] - 2026-06-28
+
+### Fixed
+
+- WebSocket dashboard updates now include ArtSync runtime fields so the compact
+  ArtSync row no longer flickers between real values and zero.
+- WebSocket updates now include the DMX test override timeout mode so the
+  override status remains consistent between HTTP status polls.
+
 ## [0.19.4] - 2026-06-28
 
 ### Changed

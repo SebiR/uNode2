@@ -169,6 +169,18 @@ void broadcastStatus() {
   doc["artnetActive"] =
     isArtNetActive();
 
+  doc["artSyncs"] =
+    getArtSyncCounter();
+
+  doc["lastSyncAge"] =
+    getLastArtSyncAge();
+
+  doc["artSyncActive"] =
+    isArtSyncActive();
+
+  doc["artSyncPending"] =
+    isArtSyncPendingOutput();
+
   doc["direction"] =
     config.direction;
 
@@ -198,6 +210,9 @@ void broadcastStatus() {
 
   doc["dmxTestOverride"] =
     isDmxTestOverrideActive();
+
+  doc["dmxTestOverrideTimeoutEnabled"] =
+    isDmxTestOverrideTimeoutEnabled();
 
   doc["dmxTestOverrideRemaining"] =
     getDmxTestOverrideRemaining();
