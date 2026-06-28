@@ -88,6 +88,8 @@ provided.
 - Parser diagnostics tests send malformed UDP/Art-Net packets and verify the
   counters for oversized packets, short packets, invalid IDs, unsupported
   protocol versions, malformed ArtDmx lengths, and unsupported opcodes.
+- ArtDmx sequencing tests verify duplicate/out-of-order packet drops, sequence
+  `0` as sequencing-disabled reset, and `255 -> 1` wraparound acceptance.
 - The PollReply bit tests verify direction-dependent PortTypes, SwIn/SwOut,
   GoodOutputA/B, Status1 indicator bits, Status2 capability/squawk bits, and
   Status3 failsafe bits.

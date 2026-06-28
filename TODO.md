@@ -262,6 +262,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Add malformed and truncated UDP-packet tests for oversized packets,
       short packets, invalid Art-Net IDs, unsupported protocol versions,
       malformed ArtDmx lengths, and unsupported opcodes.
+- [x] Add ArtDmx sequencing tests for duplicate drops, out-of-order drops,
+      sequence `0` disable/reset behaviour, and `255 -> 1` wraparound.
 - [ ] Add configuration import, migration, and interrupted-write tests.
 - [ ] Test `millis()` rollover behaviour for all timeout state machines.
 - [ ] Run long-duration soak tests with DMX traffic, WebSocket clients, Wi-Fi
