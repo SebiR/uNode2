@@ -158,7 +158,7 @@ def test_parse_artpollreply_reads_fixed_offsets() -> None:
     packet[8:10] = OP_POLL_REPLY.to_bytes(2, "little")
     packet[10:14] = bytes([2, 0, 0, 123])
     packet[14:16] = ARTNET_PORT.to_bytes(2, "little")
-    packet[16:18] = bytes([0, 18])
+    packet[16:18] = bytes([0, 19])
     packet[18] = 3
     packet[19] = 2
     packet[20:22] = bytes([0x3A, 0x28])
@@ -179,7 +179,7 @@ def test_parse_artpollreply_reads_fixed_offsets() -> None:
 
     assert reply.ip == "2.0.0.123"
     assert reply.port == ARTNET_PORT
-    assert reply.firmware_version == (0, 18)
+    assert reply.firmware_version == (0, 19)
     assert reply.net == 3
     assert reply.subnet == 2
     assert reply.short_name == "IN_uNode"

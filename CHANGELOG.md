@@ -11,6 +11,8 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-06-28
+
 ### Changed
 
 - Reorganized the repository into a workspace layout.
