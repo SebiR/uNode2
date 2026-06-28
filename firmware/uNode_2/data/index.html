@@ -618,6 +618,13 @@
 					Override idle
 				</div>
 
+				<label class="inlineCheck">
+					<input
+						id="dmxOverrideHold"
+						type="checkbox">
+					<span>Disable override timeout until restart</span>
+				</label>
+
 				</div>
 
 				<div class="dmxFaders">
@@ -672,6 +679,103 @@
 				</div>
 
             </div>
+
+			<div class="card">
+
+				<h2>DMX Patterns</h2>
+
+				<p class="helpText">
+					Patterns use the local override and send one active channel at a
+					time while all other channels are held at zero.
+				</p>
+
+				<div class="patternGrid">
+					<label>
+						<span>Scan Start</span>
+						<input
+							id="dmxPatternStart"
+							type="number"
+							min="1"
+							max="512"
+							value="1">
+					</label>
+
+					<label>
+						<span>Scan End</span>
+						<input
+							id="dmxPatternEnd"
+							type="number"
+							min="1"
+							max="512"
+							value="16">
+					</label>
+
+					<label>
+						<span>Speed</span>
+						<select id="dmxPatternSpeed">
+							<option value="250">0.25 s</option>
+							<option value="500" selected>0.5 s</option>
+							<option value="1000">1 s</option>
+							<option value="2000">2 s</option>
+							<option value="5000">5 s</option>
+						</select>
+					</label>
+
+					<div class="patternStatus">
+						<span>Testing Channel</span>
+						<strong id="dmxPatternChannel">---</strong>
+					</div>
+				</div>
+
+				<div class="buttonRow">
+					<button
+						id="channelChaseButton"
+						class="action"
+						onclick="startDmxChannelChase()">
+						Start Channel Chase
+					</button>
+
+					<button
+						id="findAddressButton"
+						class="action"
+						onclick="startDmxFindAddress()">
+						Start Find Address
+					</button>
+
+					<button
+						id="patternPauseButton"
+						class="action secondary"
+						onclick="toggleDmxPatternPause()"
+						disabled>
+						Pause
+					</button>
+
+					<button
+						id="patternPreviousButton"
+						class="action secondary"
+						onclick="stepDmxPattern(-1)"
+						disabled>
+						Previous
+					</button>
+
+					<button
+						id="patternNextButton"
+						class="action secondary"
+						onclick="stepDmxPattern(1)"
+						disabled>
+						Next
+					</button>
+
+					<button
+						id="patternStopButton"
+						class="action secondary"
+						onclick="stopDmxPattern()"
+						disabled>
+						Stop Pattern
+					</button>
+				</div>
+
+			</div>
 			
 			<div class="card">
 

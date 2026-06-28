@@ -11,6 +11,15 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+## [0.19.3] - 2026-06-28
+
+### Added
+
+- Added DMX Test patterns for Channel Chase and Find Address with configurable
+  scan range, speed, pause/resume, previous/next, and stop controls.
+- Added a non-persistent DMX test option to disable the local override timeout
+  until the next node restart.
+
 ## [0.19.2] - 2026-06-28
 
 ### Added

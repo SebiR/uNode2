@@ -6,6 +6,7 @@ static uint8_t sourceChannels[DMX_CHANNEL_COUNT];
 static uint8_t testChannels[DMX_CHANNEL_COUNT];
 static uint32_t frameVersion = 0;
 static bool testOverrideActive = false;
+static bool testOverrideTimeoutEnabled = true;
 static uint32_t testOverrideUntilMillis = 0;
 
 /** @brief Advances the frame version while reserving zero. */
@@ -21,12 +22,14 @@ void initDmxFrame() {
   memset(sourceChannels, 0, sizeof(sourceChannels));
   memset(testChannels, 0, sizeof(testChannels));
   testOverrideActive = false;
+  testOverrideTimeoutEnabled = true;
   testOverrideUntilMillis = 0;
   frameVersion = 1;
 }
 
 bool updateDmxTestOverride() {
-  if (!testOverrideActive
+  if (!testOverrideTimeoutEnabled
+      || !testOverrideActive
       || (int32_t)(millis() - testOverrideUntilMillis) < 0) {
     return false;
   }
@@ -55,8 +58,12 @@ static void beginOrExtendTestOverride() {
     testOverrideActive = true;
   }
 
-  testOverrideUntilMillis =
-    millis() + DMX_TEST_OVERRIDE_TIMEOUT_MS;
+  if (testOverrideTimeoutEnabled) {
+    testOverrideUntilMillis =
+      millis() + DMX_TEST_OVERRIDE_TIMEOUT_MS;
+  } else {
+    testOverrideUntilMillis = 0;
+  }
 }
 
 bool setDmxFrame(
@@ -167,8 +174,27 @@ bool isDmxTestOverrideActive() {
   return testOverrideActive;
 }
 
+void setDmxTestOverrideTimeoutEnabled(bool enabled) {
+  testOverrideTimeoutEnabled = enabled;
+
+  if (!testOverrideActive) {
+    testOverrideUntilMillis = 0;
+    return;
+  }
+
+  testOverrideUntilMillis =
+    enabled
+      ? millis() + DMX_TEST_OVERRIDE_TIMEOUT_MS
+      : 0;
+}
+
+bool isDmxTestOverrideTimeoutEnabled() {
+  return testOverrideTimeoutEnabled;
+}
+
 uint32_t getDmxTestOverrideRemaining() {
-  if (!isDmxTestOverrideActive()) {
+  if (!isDmxTestOverrideActive()
+      || !testOverrideTimeoutEnabled) {
     return 0;
   }
 

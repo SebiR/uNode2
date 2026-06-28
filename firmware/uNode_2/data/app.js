@@ -383,7 +383,8 @@ async function loadStatus()
         {
             updateDmxOverrideStatus(
                 data.dmxTestOverride,
-                data.dmxTestOverrideRemaining || 0);
+                data.dmxTestOverrideRemaining || 0,
+                data.dmxTestOverrideTimeoutEnabled !== false);
         }
 
 		document.getElementById(
@@ -911,11 +912,13 @@ function updateStatusMessages(data)
     {
         messages.push(
             'DMX test override active'
-            + (data.dmxTestOverrideRemaining
+            + (data.dmxTestOverrideTimeoutEnabled === false
+                ? ' (timeout disabled)'
+                : (data.dmxTestOverrideRemaining
                 ? ' ('
                     + Math.ceil(data.dmxTestOverrideRemaining / 1000)
                     + 's)'
-                : ''));
+                : '')));
     }
 
     if (messages.length > 0)
@@ -2376,6 +2379,14 @@ async function pollArtNetSubscribers()
 const dmxTestFaderCount = 4;
 let dmxMonitorSnapshot = [];
 let dmxTestOverrideActive = false;
+let dmxTestOverrideTimeoutEnabled = true;
+let dmxPatternTimer = null;
+let dmxPatternRunning = false;
+let dmxPatternPaused = false;
+let dmxPatternMode = 'chase';
+let dmxPatternStart = 1;
+let dmxPatternEnd = 16;
+let dmxPatternCurrent = 1;
 
 function getDmxTestStartAddress()
 {
@@ -2400,6 +2411,18 @@ function getDmxTestStartAddress()
         value;
 
     return value;
+}
+
+function clampDmxChannel(value)
+{
+    if (Number.isNaN(value))
+    {
+        return 1;
+    }
+
+    return Math.min(
+        Math.max(value, 1),
+        512);
 }
 
 function updateDmxTestFaderValue(
@@ -2463,10 +2486,13 @@ function syncDmxTestFadersFromMonitor()
 
 function updateDmxOverrideStatus(
     active,
-    remaining)
+    remaining,
+    timeoutEnabled = dmxTestOverrideTimeoutEnabled)
 {
     dmxTestOverrideActive =
         active;
+    dmxTestOverrideTimeoutEnabled =
+        timeoutEnabled;
 
     const status =
         document.getElementById(
@@ -2491,11 +2517,25 @@ function updateDmxOverrideStatus(
             isUiLocked() || !active;
     }
 
+    const holdCheckbox =
+        document.getElementById(
+            'dmxOverrideHold');
+
+    if (holdCheckbox)
+    {
+        holdCheckbox.checked =
+            !timeoutEnabled;
+        holdCheckbox.disabled =
+            isUiLocked();
+    }
+
     status.textContent =
         active
-            ? 'Override active - fallback in '
-                + Math.ceil(remaining / 1000)
-                + ' s'
+            ? (timeoutEnabled
+                ? 'Override active - fallback in '
+                    + Math.ceil(remaining / 1000)
+                    + ' s'
+                : 'Override active - timeout disabled')
             : 'Override idle';
 }
 
@@ -2527,6 +2567,23 @@ async function sendDmxTestValues(
     }
 }
 
+async function sendFullDmxTestFrame(activeChannel = 0, activeValue = 255)
+{
+    const values =
+        Array(512).fill(0);
+
+    if (activeChannel >= 1
+        && activeChannel <= 512)
+    {
+        values[activeChannel - 1] =
+            activeValue;
+    }
+
+    await sendDmxTestValues(
+        1,
+        values);
+}
+
 async function setDmxChannel(
     channel,
     value)
@@ -2555,6 +2612,8 @@ async function setVisibleDmxTestValues(value)
 
 async function releaseDmxOverride()
 {
+    stopDmxPattern(false);
+
     try
     {
         await authenticatedFetch(
@@ -2568,6 +2627,281 @@ async function releaseDmxOverride()
         console.error(error);
 
         beginConnectionRecovery();
+    }
+}
+
+async function setDmxOverrideTimeoutEnabled(enabled)
+{
+    try
+    {
+        await authenticatedFetch(
+            '/api/dmx/timeout',
+            {
+                method: 'POST',
+                headers:
+                {
+                    'Content-Type':
+                        'application/json'
+                },
+                body: JSON.stringify(
+                {
+                    enabled
+                })
+            });
+
+        dmxTestOverrideTimeoutEnabled =
+            enabled;
+
+        updateDmxOverrideStatus(
+            dmxTestOverrideActive,
+            0,
+            enabled);
+    }
+    catch(error)
+    {
+        console.error(error);
+    }
+}
+
+function readDmxPatternRange()
+{
+    const startInput =
+        document.getElementById(
+            'dmxPatternStart');
+    const endInput =
+        document.getElementById(
+            'dmxPatternEnd');
+
+    let start =
+        clampDmxChannel(
+            parseInt(startInput.value));
+    let end =
+        clampDmxChannel(
+            parseInt(endInput.value));
+
+    if (end < start)
+    {
+        [start, end] = [end, start];
+    }
+
+    startInput.value =
+        start;
+    endInput.value =
+        end;
+
+    return { start, end };
+}
+
+function getDmxPatternSpeed()
+{
+    const value =
+        parseInt(
+            document.getElementById(
+                'dmxPatternSpeed').value);
+
+    return Number.isNaN(value)
+        ? 500
+        : value;
+}
+
+function updateDmxPatternControls()
+{
+    setTextIfPresent(
+        'dmxPatternChannel',
+        dmxPatternRunning
+            ? String(dmxPatternCurrent).padStart(3, '0')
+            : '---');
+
+    const running =
+        dmxPatternRunning;
+    const locked =
+        isUiLocked();
+
+    const startButtons =
+        [
+            'channelChaseButton',
+            'findAddressButton'
+        ];
+    const runningButtons =
+        [
+            'patternPauseButton',
+            'patternPreviousButton',
+            'patternNextButton',
+            'patternStopButton'
+        ];
+
+    startButtons.forEach(id =>
+    {
+        const element =
+            document.getElementById(id);
+
+        if (element)
+        {
+            element.disabled =
+                locked || running;
+        }
+    });
+
+    runningButtons.forEach(id =>
+    {
+        const element =
+            document.getElementById(id);
+
+        if (element)
+        {
+            element.disabled =
+                locked || !running;
+        }
+    });
+
+    const pauseButton =
+        document.getElementById(
+            'patternPauseButton');
+
+    if (pauseButton)
+    {
+        pauseButton.textContent =
+            dmxPatternPaused
+                ? 'Resume'
+                : 'Pause';
+    }
+}
+
+async function showDmxPatternChannel(channel)
+{
+    dmxPatternCurrent =
+        channel;
+
+    updateDmxPatternControls();
+
+    await sendFullDmxTestFrame(
+        channel,
+        255);
+}
+
+function scheduleNextDmxPatternStep()
+{
+    clearTimeout(dmxPatternTimer);
+
+    if (!dmxPatternRunning
+        || dmxPatternPaused)
+    {
+        return;
+    }
+
+    dmxPatternTimer =
+        setTimeout(
+            () =>
+            {
+                stepDmxPattern(1);
+            },
+            getDmxPatternSpeed());
+}
+
+function startDmxPattern(mode)
+{
+    const range =
+        readDmxPatternRange();
+
+    dmxPatternMode =
+        mode;
+    dmxPatternStart =
+        range.start;
+    dmxPatternEnd =
+        range.end;
+    dmxPatternCurrent =
+        dmxPatternStart;
+    dmxPatternRunning =
+        true;
+    dmxPatternPaused =
+        false;
+
+    updateDmxPatternControls();
+    showDmxPatternChannel(
+        dmxPatternCurrent)
+        .then(scheduleNextDmxPatternStep);
+}
+
+function startDmxChannelChase()
+{
+    startDmxPattern('chase');
+}
+
+function startDmxFindAddress()
+{
+    startDmxPattern('find');
+}
+
+function toggleDmxPatternPause()
+{
+    if (!dmxPatternRunning)
+    {
+        return;
+    }
+
+    dmxPatternPaused =
+        !dmxPatternPaused;
+
+    updateDmxPatternControls();
+    scheduleNextDmxPatternStep();
+}
+
+function stepDmxPattern(direction)
+{
+    if (!dmxPatternRunning)
+    {
+        return;
+    }
+
+    clearTimeout(dmxPatternTimer);
+
+    let next =
+        dmxPatternCurrent + direction;
+
+    if (dmxPatternMode === 'find'
+        && next > dmxPatternEnd)
+    {
+        next =
+            dmxPatternEnd;
+        dmxPatternPaused =
+            true;
+    }
+    else if (dmxPatternMode === 'find'
+        && next < dmxPatternStart)
+    {
+        next =
+            dmxPatternStart;
+    }
+    else if (next > dmxPatternEnd)
+    {
+        next =
+            dmxPatternStart;
+    }
+    else if (next < dmxPatternStart)
+    {
+        next =
+            dmxPatternEnd;
+    }
+
+    showDmxPatternChannel(next)
+        .then(scheduleNextDmxPatternStep);
+}
+
+async function stopDmxPattern(clearOutput = true)
+{
+    clearTimeout(dmxPatternTimer);
+    dmxPatternTimer =
+        null;
+    dmxPatternRunning =
+        false;
+    dmxPatternPaused =
+        false;
+
+    updateDmxPatternControls();
+
+    if (clearOutput)
+    {
+        await sendFullDmxTestFrame();
     }
 }
 
@@ -2610,7 +2944,23 @@ function initializeDmxTestControls()
             });
     }
 
+    const holdCheckbox =
+        document.getElementById(
+            'dmxOverrideHold');
+
+    if (holdCheckbox)
+    {
+        holdCheckbox.addEventListener(
+            'change',
+            event =>
+            {
+                setDmxOverrideTimeoutEnabled(
+                    !event.target.checked);
+            });
+    }
+
     updateDmxTestLabels();
+    updateDmxPatternControls();
 }
 
 
@@ -2694,9 +3044,10 @@ ws.onmessage =
 
     if(data.dmxTestOverride !== undefined)
     {
-        updateDmxOverrideStatus(
-            data.dmxTestOverride,
-            data.dmxTestOverrideRemaining || 0);
+            updateDmxOverrideStatus(
+                data.dmxTestOverride,
+                data.dmxTestOverrideRemaining || 0,
+                data.dmxTestOverrideTimeoutEnabled !== false);
     }
 	
 	const detectButton =

@@ -54,6 +54,12 @@ bool releaseDmxTestOverride();
 /** @return True when the test override is currently active. */
 bool isDmxTestOverrideActive();
 
+/** @brief Enables or disables automatic expiry of the local test override. */
+void setDmxTestOverrideTimeoutEnabled(bool enabled);
+
+/** @return True when the local test override expires automatically. */
+bool isDmxTestOverrideTimeoutEnabled();
+
 /** @return Milliseconds until the test override expires, or zero. */
 uint32_t getDmxTestOverrideRemaining();
 

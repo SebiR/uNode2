@@ -500,6 +500,41 @@ input[type=range] {
     color: var(--warning-text);
 }
 
+.inlineCheck {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+}
+
+.patternGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(130px, 1fr));
+    gap: 14px;
+    margin: 16px 0;
+    max-width: 820px;
+}
+
+.patternGrid label {
+    display: grid;
+    gap: 5px;
+    font-weight: bold;
+}
+
+.patternStatus {
+    display: grid;
+    gap: 5px;
+    padding: 10px 12px;
+    border: 1px solid var(--section-border);
+    border-radius: 10px;
+    background: var(--radio-bg);
+}
+
+.patternStatus strong {
+    font-size: 1.7em;
+    font-family: monospace;
+}
+
 .dmxFaders {
     display: grid;
     grid-template-columns: repeat(4, minmax(110px, 1fr));

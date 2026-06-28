@@ -1137,6 +1137,9 @@ static void handleStatus() {
   doc["dmxTestOverride"] =
     isDmxTestOverrideActive();
 
+  doc["dmxTestOverrideTimeoutEnabled"] =
+    isDmxTestOverrideTimeoutEnabled();
+
   doc["dmxTestOverrideRemaining"] =
     getDmxTestOverrideRemaining();
 
@@ -1885,6 +1888,40 @@ static void handleReleaseDmxOverride() {
     "{\"ok\":true}");
 }
 
+/** @brief Updates the non-persistent DMX test override timeout mode. */
+static void handleDmxOverrideTimeout() {
+  if (!requireAuth()) {
+    return;
+  }
+
+  if (!requirePlainBodyLimit(
+        128,
+        "DMX override timeout")) {
+    return;
+  }
+
+  JsonDocument doc;
+
+  if (deserializeJson(
+        doc,
+        server.arg("plain"))) {
+    server.send(
+      400,
+      "text/plain",
+      "Invalid JSON");
+
+    return;
+  }
+
+  setDmxTestOverrideTimeoutEnabled(
+    doc["enabled"] | true);
+
+  server.send(
+    200,
+    "application/json",
+    "{\"ok\":true}");
+}
+
 /** @brief Records the current output frame as persistent failsafe scene. */
 static void handleRecordFailsafeScene() {
   if (!requireAuth()) {
@@ -2029,6 +2066,11 @@ bool initWeb() {
     "/api/dmx/release",
     HTTP_POST,
     handleReleaseDmxOverride);
+
+  server.on(
+    "/api/dmx/timeout",
+    HTTP_POST,
+    handleDmxOverrideTimeout);
 
   server.on(
     "/api/failsafe/record",
