@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import http.client
 import json
+import socket
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -43,19 +46,39 @@ class UNodeClient:
             method=method,
         )
 
-        try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
+        last_error: Exception | None = None
+
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(request, timeout=timeout) as response:
+                    return (
+                        response.status,
+                        response.headers.get("Content-Type", ""),
+                        response.read(),
+                    )
+            except urllib.error.HTTPError as error:
                 return (
-                    response.status,
-                    response.headers.get("Content-Type", ""),
-                    response.read(),
+                    error.code,
+                    error.headers.get("Content-Type", ""),
+                    error.read(),
                 )
-        except urllib.error.HTTPError as error:
-            return (
-                error.code,
-                error.headers.get("Content-Type", ""),
-                error.read(),
-            )
+            except (
+                http.client.IncompleteRead,
+                http.client.RemoteDisconnected,
+                ConnectionResetError,
+                TimeoutError,
+                socket.timeout,
+                urllib.error.URLError,
+            ) as error:
+                last_error = error
+                if attempt == 2:
+                    break
+                time.sleep(0.15 * (attempt + 1))
+
+        if last_error is not None:
+            raise last_error
+
+        raise AssertionError(f"{method} {path} failed without response")
 
     def get_json(self, path: str, *, timeout: float = 5.0) -> dict[str, Any]:
         status, _content_type, body = self._request(
@@ -116,4 +139,3 @@ class UNodeClient:
                 f"Saving config failed with HTTP {status}: {body.decode(errors='replace')}"
             )
         return json.loads(body.decode("utf-8"))
-

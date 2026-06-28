@@ -24,6 +24,8 @@ explicitly in each release entry.
   temporary test configuration uses DHCP.
 - DMX output timing HIL test now avoids counting a partial analyzer frame
   captured immediately after clearing RP2040 timing statistics.
+- Integration REST client now retries short-lived HTTP transport interruptions
+  such as incomplete reads during hardware-in-the-loop runs.
 
 ## [0.19.5] - 2026-06-28
 
