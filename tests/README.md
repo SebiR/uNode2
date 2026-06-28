@@ -80,9 +80,10 @@ provided.
 - The ArtAddress integration test programs temporary Short/Long Names, enables
   Locate, verifies `/api/status` and ArtPollReply, disables Locate again, and
   then restores the previous configuration.
-- The ArtSync integration test enables synchronous output mode, sends ArtDmx,
-  verifies that output is pending, sends a second ArtSync, and verifies that the
-  pending frame is flushed.
+- The ArtSync integration tests enable synchronous output mode, send ArtDmx,
+  verify that output is pending, flush with a second ArtSync, and verify that
+  the four-second ArtSync timeout flushes pending data and returns to
+  asynchronous output.
 - The ArtIpProg integration test sends a safe enquiry, verifies ArtIpProgReply
   network fields, and checks that the node remains reachable afterwards.
 - Parser diagnostics tests send malformed UDP/Art-Net packets and verify the
@@ -96,10 +97,10 @@ provided.
 - The DMX hardware-in-the-loop tests send ArtDmx to uNode, receive the real DMX
   output with the RP2040 analyzer, and compare channel values across low,
   middle, and high DMX channel ranges.
-- The DMX hardware-in-the-loop tests also verify ArtSync buffering/flush on the
-  real DMX output and all four output failsafe modes after Art-Net timeout:
-  Hold, All-to-Zero, All-to-Full, and Failsafe Scene. The Failsafe Scene test
-  records and verifies all 512 DMX slots.
+- The DMX hardware-in-the-loop tests also verify ArtSync buffering/flush and
+  ArtSync timeout flush on the real DMX output, plus all four output failsafe
+  modes after Art-Net timeout: Hold, All-to-Zero, All-to-Full, and Failsafe
+  Scene. The Failsafe Scene test records and verifies all 512 DMX slots.
 - The DMX input hardware-in-the-loop test uses the RP2040 as a physical DMX
   sender, advertises the Python test process as an Art-Net subscriber, and
   verifies that uNode forwards the received DMX slots as ArtDmx.

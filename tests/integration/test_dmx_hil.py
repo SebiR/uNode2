@@ -494,6 +494,84 @@ def test_artsync_flushes_pending_artdmx_to_real_dmx_output(
     )
 
 
+def test_artsync_timeout_flushes_pending_artdmx_to_real_dmx_output(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(unode_client, preserved_config)
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    baseline = [13, 13, 13, 13, 13, 13]
+    pending = [91, 82, 73, 64, 55, 46]
+
+    before_status = unode_client.get_json("/api/status")
+    before_timeouts = int(before_status["artNetDiagnostics"]["syncTimeouts"])
+
+    step(f"Sending baseline ArtDmx without ArtSync: {baseline}")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        baseline,
+        sequence=53,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        baseline,
+    )
+
+    step("Sending ArtSync to enable synchronous output mode")
+    send_artnet_packet(unode_ip, make_artsync())
+    wait_for_status(
+        unode_client,
+        lambda data: data["artSyncActive"] is True
+        and data["artSyncPending"] is False,
+    )
+
+    step(f"Sending pending ArtDmx under ArtSync without follow-up sync: {pending}")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        pending,
+        sequence=54,
+        count=1,
+    )
+    wait_for_status(
+        unode_client,
+        lambda data: data["artSyncActive"] is True
+        and data["artSyncPending"] is True,
+    )
+
+    observed = rp2040_tool.get_frame(start=1, count=len(pending))
+    step(f"Before timeout, RP2040 still sees: {observed['values']}")
+    assert observed["values"] == baseline
+
+    step("Waiting for ArtSync timeout and real DMX output flush")
+    status = wait_for_status(
+        unode_client,
+        lambda data: data["artSyncActive"] is False
+        and data["artSyncPending"] is False
+        and int(data["artNetDiagnostics"]["syncTimeouts"]) > before_timeouts,
+        timeout=6.0,
+        interval=0.2,
+    )
+    step(
+        "ArtSync timeout reported: "
+        f"syncTimeouts={status['artNetDiagnostics']['syncTimeouts']}"
+    )
+
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        pending,
+        timeout=2.0,
+    )
+    step("RP2040 analyzer confirmed ArtSync timeout flushed pending DMX output")
+
+
 def test_artnet_output_failsafe_zero_reaches_real_dmx_output(
     unode_client: UNodeClient,
     unode_ip: str,

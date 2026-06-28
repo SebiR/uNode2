@@ -236,7 +236,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Add hardware-in-the-loop tests that verify uNode Art-Net-to-DMX output
       with the RP2040 analyzer.
 - [x] Add hardware-in-the-loop coverage for sparse DMX channel mapping, ArtSync
-      flush to real DMX output, and Art-Net timeout failsafe zero output.
+      flush and timeout flush to real DMX output, and Art-Net timeout failsafe
+      zero output.
 - [x] Add hardware-in-the-loop coverage for all output failsafe modes: Hold,
       All to Zero, All to Full, and Failsafe Scene.
 - [x] Add hardware-in-the-loop tests that verify uNode DMX-to-Art-Net input
@@ -252,7 +253,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Add host-side ArtAddress integration coverage for Short/Long Name
       programming, Locate, `/api/status`, and ArtPollReply.
 - [x] Add host-side ArtSync integration coverage for synchronous ArtDmx
-      buffering and flush behaviour.
+      buffering, explicit flush, timeout flush, and return to asynchronous
+      output.
 - [x] Add safe host-side ArtIpProg enquiry coverage without changing the node
       IP address.
 - [x] Add host-side PollReply bit coverage for port direction, SwIn/SwOut,
