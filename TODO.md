@@ -194,10 +194,14 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [ ] Expose Art-Net socket bind retries and network recovery state clearly.
 - [x] Expose raw ESP8266 reset information in diagnostics so exception resets
       include decoder-friendly details such as EPC and exception address.
+- [x] Expose SoftAP health diagnostics, including active state, SoftAP IP, and
+      associated station count.
 - [x] Apply web-saved Art-Net/DMX runtime settings live without rebooting when
       no network or hostname setting changed.
 - [ ] Add optional capture/printing guidance for serial exception stack traces
       so rare crashes can be decoded after soak or HIL runs.
+- [ ] Add AP-mode health recovery for cases where the SoftAP remains visible
+      but stops accepting client associations.
 
 ## Priority 6: Verification and Release Quality
 

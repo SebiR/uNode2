@@ -20,6 +20,9 @@ explicitly in each release entry.
   firmware path.
 - Exposed raw ESP8266 reset information in `/api/status` and the System
   diagnostics card to make future exception resets easier to decode.
+- Added SoftAP diagnostics to `/api/status` and the System diagnostics card,
+  including whether SoftAP is active, the SoftAP IP address, and the number of
+  associated stations.
 
 ## [0.18.2] - 2026-06-27
 

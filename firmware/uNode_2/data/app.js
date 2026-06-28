@@ -421,6 +421,13 @@ async function loadStatus()
         setTextIfPresent(
             'heapFragmentation',
             (data.heapFragmentation ?? 0) + ' %');
+        setTextIfPresent(
+            'softAPStatus',
+            (data.softAPActive ? 'active' : 'inactive')
+                + ', stations '
+                + (data.softAPStations ?? 0)
+                + ', IP '
+                + (data.softAPIP || '---'));
         setTextIfPresent('resetReason', data.resetReason || '---');
         setTextIfPresent('resetInfo', data.resetInfo || '---');
         setTextIfPresent('bootCount', data.bootCount ?? '---');

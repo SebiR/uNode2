@@ -439,6 +439,18 @@ bool isNetworkRecoveryAPActive() {
     return recoveryAPActive;
 }
 
+bool isSoftAPInterfaceActive() {
+    return (WiFi.getMode() & WIFI_AP) != 0;
+}
+
+uint8_t getSoftAPStationCount() {
+    return WiFi.softAPgetStationNum();
+}
+
+String getSoftAPIPAddress() {
+    return WiFi.softAPIP().toString();
+}
+
 uint8_t getNetworkRetryCount() {
     return reconnectAttempts;
 }

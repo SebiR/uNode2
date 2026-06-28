@@ -24,6 +24,12 @@ bool updateNetwork();
 
 /** @return True while the automatic recovery access point is active. */
 bool isNetworkRecoveryAPActive();
+/** @return True when the ESP8266 Wi-Fi mode currently includes SoftAP. */
+bool isSoftAPInterfaceActive();
+/** @return Number of currently associated SoftAP stations. */
+uint8_t getSoftAPStationCount();
+/** @return String representation of the SoftAP IP address. */
+String getSoftAPIPAddress();
 /** @return Current number of consecutive reconnect attempts. */
 uint8_t getNetworkRetryCount();
 /** @return Milliseconds since Wi-Fi connectivity was lost, or zero. */

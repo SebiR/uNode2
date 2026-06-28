@@ -962,6 +962,15 @@ static void handleStatus() {
   doc["wifiRecoveryAP"] =
     isNetworkRecoveryAPActive();
 
+  doc["softAPActive"] =
+    isSoftAPInterfaceActive();
+
+  doc["softAPStations"] =
+    getSoftAPStationCount();
+
+  doc["softAPIP"] =
+    getSoftAPIPAddress();
+
   doc["uptime"] = millis();
 
   doc["freeHeap"] =
