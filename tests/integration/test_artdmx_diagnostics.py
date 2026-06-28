@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import socket
 
-from artnet_packets import ARTNET_PORT, make_artdmx
+from artnet_packets import ARTNET_ID, ARTNET_PORT, OP_DMX, make_artdmx
 from helpers import configured_port_address, step, wait_for_status
 from unode_client import UNodeClient
+
+ARTNET_MAX_BUFFER = 530
+ARTNET_PROTOCOL_VERSION = 14
 
 
 def _send_artdmx(unode_ip: str, universe: int, values: list[int]) -> None:
@@ -18,6 +21,125 @@ def _send_artdmx(unode_ip: str, universe: int, values: list[int]) -> None:
         sock.sendto(packet, (unode_ip, ARTNET_PORT))
     finally:
         sock.close()
+
+
+def _opcode_bytes(opcode: int) -> bytes:
+    return opcode.to_bytes(2, "little")
+
+
+def _protocol_version_bytes(version: int = ARTNET_PROTOCOL_VERSION) -> bytes:
+    return version.to_bytes(2, "big")
+
+
+def _artdmx_header(
+    *,
+    universe: int = 0,
+    length: int = 2,
+    protocol_version: int = ARTNET_PROTOCOL_VERSION,
+) -> bytes:
+    return (
+        ARTNET_ID
+        + _opcode_bytes(OP_DMX)
+        + _protocol_version_bytes(protocol_version)
+        + b"\x01\x00"
+        + (universe & 0x7FFF).to_bytes(2, "little")
+        + int(length).to_bytes(2, "big")
+    )
+
+
+def _diagnostics(status: dict) -> dict:
+    return status["artNetDiagnostics"]
+
+
+def _wait_for_diagnostic_counter(
+    unode_client: UNodeClient,
+    counter: str,
+    before_count: int,
+) -> dict:
+    return wait_for_status(
+        unode_client,
+        lambda data: _diagnostics(data)[counter] > before_count,
+    )
+
+
+def _send_parser_probe(
+    unode_ip: str,
+    label: str,
+    packet: bytes,
+    unode_client: UNodeClient,
+    counter: str,
+) -> dict:
+    before = _diagnostics(unode_client.get_json("/api/status"))[counter]
+
+    step(f"Sending parser probe '{label}' expecting {counter} to increment")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.sendto(packet, (unode_ip, ARTNET_PORT))
+    finally:
+        sock.close()
+
+    status = _wait_for_diagnostic_counter(
+        unode_client,
+        counter,
+        before,
+    )
+    count = _diagnostics(status)[counter]
+    step(f"Parser diagnostic {counter}: {before} -> {count}")
+    return status
+
+
+def test_parser_diagnostics_count_malformed_udp_packets(
+    unode_client: UNodeClient,
+    unode_ip: str,
+) -> None:
+    probes = [
+        (
+            "oversized UDP packet",
+            bytes(ARTNET_MAX_BUFFER + 1),
+            "oversizedPackets",
+        ),
+        (
+            "short UDP packet",
+            b"Art-Net",
+            "shortPackets",
+        ),
+        (
+            "invalid Art-Net ID",
+            b"Bad-Net\x00" + _opcode_bytes(OP_DMX),
+            "invalidIdPackets",
+        ),
+        (
+            "unsupported protocol version",
+            _artdmx_header(protocol_version=ARTNET_PROTOCOL_VERSION - 1)
+            + b"\x00\x00",
+            "unsupportedProtocolPackets",
+        ),
+        (
+            "malformed ArtDmx length",
+            _artdmx_header(length=4) + b"\x01\x02",
+            "malformedPackets",
+        ),
+        (
+            "unsupported opcode",
+            ARTNET_ID + _opcode_bytes(0x9999),
+            "unsupportedOpcodes",
+        ),
+    ]
+
+    for label, packet, counter in probes:
+        _send_parser_probe(
+            unode_ip,
+            label,
+            packet,
+            unode_client,
+            counter,
+        )
+
+    status = unode_client.get_json("/api/status")
+    step(
+        "Parser diagnostics after probes: "
+        f"{_diagnostics(status)}"
+    )
 
 
 def test_wrong_universe_warning_clears_after_valid_artdmx(

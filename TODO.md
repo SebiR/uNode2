@@ -259,7 +259,9 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       GoodOutput, Status1, Status2, Status3, Locate, merge mode, and failsafe.
 - [ ] Extend host-side Art-Net tests for destructive/opt-in ArtIpProg edge
       cases and additional PollReply fields.
-- [ ] Add malformed and truncated UDP-packet tests.
+- [x] Add malformed and truncated UDP-packet tests for oversized packets,
+      short packets, invalid Art-Net IDs, unsupported protocol versions,
+      malformed ArtDmx lengths, and unsupported opcodes.
 - [ ] Add configuration import, migration, and interrupted-write tests.
 - [ ] Test `millis()` rollover behaviour for all timeout state machines.
 - [ ] Run long-duration soak tests with DMX traffic, WebSocket clients, Wi-Fi

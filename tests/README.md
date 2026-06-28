@@ -85,6 +85,9 @@ provided.
   pending frame is flushed.
 - The ArtIpProg integration test sends a safe enquiry, verifies ArtIpProgReply
   network fields, and checks that the node remains reachable afterwards.
+- Parser diagnostics tests send malformed UDP/Art-Net packets and verify the
+  counters for oversized packets, short packets, invalid IDs, unsupported
+  protocol versions, malformed ArtDmx lengths, and unsupported opcodes.
 - The PollReply bit tests verify direction-dependent PortTypes, SwIn/SwOut,
   GoodOutputA/B, Status1 indicator bits, Status2 capability/squawk bits, and
   Status3 failsafe bits.
