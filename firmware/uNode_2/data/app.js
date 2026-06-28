@@ -2819,7 +2819,18 @@ function startDmxPattern(mode)
     updateDmxPatternControls();
     showDmxPatternChannel(
         dmxPatternCurrent)
-        .then(scheduleNextDmxPatternStep);
+        .then(() =>
+        {
+            if (dmxPatternMode === 'find')
+            {
+                dmxPatternPaused =
+                    true;
+                updateDmxPatternControls();
+                return;
+            }
+
+            scheduleNextDmxPatternStep();
+        });
 }
 
 function startDmxChannelChase()

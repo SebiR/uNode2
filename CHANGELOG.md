@@ -19,6 +19,8 @@ explicitly in each release entry.
   scan range, speed, pause/resume, previous/next, and stop controls.
 - Added a non-persistent DMX test option to disable the local override timeout
   until the next node restart.
+- Fixed Find Address so it starts paused on the first scan channel instead of
+  running an automatic chase first.
 
 ## [0.19.2] - 2026-06-28
 
