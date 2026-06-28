@@ -154,6 +154,21 @@ body {
     cursor: not-allowed;
 }
 
+.statusRevertButton {
+    margin-left: 6px;
+    padding: 5px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 4px;
+    background: transparent;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.statusRevertButton:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
 .warningBox {
     margin-top: 14px;
     padding: 10px 12px;

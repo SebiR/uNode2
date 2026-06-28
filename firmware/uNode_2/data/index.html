@@ -105,6 +105,13 @@
 				onclick="saveConfig()">
 				Save & Restart
 			</button>
+			<button
+				id="revertChangesButton"
+				type="button"
+				class="statusRevertButton"
+				onclick="revertConfigChanges()">
+				Revert
+			</button>
 		</div>
 
 		<label class="themeSelector">
@@ -178,16 +185,16 @@
             </div>
 
             <div class="card">
-                <h2>Art-Net Input</h2>
+                <h2 id="artnetCardTitle">Art-Net Input</h2>
 
                 <div class="statusgrid">
-                    <div class="label">ArtDmx Packets</div>
+                    <div id="artnetPacketsLabel" class="label">ArtDmx Packets</div>
                     <div id="artnetPackets">0</div>
 
-                    <div class="label">Frames per Second</div>
+                    <div id="artnetFpsLabel" class="label">Frames per Second</div>
                     <div id="artnetFPS">0</div>
 
-					<div class="label">Last Packet</div>
+					<div id="lastPacketLabel" class="label">Last Packet</div>
 					<div id="lastPacket">0 ms</div>
 
 					<div class="label">ArtSync Packets</div>
@@ -205,7 +212,7 @@
 					<div class="label">Last Poll</div>
 					<div id="lastPollAge">---</div>
 
-					<div class="label">Subscriber</div>
+					<div id="artnetSubscribersLabel" class="label">Subscriber</div>
 					<div id="artnetSubscribers">0</div>
 
 					<div class="label">Output Failsafe</div>
@@ -214,16 +221,16 @@
             </div>
 
             <div class="card">
-                <h2>DMX Input</h2>
+                <h2 id="dmxCardTitle">DMX Input</h2>
 
                 <div class="statusgrid">
-                    <div class="label">DMX-Frames</div>
+                    <div id="dmxFramesLabel" class="label">DMX-Frames</div>
                     <div id="dmxFrames">0</div>
 
-                    <div class="label">Frames per Second</div>
+                    <div id="dmxFpsLabel" class="label">Frames per Second</div>
                     <div id="dmxFPS">0</div>
 
-                    <div class="label">Last Frame</div>
+                    <div id="lastDmxFrameLabel" class="label">Last Frame</div>
                     <div id="lastDMXFrameAge">0 ms</div>
                 </div>
             </div>

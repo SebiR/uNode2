@@ -11,6 +11,21 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-06-28
+
+### Added
+
+- Added a Revert button next to the unsaved-changes save action so accidental
+  web UI edits can be discarded without reloading the page.
+- Added compact status-bar messages for firmware/web-asset mismatch, active
+  output failsafe, DMX test override, and recent wrong-universe ArtDmx packets.
+
+### Changed
+
+- Dashboard Art-Net and DMX cards now adapt their labels and summary values to
+  the configured direction, showing Art-Net input/DMX output or DMX input/
+  Art-Net output context more clearly.
+
 ## [0.19.1] - 2026-06-28
 
 ### Fixed

@@ -395,7 +395,7 @@ async function loadStatus()
 
         updateHardwareStatus(data);
         updateDetailedDiagnostics(data);
-        updateStatusWarning(data);
+        updateStatusMessages(data);
 
         document.getElementById('uptime').textContent =
             formatUptime(data.uptime);
@@ -489,6 +489,8 @@ async function loadStatus()
 
 		document.getElementById('lastDMXFrameAge').textContent =
 			data.lastDMXFrameAge + " ms";
+
+        updateDashboardModeLabels(data);
 		
     }
     catch(error)
@@ -509,6 +511,77 @@ function setTextIfPresent(id, value)
     if (element)
     {
         element.textContent = value;
+    }
+}
+
+function updateDashboardModeLabels(data)
+{
+    const artnetToDmx =
+        data.direction == 0;
+
+    setTextIfPresent(
+        'artnetCardTitle',
+        artnetToDmx ? 'Art-Net Input' : 'Art-Net Output');
+    setTextIfPresent(
+        'artnetPacketsLabel',
+        artnetToDmx ? 'Received ArtDmx Packets' : 'Sent ArtDmx Status');
+    setTextIfPresent(
+        'artnetFpsLabel',
+        artnetToDmx ? 'Received FPS' : 'Target Refresh');
+    setTextIfPresent(
+        'lastPacketLabel',
+        artnetToDmx ? 'Last ArtDmx Packet' : 'Last ArtDmx Sent');
+    setTextIfPresent(
+        'artnetSubscribersLabel',
+        artnetToDmx ? 'Subscribers' : 'Art-Net Subscribers');
+    setTextIfPresent(
+        'dmxCardTitle',
+        artnetToDmx ? 'DMX Output' : 'DMX Input');
+    setTextIfPresent(
+        'dmxFramesLabel',
+        artnetToDmx ? 'Output State' : 'Received DMX Frames');
+    setTextIfPresent(
+        'dmxFpsLabel',
+        artnetToDmx ? 'DMX Source' : 'Received FPS');
+    setTextIfPresent(
+        'lastDmxFrameLabel',
+        artnetToDmx ? 'Output Activity' : 'Last DMX Frame');
+
+    if (artnetToDmx)
+    {
+        setTextIfPresent(
+            'dmxFrames',
+            data.failsafeActive
+                ? 'Failsafe active'
+                : (data.dmxTestOverride
+                    ? 'Test override'
+                    : (data.artnetActive ? 'Sending DMX' : 'Idle')));
+        setTextIfPresent(
+            'dmxFPS',
+            data.dmxTestOverride
+                ? 'DMX Test'
+                : (data.artnetActive ? 'Art-Net' : 'None'));
+        setTextIfPresent(
+            'lastDMXFrameAge',
+            data.artnetActive
+                ? 'active'
+                : 'no recent ArtDmx');
+    }
+    else
+    {
+        setTextIfPresent(
+            'artnetPackets',
+            data.dmxActive ? 'Sending ArtDmx' : 'Idle');
+        setTextIfPresent(
+            'artnetFPS',
+            data.dmxActive
+                ? 'on DMX changes / 1s refresh'
+                : 'waiting for DMX');
+        setTextIfPresent(
+            'lastPacket',
+            data.dmxActive
+                ? 'subscriber refresh active'
+                : 'no recent DMX');
     }
 }
 
@@ -784,7 +857,7 @@ function updateDetailedDiagnostics(data)
         diagnostics.syncTimeouts ?? 0);
 }
 
-function updateStatusWarning(data)
+function updateStatusMessages(data)
 {
     const warning =
         document.getElementById(
@@ -800,6 +873,7 @@ function updateStatusWarning(data)
 
     const diagnostics =
         data.artNetDiagnostics;
+    const messages = [];
 
     if (data.direction == 0
         && diagnostics
@@ -813,11 +887,42 @@ function updateStatusWarning(data)
 
     if (Date.now() < wrongUniverseWarningVisibleUntil)
     {
-        warning.hidden = false;
-        warningText.textContent =
+        messages.push(
             'Recent ArtDmx on wrong universe U'
             + lastWrongUniverseWarning
-            + ' - check controller/node universe';
+            + ' - check controller/node universe');
+    }
+
+    if (data.webAssetVersionMatch === false)
+    {
+        messages.push(
+            'Firmware/Web files mismatch');
+    }
+
+    if (data.direction == 0
+        && data.failsafeActive)
+    {
+        messages.push(
+            'Output failsafe active: '
+            + (data.failsafeModeName || 'configured mode'));
+    }
+
+    if (data.dmxTestOverride)
+    {
+        messages.push(
+            'DMX test override active'
+            + (data.dmxTestOverrideRemaining
+                ? ' ('
+                    + Math.ceil(data.dmxTestOverrideRemaining / 1000)
+                    + 's)'
+                : ''));
+    }
+
+    if (messages.length > 0)
+    {
+        warning.hidden = false;
+        warningText.textContent =
+            messages.join(' · ');
         return;
     }
 
@@ -1364,6 +1469,66 @@ function updateUnsavedChangesIndicator()
     }
 
     indicator.hidden = false;
+}
+
+async function revertConfigChanges()
+{
+    if (!configBaseline)
+    {
+        await loadConfig();
+        return;
+    }
+
+    document.getElementById('hostnameInput').value =
+        configBaseline.hostname;
+    document.getElementById('wifiMode').value =
+        configBaseline.wifiMode;
+    document.getElementById('ipAddress').value =
+        configBaseline.ip;
+    document.getElementById('subnetMask').value =
+        configBaseline.subnet;
+    document.getElementById('gateway').value =
+        configBaseline.gateway;
+    document.getElementById('ledBrightness').value =
+        configBaseline.ledBrightness;
+    document.getElementById('ledBrightnessValue').textContent =
+        configBaseline.ledBrightness + ' %';
+    document.getElementById('shortName').value =
+        configBaseline.shortName;
+    document.getElementById('longName').value =
+        configBaseline.longName;
+    document.getElementById('net').value =
+        configBaseline.net;
+    document.getElementById('subnetId').value =
+        configBaseline.subnetId;
+    document.getElementById('universe').value =
+        configBaseline.universe;
+    document.getElementById('failsafeMode').value =
+        configBaseline.failsafeMode;
+    document.getElementById('mergeMode').value =
+        configBaseline.mergeMode;
+    document.getElementById('terminationMode').value =
+        configBaseline.terminationMode;
+    document.getElementById('legacyArtPollReply').checked =
+        configBaseline.legacyArtPollReply;
+
+    document.getElementById('dhcp').checked =
+        configBaseline.dhcp;
+    document.getElementById('staticIp').checked =
+        !configBaseline.dhcp;
+    document.getElementById('artnetToDmx').checked =
+        configBaseline.direction == 0;
+    document.getElementById('dmxToArtnet').checked =
+        configBaseline.direction == 1;
+
+    updateDirectionMode();
+    updateIPMode();
+    validateStaticIpSettings(configBaseline);
+    updateUnsavedChangesIndicator();
+
+    await applyBrightnessPreview(
+        configBaseline.ledBrightness,
+        false);
 }
 
 window.addEventListener(
@@ -2570,7 +2735,7 @@ ws.onmessage =
 
     updateHardwareStatus(data);
     updateDetailedDiagnostics(data);
-    updateStatusWarning(data);
+    updateStatusMessages(data);
 
 	// LED transitions are also sent as small, LED-only messages. Do not
 	// overwrite status fields with missing values in those messages.
@@ -2645,6 +2810,8 @@ ws.onmessage =
         'lastDMXFrameAge')
         .textContent =
             data.lastDMXFrameAge + " ms";
+
+    updateDashboardModeLabels(data);
 
     document.getElementById(
         'uptime')
