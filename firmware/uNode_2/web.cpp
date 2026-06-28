@@ -119,6 +119,12 @@ static const char RECOVERY_HTML[] PROGMEM = R"rawliteral(
     </section>
 
     <section class="card">
+      <h2>Wi-Fi Credentials</h2>
+      <p class="muted" id="storedWifi">Stored Wi-Fi: unknown</p>
+      <button class="warn" onclick="forgetWifi()">Forget Saved Wi-Fi Credentials</button>
+    </section>
+
+    <section class="card">
       <h2>Web Password</h2>
       <p class="muted">Leave empty and apply to disable web write protection.</p>
       <input id="adminPassword" type="password" placeholder="New password or empty">
@@ -139,6 +145,10 @@ static const char RECOVERY_HTML[] PROGMEM = R"rawliteral(
         const data = await response.json();
         document.getElementById('status').textContent =
           `Firmware ${data.firmware}, flash layout ${data.flashLayout}, LittleFS image ${Math.round(data.littleFsImageSize / 1024)} kB`;
+        document.getElementById('storedWifi').textContent =
+          data.storedWifiConfigured
+            ? `Stored Wi-Fi: ${data.storedWifiSSID}`
+            : 'Stored Wi-Fi: none';
       } catch (error) {
         document.getElementById('status').textContent = 'Recovery status unavailable.';
       }
@@ -209,6 +219,21 @@ static const char RECOVERY_HTML[] PROGMEM = R"rawliteral(
       }
 
       setMessage('Factory reset completed. Rebooting...');
+      waitForRestart();
+    }
+
+    async function forgetWifi() {
+      if (!confirm('Forget the saved Wi-Fi SSID and password? The node will restart.')) {
+        return;
+      }
+
+      const response = await fetch('/api/wifi/forget', { method: 'POST' });
+      if (!response.ok) {
+        setMessage('Clearing Wi-Fi credentials failed: ' + await response.text());
+        return;
+      }
+
+      setMessage('Saved Wi-Fi credentials cleared. Rebooting...');
       waitForRestart();
     }
 
@@ -962,6 +987,12 @@ static void handleStatus() {
   doc["wifiRecoveryAP"] =
     isNetworkRecoveryAPActive();
 
+  doc["storedWifiSSID"] =
+    getStoredWifiSSID();
+
+  doc["storedWifiConfigured"] =
+    hasStoredWifiCredentials();
+
   doc["softAPActive"] =
     isSoftAPInterfaceActive();
 
@@ -1268,6 +1299,44 @@ static void handleRestart() {
   scheduleRestart();
 }
 
+/** @brief Erases stored station credentials and restarts into configured mode. */
+static void handleForgetWifiCredentials() {
+  if (!recoveryWebMode
+      && !requireAuth()) {
+    return;
+  }
+
+  const bool cleared =
+    forgetStoredWifiCredentials();
+
+  if (!cleared) {
+    server.send(
+      500,
+      "text/plain",
+      "Failed to clear saved Wi-Fi credentials");
+
+    return;
+  }
+
+  JsonDocument doc;
+  doc["restartRequired"] = true;
+  doc["message"] =
+    "Saved Wi-Fi credentials cleared. Restarting.";
+  doc["storedWifiConfigured"] = false;
+
+  String json;
+  serializeJson(
+    doc,
+    json);
+
+  server.send(
+    200,
+    "application/json",
+    json);
+
+  scheduleRestart();
+}
+
 /** @brief Toggles local Art-Net Locate indication. */
 static void handleDetectNode() {
   if (!requireAuth()) {
@@ -1396,6 +1465,8 @@ static void handleRecoveryStatus() {
   doc["chipId"] = getChipIdString();
   doc["fsMounted"] = recoveryFilesystemMounted;
   doc["freeSketch"] = ESP.getFreeSketchSpace();
+  doc["storedWifiSSID"] = getStoredWifiSSID();
+  doc["storedWifiConfigured"] = hasStoredWifiCredentials();
 
   String json;
   serializeJson(doc, json);
@@ -1891,6 +1962,11 @@ bool initWeb() {
     handleRestart);
 
   server.on(
+    "/api/wifi/forget",
+    HTTP_POST,
+    handleForgetWifiCredentials);
+
+  server.on(
     "/api/detect",
     HTTP_POST,
     handleDetectNode);
@@ -2001,6 +2077,11 @@ bool initRecoveryWeb(
     "/api/restart",
     HTTP_POST,
     handleRestart);
+
+  server.on(
+    "/api/wifi/forget",
+    HTTP_POST,
+    handleForgetWifiCredentials);
 
   server.on(
     "/api/factoryReset",

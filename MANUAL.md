@@ -236,6 +236,16 @@ http://<hostname>.local
 The WiFiManager configuration portal also uses `2.0.0.1` and is indicated by
 the orange status-LED pattern described below.
 
+### Saved Wi-Fi Credentials
+
+The ESP8266 stores at most one station SSID/password pair in SDK flash. uNode
+does not maintain a multi-network list.
+
+The Network tab shows the currently stored station SSID when one is available.
+Use **Forget Saved Wi-Fi Credentials** to erase only this stored SSID/password
+pair. uNode configuration, Art-Net settings, the web password, and failsafe
+scene data are left unchanged. The same action is available from Recovery Mode.
+
 ## OTA Updates and Recovery
 
 The firmware provides HTTP OTA updates for both firmware and the complete

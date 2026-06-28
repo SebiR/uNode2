@@ -25,6 +25,11 @@ explicitly in each release entry.
   associated stations.
 - Added reset reason and raw ESP8266 reset information to the Serial1/GPIO2
   boot log for crash diagnosis when Wi-Fi is unavailable.
+- Added a Network-tab and Recovery-page action to forget saved Wi-Fi station
+  credentials without deleting the uNode configuration.
+- Recovery network startup now explicitly keeps saved Wi-Fi credentials instead
+  of relying on the ESP8266 one-argument disconnect overload, which erases
+  credentials.
 
 ## [0.18.2] - 2026-06-27
 

@@ -18,6 +18,12 @@ String getChipIdString();
 String getDefaultAPSSID();
 /** @return Deterministic access-point password for this device. */
 String getDefaultAPPassword();
+/** @return Stored station SSID, or an empty string when no credentials exist. */
+String getStoredWifiSSID();
+/** @return True when station credentials are currently stored in SDK flash. */
+bool hasStoredWifiCredentials();
+/** @brief Erases stored station credentials from SDK flash. */
+bool forgetStoredWifiCredentials();
 
 /** @return True when the active interface or IP configuration changed. */
 bool updateNetwork();

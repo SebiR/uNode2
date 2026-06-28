@@ -428,6 +428,11 @@ async function loadStatus()
                 + (data.softAPStations ?? 0)
                 + ', IP '
                 + (data.softAPIP || '---'));
+        setTextIfPresent(
+            'storedWifiCredentials',
+            data.storedWifiConfigured
+                ? 'Stored Wi-Fi: ' + (data.storedWifiSSID || '(unnamed)')
+                : 'Stored Wi-Fi: none');
         setTextIfPresent('resetReason', data.resetReason || '---');
         setTextIfPresent('resetInfo', data.resetInfo || '---');
         setTextIfPresent('bootCount', data.bootCount ?? '---');
@@ -1516,6 +1521,51 @@ async function restartAndReload()
     {
         // The reboot may close the socket before the response is complete.
         // Continue waiting for the node in that case.
+    }
+
+    await waitForRestartAndReload();
+}
+
+async function forgetWifiCredentials()
+{
+    if (restartInProgress)
+    {
+        return;
+    }
+
+    if (!confirm(
+        'Forget the saved Wi-Fi SSID and password? '
+            + 'The node will restart. uNode settings stay unchanged.'))
+    {
+        return;
+    }
+
+    restartInProgress = true;
+    showRestartOverlay(
+        'Clearing saved Wi-Fi credentials...');
+
+    try
+    {
+        const response = await authenticatedFetch(
+            '/api/wifi/forget',
+            {
+                method: 'POST'
+            });
+
+        if (!response.ok)
+        {
+            restartInProgress = false;
+            hideRestartOverlay();
+            alert(
+                'Clearing Wi-Fi credentials failed: ' +
+                await response.text());
+            return;
+        }
+    }
+    catch(error)
+    {
+        // The station interface may disappear before the response completes.
+        // Continue waiting for the configured AP/recovery path.
     }
 
     await waitForRestartAndReload();

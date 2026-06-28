@@ -151,6 +151,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       continue reconnecting and require a button-assisted reboot for recovery.
 - [ ] Keep AP and AP + Client modes available when they are explicitly selected
       in the stored configuration.
+- [x] Add a Network-tab and Recovery-page action to forget saved Wi-Fi station
+      credentials without performing a full factory reset.
 - [ ] Use a distinctive LED pattern for recovery boot and expose the current
       boot mode in diagnostics.
 - [x] Replace the current `DBG_PRINT` macros with a central logging layer.

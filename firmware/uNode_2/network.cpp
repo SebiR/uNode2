@@ -181,6 +181,28 @@ String getDefaultAPPassword()
     return "artnode" + getChipIdString();
 }
 
+String getStoredWifiSSID()
+{
+    return WiFi.SSID();
+}
+
+bool hasStoredWifiCredentials()
+{
+    return getStoredWifiSSID().length() > 0;
+}
+
+bool forgetStoredWifiCredentials()
+{
+    LOG_WARN("Clearing stored Wi-Fi station credentials");
+
+    // The two-argument overload makes credential erasure explicit. The
+    // one-argument ESP8266 overload also erases credentials, which is easy to
+    // miss when only a temporary disconnect is intended.
+    return WiFi.disconnect(
+        false,
+        true);
+}
+
 String getIPAddress()
 {
     if (WiFi.status() == WL_CONNECTED)
@@ -340,7 +362,9 @@ bool initRecoveryNetwork()
 
     stopMDNS();
 
-    WiFi.disconnect(false);
+    WiFi.disconnect(
+        false,
+        false);
     WiFi.mode(WIFI_AP);
     WiFi.softAPConfig(apIP, apIP, apMask);
 
