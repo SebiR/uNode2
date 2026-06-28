@@ -1943,7 +1943,14 @@ bool initWeb() {
     "/",
     HTTP_GET,
     []() {
-      handleFileRead("/index.html");
+      if (handleFileRead("/index.html")) {
+        return;
+      }
+
+      server.send(
+        500,
+        "text/plain",
+        "Web interface asset /index.html is missing. Upload the LittleFS image or reboot into recovery mode.");
     });
 
   server.on(

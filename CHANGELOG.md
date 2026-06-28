@@ -11,6 +11,19 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-06-28
+
+### Fixed
+
+- The web root now returns a clear HTTP 500 error when `/index.html` is missing
+  instead of silently failing the request.
+
+### Changed
+
+- Updated the roadmap to reflect implemented AP/AP+Client mode handling,
+  scheduled restarts, recovery diagnostics, hardware-in-the-loop soak coverage,
+  DMX fault injection, and DMX hardware-test coverage.
+
 ## [0.19.0] - 2026-06-28
 
 ### Changed

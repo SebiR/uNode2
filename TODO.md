@@ -149,12 +149,12 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       the firmware-embedded recovery page.
 - [x] Remove the automatic runtime Recovery AP after failed client reconnects;
       continue reconnecting and require a button-assisted reboot for recovery.
-- [ ] Keep AP and AP + Client modes available when they are explicitly selected
+- [x] Keep AP and AP + Client modes available when they are explicitly selected
       in the stored configuration.
 - [x] Add a Network-tab and Recovery-page action to forget saved Wi-Fi station
       credentials without performing a full factory reset.
-- [ ] Use a distinctive LED pattern for recovery boot and expose the current
-      boot mode in diagnostics.
+- [x] Expose the current recovery boot mode in diagnostics.
+- [ ] Use a distinctive LED pattern for recovery boot.
 - [x] Replace the current `DBG_PRINT` macros with a central logging layer.
 - [x] Add compile-time verbosity levels: Off, Error, Warning, Info, Debug, and
       Trace.
@@ -187,12 +187,12 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Add upload and request-size limits to all web endpoints.
 - [x] Protect configuration, restart, reset, and update endpoints with
       authentication.
-- [ ] Replace firmware-side blocking restart delays with a scheduled restart.
+- [x] Replace firmware-side blocking restart delays with a scheduled restart.
 - [x] Validate static network settings semantically, including subnet masks
       and address relationships.
 - [x] Clamp the copied physical DMX slot count defensively before clearing the
       remainder of the frame buffer.
-- [ ] Return a proper error when the root web asset is missing.
+- [x] Return a proper error when the root web asset is missing.
 - [ ] Expose Art-Net socket bind retries and network recovery state clearly.
 - [x] Expose raw ESP8266 reset information in diagnostics so exception resets
       include decoder-friendly details such as EPC and exception address.
@@ -229,8 +229,10 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       slot count, frame rate, and channel values.
 - [x] Use a separate PIO receive path to capture complete DMX frames and
       measure timing, jitter, framing errors, and channel data from uNode.
-- [ ] Add controlled fault injection for missing frames, invalid timing,
-      truncated frames, and deliberate signal loss.
+- [x] Add initial controlled DMX-input fault injection for invalid timing,
+      below-spec frames, random UART garbage, and line-noise bursts.
+- [ ] Extend controlled fault injection with explicit missing frames, truncated
+      frames, and deliberate signal loss.
 - [x] Define a small versioned USB-serial command protocol with machine-readable
       `OK`, `ERROR`, measurement, and frame responses.
 - [x] Add commands for fixture identity, mode selection, transmitter settings,
@@ -240,7 +242,7 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Add host-side hardware-in-the-loop tests that coordinate the RP2040,
       uNode HTTP API, and Art-Net UDP traffic.
 - [x] Verify both DMX-to-Art-Net and Art-Net-to-DMX directions automatically.
-- [ ] Cover signal-loss failsafe, refresh intervals, channel mapping, frame
+- [x] Cover signal-loss failsafe, refresh intervals, channel mapping, frame
       length, and direction changes in the hardware test suite.
 - [x] Add RP2040 DMX analyzer/test-fixture firmware in a dedicated project
       folder, for example `firmware/rp2040_dmx_tool`.
@@ -286,7 +288,7 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       ArtPollReply reachability, ArtDmx, ArtSync, malformed parser probes,
       runtime direction/failsafe/merge changes, reboot detection, reset-info
       reporting, and heap monitoring.
-- [ ] Add a hardware-in-the-loop soak mode with RP2040 DMX input/output traffic
+- [x] Add a hardware-in-the-loop soak mode with RP2040 DMX input/output traffic
       and timing variation during long runs.
 - [x] Add an initial RP2040 hardware-in-the-loop DMX input soak with timing
       variation, random UART garbage, optional line-noise bursts, below-spec
