@@ -70,10 +70,27 @@ Or auto-detect a single connected RP2040 USB serial port:
 The RP2040 tests are skipped unless `UNODE_RP2040_PORT` or `-Rp2040Port` is
 provided.
 
+Run the host-only soak/stability test for a specific duration:
+
+```powershell
+.\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Path tests/integration/test_soak.py -SoakSeconds 600
+```
+
+Optional soak tuning:
+
+```powershell
+.\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Path tests/integration/test_soak.py -SoakSeconds 3600 -SoakInterval 1 -SoakGrace 8
+```
+
 ## Notes
 
 - Integration tests may change the node configuration temporarily. They try to
   restore the previous configuration afterwards.
+- The host-only soak test repeatedly checks HTTP reachability, ArtPollReply
+  reachability, reboot counters, reset diagnostics, heap health, ArtDmx,
+  ArtSync, malformed Art-Net parser probes, and live runtime configuration
+  changes. It is intentionally excluded from normal quick runs unless selected
+  by path.
 - The live-configuration integration test currently changes Art-Net direction,
   Net, Sub-Net, and Universe, verifies `/api/status`, verifies ArtPollReply, and
   then restores the previous configuration.

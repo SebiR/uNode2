@@ -4,6 +4,9 @@ param(
     [string]$BaseUrl = "",
     [string]$Password = "",
     [string]$Rp2040Port = "",
+    [int]$SoakSeconds = 0,
+    [double]$SoakInterval = 0,
+    [double]$SoakGrace = 0,
     [string]$Path = ""
 )
 
@@ -48,6 +51,21 @@ if ($Integration)
         Remove-Item Env:\UNODE_RP2040_PORT -ErrorAction SilentlyContinue
     }
 
+    if ($SoakSeconds -gt 0)
+    {
+        $env:UNODE_SOAK_SECONDS = "$SoakSeconds"
+    }
+
+    if ($SoakInterval -gt 0)
+    {
+        $env:UNODE_SOAK_INTERVAL = "$SoakInterval"
+    }
+
+    if ($SoakGrace -gt 0)
+    {
+        $env:UNODE_SOAK_REACHABILITY_GRACE = "$SoakGrace"
+    }
+
     if ($Path.Length -eq 0)
     {
         $Path = "tests/integration"
@@ -62,10 +80,17 @@ if ($Integration)
     {
         Write-Host "RP2040  : $env:UNODE_RP2040_PORT"
     }
+    if ($env:UNODE_SOAK_SECONDS)
+    {
+        Write-Host "Soak    : $env:UNODE_SOAK_SECONDS seconds"
+    }
 }
 else
 {
     Remove-Item Env:\UNODE_RUN_INTEGRATION -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_SOAK_SECONDS -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_SOAK_INTERVAL -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_SOAK_REACHABILITY_GRACE -ErrorAction SilentlyContinue
 
     if ($Path.Length -eq 0)
     {

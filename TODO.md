@@ -274,6 +274,12 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [ ] Test `millis()` rollover behaviour for all timeout state machines.
 - [ ] Run long-duration soak tests with DMX traffic, WebSocket clients, Wi-Fi
       interruptions, and repeated controller discovery.
+- [x] Add an initial host-only soak test for repeated HTTP/API reachability,
+      ArtPollReply reachability, ArtDmx, ArtSync, malformed parser probes,
+      runtime direction/failsafe/merge changes, reboot detection, reset-info
+      reporting, and heap monitoring.
+- [ ] Add a hardware-in-the-loop soak mode with RP2040 DMX input/output traffic
+      and timing variation during long runs.
 - [ ] Test power loss during firmware, LittleFS, and configuration updates.
 - [ ] Add a Doxygen configuration and generated API-documentation workflow.
 - [ ] Keep `MANUAL.md` and this roadmap synchronized with each release.
