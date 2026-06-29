@@ -25,6 +25,7 @@ static bool sacnActive = false;
 static bool sacnFailsafeActive = false;
 static uint32_t nextSacnBindRetryMillis = 0;
 static uint32_t lastSacnPacketMillis = 0;
+static uint32_t sacnUdpPacketCounter = 0;
 static uint32_t sacnPacketCounter = 0;
 static uint32_t sacnFpsCounter = 0;
 static uint32_t sacnCurrentFps = 0;
@@ -33,6 +34,8 @@ static uint32_t wrongUniverseCounter = 0;
 static uint16_t lastWrongUniverse = 0;
 static uint32_t malformedPacketCounter = 0;
 static uint32_t sequenceDropCounter = 0;
+static uint32_t protocolDropCounter = 0;
+static uint32_t directionDropCounter = 0;
 static uint32_t priorityDropCounter = 0;
 static uint32_t streamTerminatedCounter = 0;
 static uint8_t outgoingSequence = 1;
@@ -206,8 +209,13 @@ static bool isSequenceNewer(
 
 /** @brief Applies the configured output failsafe for sACN live data. */
 static void applySacnFailsafe() {
-  if (config.direction != ARTNET_TO_DMX
-      || config.liveProtocol != LIVE_PROTOCOL_SACN) {
+  if (config.liveProtocol != LIVE_PROTOCOL_SACN) {
+    protocolDropCounter++;
+    return;
+  }
+
+  if (config.direction != ARTNET_TO_DMX) {
+    directionDropCounter++;
     return;
   }
 
@@ -470,6 +478,7 @@ void updateSacn() {
           sizeof(packetBuffer));
 
       if (bytesRead > 0) {
+        sacnUdpPacketCounter++;
         handleSacnPacket(
           packetBuffer,
           (uint16_t)bytesRead);
@@ -608,6 +617,10 @@ uint32_t getSacnPacketCount() {
   return sacnPacketCounter;
 }
 
+uint32_t getSacnUdpPacketCount() {
+  return sacnUdpPacketCounter;
+}
+
 uint32_t getSacnFPS() {
   return sacnCurrentFps;
 }
@@ -634,6 +647,14 @@ uint32_t getSacnMalformedPacketCount() {
 
 uint32_t getSacnSequenceDropCount() {
   return sequenceDropCounter;
+}
+
+uint32_t getSacnProtocolDropCount() {
+  return protocolDropCounter;
+}
+
+uint32_t getSacnDirectionDropCount() {
+  return directionDropCounter;
 }
 
 uint32_t getSacnPriorityDropCount() {

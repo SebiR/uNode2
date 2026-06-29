@@ -631,6 +631,18 @@ function updateDashboardRuntime(data)
 {
     const artnetToDmx =
         data.direction == 0;
+    const usesSacn =
+        data.liveProtocol == 1;
+    const liveProtocolName =
+        usesSacn ? 'sACN' : 'Art-Net';
+    const liveInputActive =
+        usesSacn ? data.sacnActive : data.artnetActive;
+    const livePacketCount =
+        usesSacn ? data.sacnPackets : data.artnetPackets;
+    const liveFps =
+        usesSacn ? data.sacnFPS : data.artnetFPS;
+    const livePacketAge =
+        usesSacn ? data.lastSacnPacketAge : data.lastPacketAge;
 
     updateDashboardModeLabels(data);
 
@@ -806,6 +818,69 @@ function updateDashboardRuntime(data)
             data.dmxActive
                 ? 'Receiving physical DMX'
                 : 'No recent DMX');
+    }
+
+    if (usesSacn)
+    {
+        setTextIfPresent(
+            'flowNodeMeta',
+            'sACN input - ' + universeText);
+        setTextIfPresent(
+            'flowArtNetSource',
+            'sACN Source');
+        setTextIfPresent(
+            'flowArtNetSourceMeta',
+            (data.sacnActive ? 'Active' : 'Idle')
+                + ' - last '
+                + formatAge(data.lastSacnPacketAge));
+        setTextIfPresent(
+            'artnetSummary',
+            (livePacketCount ?? 0)
+                + ' packets, '
+                + (liveFps ?? 0)
+                + ' fps (last '
+                + formatAge(livePacketAge)
+                + ')');
+
+        if (artnetToDmx)
+        {
+            setTextIfPresent(
+                'flowDmxOutMeta',
+                data.failsafeActive
+                    ? 'Failsafe active - ' + data.failsafeModeName
+                    : (data.dmxTestOverride
+                        ? 'Web test override active'
+                        : (liveInputActive ? 'Sending physical DMX' : 'Idle')));
+            setTextIfPresent(
+                'dmxSummary',
+                (data.failsafeActive
+                    ? 'Failsafe active'
+                    : (data.dmxTestOverride
+                        ? 'Test override'
+                        : (liveInputActive ? 'Sending DMX' : 'Idle')))
+                + ' - Failsafe '
+                + (data.failsafeActive ? 'active' : 'armed')
+                + ': '
+                + (data.failsafeModeName || 'N/A'));
+            setTextIfPresent(
+                'dmxStatus',
+                data.dmxTestOverride
+                    ? 'DMX Test'
+                    : (liveInputActive ? liveProtocolName : 'None'));
+        }
+        else
+        {
+            setTextIfPresent(
+                'artnetSummary',
+                data.dmxActive ? 'Sending sACN' : 'Idle');
+        }
+
+        setFlowNodeState(
+            'flowArtNetSourceNode',
+            data.sacnActive ? 'ok' : 'idle');
+        setFlowNodeState(
+            'flowDmxOutNode',
+            data.failsafeActive ? 'warn' : (liveInputActive || data.dmxTestOverride ? 'ok' : 'idle'));
     }
 }
 

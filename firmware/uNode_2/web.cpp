@@ -1167,6 +1167,9 @@ static void handleStatus() {
   doc["sacnPackets"] =
     getSacnPacketCount();
 
+  doc["sacnUdpPackets"] =
+    getSacnUdpPacketCount();
+
   doc["sacnFPS"] =
     getSacnFPS();
 
@@ -1189,6 +1192,10 @@ static void handleStatus() {
     getSacnMalformedPacketCount();
   sacnDiagnostics["sequenceDrops"] =
     getSacnSequenceDropCount();
+  sacnDiagnostics["protocolDrops"] =
+    getSacnProtocolDropCount();
+  sacnDiagnostics["directionDrops"] =
+    getSacnDirectionDropCount();
   sacnDiagnostics["priorityDrops"] =
     getSacnPriorityDropCount();
   sacnDiagnostics["streamTerminated"] =

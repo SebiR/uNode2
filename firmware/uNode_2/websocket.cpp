@@ -228,6 +228,9 @@ void broadcastStatus() {
   doc["sacnPackets"] =
     getSacnPacketCount();
 
+  doc["sacnUdpPackets"] =
+    getSacnUdpPacketCount();
+
   doc["sacnFPS"] =
     getSacnFPS();
 

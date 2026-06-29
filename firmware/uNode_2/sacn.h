@@ -20,6 +20,8 @@ bool isSacnActive();
 bool isSacnFailsafeActive();
 /** @return Number of accepted sACN data packets. */
 uint32_t getSacnPacketCount();
+/** @return Number of UDP packets received on the sACN socket. */
+uint32_t getSacnUdpPacketCount();
 /** @return Accepted sACN data packets during the previous second. */
 uint32_t getSacnFPS();
 /** @return Milliseconds since the last accepted sACN packet, or zero. */
@@ -32,6 +34,10 @@ uint16_t getSacnLastWrongUniverse();
 uint32_t getSacnMalformedPacketCount();
 /** @return Number of sACN packets dropped by sequence tracking. */
 uint32_t getSacnSequenceDropCount();
+/** @return Number of valid sACN packets ignored because sACN live mode is off. */
+uint32_t getSacnProtocolDropCount();
+/** @return Number of valid sACN packets ignored because direction is DMX input. */
+uint32_t getSacnDirectionDropCount();
 /** @return Number of sACN lower-priority packets ignored. */
 uint32_t getSacnPriorityDropCount();
 /** @return Number of stream-terminated packets accepted. */
