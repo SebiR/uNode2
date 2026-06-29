@@ -11,6 +11,33 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+### Changed
+
+- Added a `USE_LEGACY_HARDWARE` build define that selects the original
+  hardware profile with classic PWM status LEDs, tied RS-485 RE/DE direction
+  control, and no switchable termination.
+- Added a UART flash helper that selects release artifacts, lists serial ports
+  with VID/PID, remembers the selected USB serial adapter, and flashes firmware
+  plus LittleFS at 512000 baud by default.
+- Added an OTA flash helper that selects release artifacts and uploads either
+  firmware or LittleFS through the node's web update endpoints, including
+  optional API-password login.
+- Made the RP2040 DMX tester's TX/RX/direction pin defines override-friendly
+  and documented automatic RS-485 direction handling.
+- Added optional boot-time RS-485 Bus Guarding. When enabled, the node briefly
+  listens for external DMX at startup and switches to DMX input when valid DMX
+  is already present on the bus.
+- Updated the release build script to generate both normal and legacy hardware
+  artifacts in one run, using version-only file names without build timestamps.
+- Increased the configuration schema version to `3` for the new Bus Guarding
+  setting.
+
+### Fixed
+
+- Made the Network tab's "Forget Saved Wi-Fi Credentials" action use
+  WiFiManager's ESP8266 persistent credential erase path instead of relying on
+  a plain disconnect call.
+
 ## [0.21.0] - 2026-06-29
 
 ### Fixed

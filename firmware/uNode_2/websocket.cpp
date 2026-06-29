@@ -233,6 +233,9 @@ void broadcastStatus() {
   doc["direction"] =
     config.direction;
 
+  doc["busGuardMode"] =
+    config.busGuardMode;
+
   doc["universe"] =
     getConfiguredUniverse();
 

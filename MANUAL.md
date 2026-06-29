@@ -264,8 +264,45 @@ Release artifacts can be generated with:
 ```
 
 The script writes versioned firmware, LittleFS, and manifest files to
-`artifacts/release`. The manifest includes the flash layout, LittleFS image
+`artifacts/release`. File names contain only the firmware version, hardware
+profile suffix, and artifact type; no build timestamp is added. Each release
+run creates both the current hardware profile and the legacy hardware profile:
+
+- `uNode-<version>-firmware.bin`
+- `uNode-<version>-littlefs.bin`
+- `uNode-<version>_legacy-firmware.bin`
+- `uNode-<version>_legacy-littlefs.bin`
+- `uNode-<version>-manifest.json`
+
+The manifest includes both hardware profiles, flash layout, LittleFS image
 size, and SHA-256 hashes.
+
+Generated release artifacts can also be flashed over UART with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\flash_uart.ps1
+```
+
+The UART helper lists available release artifacts, asks for the firmware/profile
+number, lists USB serial adapters with VID/PID, and flashes firmware to `0x0`
+and LittleFS to `0x300000` at 512000 baud by default. The selected adapter is
+remembered in `artifacts/flash_uart.settings.json`, so the next run can pick the
+same VID/PID and serial number automatically when exactly one match is present.
+
+Useful options are `-ListOnly`, `-Port COMx`, `-FirmwareOnly`, `-LittleFsOnly`,
+`-Baud <rate>`, and `-NoRemember`.
+
+Release artifacts can also be uploaded through the normal web OTA endpoints:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\flash_ota.ps1 -FirmwareOnly -NodeIp 2.0.0.1
+powershell -ExecutionPolicy Bypass -File .\tools\flash_ota.ps1 -LittleFsOnly -NodeIp 2.0.0.1
+```
+
+Use `-Password <password>` when the web/API password is enabled. Firmware and
+LittleFS OTA updates are deliberately one-step operations because each accepted
+upload restarts the node. For a full update, run the helper once for firmware
+and once for LittleFS after the node is reachable again.
 
 The Arduino sketch lives in `firmware/uNode_2`. Open
 `firmware/uNode_2/uNode_2.ino` in the Arduino IDE if you want to build or edit
@@ -371,6 +408,17 @@ The same tab reports whether split `/RE`/`DE` control and switchable
 termination are available in the current build, plus the effective driver,
 receiver, and termination states.
 
+The Hardware tab also provides optional Bus Guarding:
+
+| Mode | Behaviour |
+|---|---|
+| Off | The configured DMX direction is used immediately at boot. |
+| Auto input on boot | uNode briefly listens for external DMX while keeping the RS-485 driver disabled. If at least two valid DMX frames are detected, the node switches to DMX input and stores that direction. |
+
+Bus Guarding is a boot-time convenience feature, not continuous collision
+detection. It does not monitor for another master after the configured DMX
+direction has started.
+
 Legacy builds can disable split control and termination at compile time. In
 that case the web interface reports the hardware controls as unavailable rather
 than exposing a runtime-selectable hardware revision.
@@ -446,7 +494,7 @@ configuration files are limited to 8 KiB; firmware and LittleFS OTA uploads are
 checked against the declared upload size and the configured flash layout.
 
 Configuration files include a `configVersion` field. Firmware currently uses
-schema version `2`; older configuration files without this field are migrated
+schema version `3`; older configuration files without this field are migrated
 and saved again automatically when loaded.
 
 The configuration contains:

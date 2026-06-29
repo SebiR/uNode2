@@ -6,15 +6,28 @@
 // Default pins match the Raspberry Pi Pico / Arduino-Pico UART0 defaults:
 //   GPIO0: Serial1 TX -> RS-485 DI or peer UART RX
 //   GPIO1: Serial1 RX <- RS-485 RO or peer UART TX
+#ifndef DMX_TX_PIN
 #define DMX_TX_PIN 0
+#endif
+
+#ifndef DMX_RX_PIN
 #define DMX_RX_PIN 1
+#endif
 
 // Set to a GPIO connected to DE/!RE if your transceiver has a direction pin.
 // -1 keeps the pin unused, which is suitable for separate RX/TX transceivers
 // or direct UART-to-UART bench wiring.
-#define DMX_DIR_PIN -1
+#ifndef DMX_DIR_PIN
+#define DMX_DIR_PIN 2
+#endif
+
+#ifndef DMX_DIR_TX_LEVEL
 #define DMX_DIR_TX_LEVEL HIGH
+#endif
+
+#ifndef DMX_DIR_RX_LEVEL
 #define DMX_DIR_RX_LEVEL LOW
+#endif
 
 static constexpr uint16_t DMX_MAX_SLOTS = 512;
 static constexpr uint16_t DMX_MAX_PACKET_BYTES = DMX_MAX_SLOTS + 1;

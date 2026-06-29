@@ -8,6 +8,9 @@ void initHardware();
 /** @brief Applies the configured RS-485 transceiver direction and termination. */
 void applyHardwareForDirection();
 
+/** @brief Temporarily enables the RS-485 receiver while keeping the driver off. */
+void applyHardwareListenOnly();
+
 /** @brief Applies only the configured termination mode. */
 void applyTermination();
 
@@ -25,4 +28,3 @@ bool isRs485ReceiverEnabled();
 
 /** @return True when switchable bus termination is currently enabled. */
 bool isTerminationEnabled();
-

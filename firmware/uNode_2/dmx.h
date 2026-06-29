@@ -2,6 +2,8 @@
 
 /** @brief Initializes UART DMX for the configured direction. */
 bool initDMX();
+/** @brief Optionally listens for external DMX at boot and switches to input. */
+bool applyBootBusGuard();
 /** @brief Stops and restarts UART DMX for the current configured direction. */
 bool restartDMX();
 /** @brief Processes pending frames, output updates, and activity metrics. */

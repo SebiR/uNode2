@@ -331,6 +331,7 @@ static bool configChangeRequiresRestart(
          || previous.ip != current.ip
          || previous.subnet != current.subnet
          || previous.gateway != current.gateway
+         || previous.busGuardMode != current.busGuardMode
          || previous.adminPasswordHash != current.adminPasswordHash;
 }
 
@@ -1218,6 +1219,9 @@ static void handleStatus() {
 
   doc["terminationMode"] =
     config.terminationMode;
+
+  doc["busGuardMode"] =
+    config.busGuardMode;
 
   doc["terminationEnabled"] =
     isTerminationEnabled();

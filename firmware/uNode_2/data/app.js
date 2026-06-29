@@ -875,6 +875,11 @@ async function loadConfig()
         ).value =
             cfg.terminationMode ?? 2;
 
+        document.getElementById(
+            'busGuardMode'
+        ).value =
+            cfg.busGuardMode ?? 0;
+
 		if (cfg.direction == 0)
 		{
 			document.getElementById(
@@ -973,11 +978,21 @@ function updateHardwareStatus(data)
 
     if (data.rs485SplitControlSupported !== undefined)
     {
+        const busGuardSelect =
+            document.getElementById(
+                'busGuardMode');
+
+        if (busGuardSelect)
+        {
+            busGuardSelect.disabled =
+                isUiLocked();
+        }
+
         setTextIfPresent(
             'rs485GuardStatus',
-            data.rs485SplitControlSupported
-                ? 'Split /RE and DE control available'
-                : 'Legacy single direction control');
+            (data.busGuardMode ?? 0) == 1
+                ? 'Listens briefly at boot and switches to DMX input when external DMX is detected.'
+                : 'Disabled. The configured direction is used at boot.');
     }
 
     if (data.terminationControlSupported !== undefined)
@@ -1173,7 +1188,8 @@ const restartRequiredConfigKeys =
     'dhcp',
     'ip',
     'subnet',
-    'gateway'
+    'gateway',
+    'busGuardMode'
 ];
 
 const configFieldIds =
@@ -1196,6 +1212,7 @@ const configFieldIds =
     'failsafeMode',
     'mergeMode',
     'terminationMode',
+    'busGuardMode',
     'legacyArtPollReply'
 ];
 
@@ -1411,6 +1428,12 @@ function readConfigForm()
             parseInt(
                 document.getElementById(
                     'terminationMode'
+                ).value),
+
+        busGuardMode:
+            parseInt(
+                document.getElementById(
+                    'busGuardMode'
                 ).value),
 
         legacyArtPollReply:
@@ -1731,6 +1754,8 @@ async function revertConfigChanges()
         configBaseline.mergeMode;
     document.getElementById('terminationMode').value =
         configBaseline.terminationMode;
+    document.getElementById('busGuardMode').value =
+        configBaseline.busGuardMode;
     document.getElementById('legacyArtPollReply').checked =
         configBaseline.legacyArtPollReply;
 

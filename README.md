@@ -35,3 +35,43 @@ Build versioned firmware and LittleFS release artifacts:
 ```powershell
 .\tools\build_release.ps1
 ```
+
+The release script builds both supported hardware profiles and writes artifacts
+without a build timestamp in the file name:
+
+- `uNode-<version>-firmware.bin`
+- `uNode-<version>-littlefs.bin`
+- `uNode-<version>_legacy-firmware.bin`
+- `uNode-<version>_legacy-littlefs.bin`
+- `uNode-<version>-manifest.json`
+
+Flash a generated release over UART:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\flash_uart.ps1
+```
+
+The UART flash helper lists the release artifacts in `artifacts/release`, asks
+for the target firmware profile, lists detected serial ports with VID/PID, and
+then flashes firmware plus LittleFS at 512000 baud. The selected USB serial
+adapter is remembered in `artifacts/flash_uart.settings.json` for the next run.
+
+Useful variants:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\flash_uart.ps1 -ListOnly
+powershell -ExecutionPolicy Bypass -File .\tools\flash_uart.ps1 -Port COM15
+powershell -ExecutionPolicy Bypass -File .\tools\flash_uart.ps1 -FirmwareOnly
+powershell -ExecutionPolicy Bypass -File .\tools\flash_uart.ps1 -LittleFsOnly
+```
+
+Flash a generated release over OTA:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\flash_ota.ps1 -FirmwareOnly -NodeIp 2.0.0.1
+powershell -ExecutionPolicy Bypass -File .\tools\flash_ota.ps1 -LittleFsOnly -NodeIp 2.0.0.1
+```
+
+OTA firmware and LittleFS uploads restart the node after each upload, so the
+helper intentionally performs one update type per run. Use `-Password` when the
+web/API password is enabled.

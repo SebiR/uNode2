@@ -88,6 +88,38 @@ void applyHardwareForDirection() {
     rs485ReceiverEnabled ? "enabled" : "disabled");
 }
 
+void applyHardwareListenOnly() {
+  rs485DriverEnabled = false;
+  rs485ReceiverEnabled = true;
+
+#if ENABLE_RS485_SPLIT_CONTROL
+  digitalWrite(
+    PIN_RS485_DE,
+    LOW);
+
+  digitalWrite(
+    PIN_RS485_RE,
+    LOW);
+#else
+  digitalWrite(
+    PIN_RS485_DIR,
+    LOW);
+#endif
+
+#if ENABLE_RS485_TERMINATION_CONTROL
+  terminationEnabled =
+    config.terminationMode != TERMINATION_OFF;
+
+  digitalWrite(
+    PIN_RS485_TERMINATION,
+    terminationEnabled ? HIGH : LOW);
+#else
+  terminationEnabled = false;
+#endif
+
+  LOG_DEBUG("RS485 listen-only guard mode enabled");
+}
+
 void applyTermination() {
 #if ENABLE_RS485_TERMINATION_CONTROL
   switch (config.terminationMode) {

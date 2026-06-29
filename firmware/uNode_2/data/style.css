@@ -94,8 +94,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 8px 22px;
+    gap: 14px;
+    padding: 6px 20px;
     color: var(--bar-text);
     background: linear-gradient(135deg, var(--header-bg), var(--status-bg));
 }
@@ -104,14 +104,14 @@ body {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 9px;
+    gap: 8px;
     font-size: 1.04rem;
     font-weight: 760;
 }
 
 .brandIcon {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
 }
 
 .lockState {
@@ -139,14 +139,14 @@ body {
 .subtitle {
     display: block;
     width: 100%;
-    margin-left: 43px;
+    margin-left: 40px;
     color: rgba(255, 255, 255, 0.72);
     font-size: 0.82rem;
     font-weight: 500;
 }
 
 .logo {
-    height: 30px;
+    height: 38px;
     width: auto;
     object-fit: contain;
 }
@@ -155,8 +155,8 @@ body {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
-    padding: 9px 22px;
+    gap: 9px;
+    padding: 6px 20px;
     color: rgba(255, 255, 255, 0.8);
     background: var(--status-bg);
     font-size: 0.88rem;
@@ -211,7 +211,7 @@ body {
 .locateButton {
     border: 1px solid rgba(255, 255, 255, 0.34);
     border-radius: 7px;
-    padding: 6px 10px;
+    padding: 5px 9px;
     background: rgba(255, 255, 255, 0.09);
     color: var(--bar-text);
     font-weight: 700;

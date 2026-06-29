@@ -908,7 +908,13 @@
 					</div>
 
 					<div class="label">Bus Guarding</div>
-					<div id="rs485GuardStatus">N/A</div>
+					<div>
+						<select id="busGuardMode">
+							<option value="0">Off</option>
+							<option value="1">Auto input on boot</option>
+						</select>
+						<div id="rs485GuardStatus" class="helpText">N/A</div>
+					</div>
 
 					<div class="label">Effective Termination</div>
 					<div id="terminationStatus">N/A</div>

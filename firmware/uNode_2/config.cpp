@@ -32,6 +32,7 @@ static void setDefaults(Config& target) {
   target.failsafeMode = FAILSAFE_HOLD;
   target.mergeMode = MERGE_HTP;
   target.terminationMode = TERMINATION_AUTO;
+  target.busGuardMode = BUS_GUARD_OFF;
   target.legacyArtPollReply = false;
   target.adminPasswordHash = "";
 }
@@ -314,6 +315,8 @@ static bool applyJson(
     doc["mergeMode"] | static_cast<int>(candidate.mergeMode);
   const int terminationMode =
     doc["terminationMode"] | static_cast<int>(candidate.terminationMode);
+  const int busGuardMode =
+    doc["busGuardMode"] | static_cast<int>(candidate.busGuardMode);
 
   if (net < 0 || net > 127) {
     error = "Art-Net net must be between 0 and 127";
@@ -348,6 +351,12 @@ static bool applyJson(
     return false;
   }
 
+  if (busGuardMode < BUS_GUARD_OFF
+      || busGuardMode > BUS_GUARD_AUTO_INPUT_ON_BOOT) {
+    error = "Bus guarding mode must be Off or Auto Input on Boot";
+    return false;
+  }
+
   candidate.net = net;
   candidate.subnetId = subnetId;
   candidate.universe = universe;
@@ -357,6 +366,8 @@ static bool applyJson(
     static_cast<MergeMode>(mergeMode);
   candidate.terminationMode =
     static_cast<TerminationMode>(terminationMode);
+  candidate.busGuardMode =
+    static_cast<BusGuardMode>(busGuardMode);
 
   candidate.legacyArtPollReply =
     doc["legacyArtPollReply"] | candidate.legacyArtPollReply;
@@ -389,6 +400,7 @@ static void configToJsonDocument(
   doc["failsafeMode"] = source.failsafeMode;
   doc["mergeMode"] = source.mergeMode;
   doc["terminationMode"] = source.terminationMode;
+  doc["busGuardMode"] = source.busGuardMode;
   doc["legacyArtPollReply"] = source.legacyArtPollReply;
 
   if (includeSecrets

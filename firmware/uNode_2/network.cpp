@@ -195,12 +195,24 @@ bool forgetStoredWifiCredentials()
 {
     LOG_WARN("Clearing stored Wi-Fi station credentials");
 
-    // The two-argument overload makes credential erasure explicit. The
-    // one-argument ESP8266 overload also erases credentials, which is easy to
-    // miss when only a temporary disconnect is intended.
-    return WiFi.disconnect(
-        false,
-        true);
+    WiFi.setAutoReconnect(false);
+
+    // WiFiManager's resetSettings() uses the ESP8266-specific persistent STA
+    // erase sequence internally. A plain WiFi.disconnect(false, true) can leave
+    // the saved station credentials intact on some core/library combinations.
+    WiFiManager wm;
+    wm.setDebugOutput(false);
+    wm.resetSettings();
+
+    // Leave the station disconnected until the scheduled restart happens.
+    const bool disconnected =
+        WiFi.disconnect(
+            true,
+            true);
+
+    delay(250);
+
+    return disconnected || WiFi.SSID().length() == 0;
 }
 
 String getIPAddress()

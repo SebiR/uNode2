@@ -111,6 +111,7 @@ void setup() {
   randomSeed(micros());
 
 #if !SERIAL_LOG_REPLACES_DMX
+  applyBootBusGuard();
   initDMX();
 #endif
 

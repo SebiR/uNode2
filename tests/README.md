@@ -4,7 +4,8 @@ This directory contains the first Python-based tests for uNode.
 
 The tests are split into two groups:
 
-- `unit`: offline tests for byte-level Art-Net packet helpers and parsers.
+- `unit`: offline tests for byte-level Art-Net packet helpers/parsers and
+  release helper consistency.
 - `integration`: opt-in tests against a real uNode on the network.
 
 ## Requirements
@@ -99,6 +100,19 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
 
 - Integration tests may change the node configuration temporarily. They try to
   restore the previous configuration afterwards.
+- Offline release-helper tests verify that `data/version.json` matches the
+  firmware/config schema defines, that the UART flash helper lists normal and
+  legacy release artifacts in the expected order, and that the OTA flash helper
+  dry-run path targets the expected update endpoint.
+- The Bus Guarding integration test verifies that `busGuardMode` is persisted,
+  exposed through `/api/status`, and correctly marked as restart-required.
+- The Bus Guarding hardware-in-the-loop test uses the RP2040 as a physical DMX
+  sender during an API-triggered node restart and verifies that boot-time Bus
+  Guarding switches the node from DMX output to DMX input when valid DMX is
+  already present on the RS-485 bus.
+- The restart persistence integration test stores representative runtime and
+  hardware settings, restarts the node through `/api/restart`, and verifies the
+  restored configuration through `/api/config`, `/api/status`, and ArtPollReply.
 - The host-only soak test repeatedly checks HTTP reachability, ArtPollReply
   reachability, reboot counters, reset diagnostics, heap health, ArtDmx,
   ArtSync, malformed Art-Net parser probes, and live runtime configuration

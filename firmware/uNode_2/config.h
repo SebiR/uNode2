@@ -8,7 +8,7 @@
 // -----------------------------------------------------------------------------
 
 #define FW_VERSION_MAJOR 0
-#define FW_VERSION_MINOR 21
+#define FW_VERSION_MINOR 22
 #define FW_VERSION_PATCH 0
 
 #define FW_STRINGIFY_IMPL(value) #value
@@ -24,11 +24,18 @@
 #define FW_FLASH_LAYOUT "4M1M"
 #define FW_LITTLEFS_IMAGE_SIZE 0xFA000UL
 #define FW_WEB_ASSET_VERSION FW_VERSION
-#define CONFIG_SCHEMA_VERSION 2
+#define CONFIG_SCHEMA_VERSION 3
 
 // -----------------------------------------------------------------------------
 // Feature Switches
 // -----------------------------------------------------------------------------
+
+// Set to 1 for the original board revision with two classic status LEDs and a
+// single tied RE/DE RS-485 direction control line. Set to 0 for the current
+// WS2812 + split RE/DE + switchable-termination hardware profile.
+#ifndef USE_LEGACY_HARDWARE
+#define USE_LEGACY_HARDWARE 0
+#endif
 
 #ifndef ENABLE_DEBUG
 #define ENABLE_DEBUG 1
@@ -55,7 +62,11 @@
 
 // 0: two classic status LEDs, 1: two WS2812/SK6812-compatible pixels
 #ifndef USE_WS2812
+#if USE_LEGACY_HARDWARE
+#define USE_WS2812 0
+#else
 #define USE_WS2812 1
+#endif
 #endif
 
 // Legacy LEDs only: 0 saves IRAM and uses digital on/off, 1 enables brightness
@@ -68,11 +79,19 @@
 // -----------------------------------------------------------------------------
 
 #ifndef ENABLE_RS485_SPLIT_CONTROL
+#if USE_LEGACY_HARDWARE
+#define ENABLE_RS485_SPLIT_CONTROL 0
+#else
 #define ENABLE_RS485_SPLIT_CONTROL USE_WS2812
+#endif
 #endif
 
 #ifndef ENABLE_RS485_TERMINATION_CONTROL
+#if USE_LEGACY_HARDWARE
+#define ENABLE_RS485_TERMINATION_CONTROL 0
+#else
 #define ENABLE_RS485_TERMINATION_CONTROL ENABLE_RS485_SPLIT_CONTROL
+#endif
 #endif
 
 #define PIN_RS485_DIR 5
@@ -246,6 +265,11 @@ enum TerminationMode {
   TERMINATION_AUTO = 2
 };
 
+enum BusGuardMode {
+  BUS_GUARD_OFF = 0,
+  BUS_GUARD_AUTO_INPUT_ON_BOOT = 1
+};
+
 // -----------------------------------------------------------------------------
 // Configuration Structure
 // -----------------------------------------------------------------------------
@@ -285,6 +309,7 @@ struct Config {
   MergeMode mergeMode;
 
   TerminationMode terminationMode;
+  BusGuardMode busGuardMode;
 
   bool legacyArtPollReply;
 

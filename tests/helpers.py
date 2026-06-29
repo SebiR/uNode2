@@ -49,6 +49,35 @@ def wait_for_status(
     raise AssertionError(f"Timed out waiting for status condition; last={last_status}")
 
 
+def wait_for_node_restart(
+    client,
+    *,
+    previous_boot_count: int,
+    timeout: float = 25.0,
+    interval: float = 0.5,
+) -> dict:
+    """Poll `/api/status` until the node is reachable after a reboot."""
+
+    deadline = time.time() + timeout
+    last_error: Exception | None = None
+    last_status: dict = {}
+
+    while time.time() < deadline:
+        try:
+            last_status = client.get_json("/api/status", timeout=2.0)
+            if int(last_status.get("bootCount", previous_boot_count)) > previous_boot_count:
+                return last_status
+        except Exception as error:  # noqa: BLE001 - reboot polling intentionally tolerates transport errors.
+            last_error = error
+
+        time.sleep(interval)
+
+    raise AssertionError(
+        "Timed out waiting for node restart; "
+        f"last_status={last_status}, last_error={last_error}"
+    )
+
+
 def send_artnet_packet(unode_ip: str, packet: bytes) -> None:
     """Send one Art-Net UDP packet to the target node."""
 

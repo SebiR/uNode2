@@ -24,6 +24,7 @@ static uint32_t lastArtNetTransmitAttemptMillis = 0;
 static uint32_t lastTransmittedSubscriberVersion = 0;
 
 static volatile uint32_t pendingInputFrames = 0;
+static volatile uint32_t bootGuardInputFrames = 0;
 
 /** @brief Attempts one subscriber-based ArtDmx transmission and records timing. */
 static bool transmitArtNetFrame(uint32_t now) {
@@ -46,6 +47,80 @@ static bool transmitArtNetFrame(uint32_t now) {
 static void IRAM_ATTR onDMXFrame(int slots) {
   (void)slots;
   pendingInputFrames++;
+}
+
+/** @brief ISR callback used only during the short boot bus-guard probe. */
+static void IRAM_ATTR onBootGuardDMXFrame(int slots) {
+  if (slots > 0) {
+    bootGuardInputFrames++;
+  }
+}
+
+bool applyBootBusGuard() {
+  if (config.busGuardMode != BUS_GUARD_AUTO_INPUT_ON_BOOT
+      || config.direction == DMX_TO_ARTNET) {
+    return false;
+  }
+
+  LOG_INFO("Bus guard: listening for external DMX at boot");
+
+  noInterrupts();
+  bootGuardInputFrames = 0;
+  interrupts();
+
+  applyHardwareListenOnly();
+
+  ESP8266DMX.setDataReceivedCallback(
+    &onBootGuardDMXFrame);
+  ESP8266DMX.startInput();
+
+  const uint32_t startMillis =
+    millis();
+
+  bool detected = false;
+
+  while (millis() - startMillis < 1200) {
+    noInterrupts();
+    const uint32_t frames =
+      bootGuardInputFrames;
+    interrupts();
+
+    if (frames >= 2) {
+      detected = true;
+      break;
+    }
+
+    delay(1);
+  }
+
+  ESP8266DMX.stop();
+
+  noInterrupts();
+  bootGuardInputFrames = 0;
+  pendingInputFrames = 0;
+  interrupts();
+
+  if (!detected) {
+    LOG_INFO("Bus guard: no external DMX detected");
+    return false;
+  }
+
+  LOG_WARN("Bus guard: external DMX detected, switching to DMX input");
+
+  String error;
+  const ConfigResult result =
+    updateConfiguredDirection(
+      DMX_TO_ARTNET,
+      error);
+
+  if (result != ConfigResult::OK) {
+    LOG_WARN_PRINT("Bus guard direction update failed: ");
+    LOG_PRINTLN(
+      LOG_LEVEL_WARN,
+      error);
+  }
+
+  return true;
 }
 
 bool initDMX() {

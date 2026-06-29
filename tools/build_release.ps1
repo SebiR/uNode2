@@ -69,9 +69,6 @@ $version =
 $configSchemaVersion =
     Get-FirmwareVersionPart "CONFIG_SCHEMA_VERSION"
 
-$timestamp =
-    Get-Date -Format "yyyyMMdd-HHmmss"
-
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir =
         Join-Path $projectRoot "artifacts\release"
@@ -83,41 +80,72 @@ New-Item `
     -Force |
     Out-Null
 
-$buildPath =
-    Join-Path ([System.IO.Path]::GetTempPath()) "unode-release-build"
+function Build-FirmwareArtifact {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Profile,
 
-if (Test-Path $buildPath) {
-    Remove-Item `
-        -LiteralPath $buildPath `
-        -Recurse `
+        [string]$Suffix = "",
+
+        [string[]]$BuildProperties = @()
+    )
+
+    $buildPath =
+        Join-Path ([System.IO.Path]::GetTempPath()) "unode-release-build-$Profile"
+
+    if (Test-Path $buildPath) {
+        Remove-Item `
+            -LiteralPath $buildPath `
+            -Recurse `
+            -Force
+    }
+
+    Write-Host "Building $Profile firmware with FQBN $Fqbn"
+
+    $compileArgs = @(
+        "compile",
+        "--fqbn",
+        $Fqbn,
+        "--build-path",
+        $buildPath
+    )
+
+    foreach ($property in $BuildProperties) {
+        $compileArgs += @(
+            "--build-property",
+            $property
+        )
+    }
+
+    $compileArgs += $sketchDir
+
+    & $arduinoCli @compileArgs
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Profile firmware build failed"
+    }
+
+    $firmwareSource =
+        Get-ChildItem `
+            -Path $buildPath `
+            -Filter "*.ino.bin" `
+            -Recurse |
+        Select-Object -First 1
+
+    if (!$firmwareSource) {
+        throw "$Profile firmware binary not found in $buildPath"
+    }
+
+    $artifact =
+        Join-Path $OutputDir "uNode-$version$Suffix-firmware.bin"
+
+    Copy-Item `
+        -LiteralPath $firmwareSource.FullName `
+        -Destination $artifact `
         -Force
+
+    return $artifact
 }
-
-Write-Host "Building firmware with FQBN $Fqbn"
-
-& $arduinoCli `
-    compile `
-    --fqbn $Fqbn `
-    --build-path $buildPath `
-    $sketchDir
-
-if ($LASTEXITCODE -ne 0) {
-    throw "Firmware build failed"
-}
-
-$firmwareSource =
-    Get-ChildItem `
-        -Path $buildPath `
-        -Filter "*.ino.bin" `
-        -Recurse |
-    Select-Object -First 1
-
-if (!$firmwareSource) {
-    throw "Firmware binary not found in $buildPath"
-}
-
-$artifactPrefix =
-    "uNode-$version-$timestamp-4M1M"
 
 $webVersionPath =
     Join-Path $dataDir "version.json"
@@ -131,6 +159,39 @@ $webVersionOriginalBytes =
     } else {
         $null
     }
+
+$firmwareArtifact =
+    Build-FirmwareArtifact `
+        -Profile "normal" `
+        -Suffix ""
+
+$legacyFirmwareArtifact =
+    Build-FirmwareArtifact `
+        -Profile "legacy" `
+        -Suffix "_legacy" `
+        -BuildProperties @(
+            "compiler.cpp.extra_flags=-DUSE_LEGACY_HARDWARE=1"
+        )
+
+$mklittlefs =
+    Get-ChildItem `
+        -Path (Join-Path $env:LOCALAPPDATA "Arduino15\packages\esp8266") `
+        -Recurse `
+        -File `
+        -Filter "mklittlefs.exe" |
+    Select-Object -First 1
+
+if (!$mklittlefs) {
+    throw "mklittlefs.exe not found in the installed ESP8266 Arduino package"
+}
+
+$filesystemArtifact =
+    Join-Path $OutputDir "uNode-$version-littlefs.bin"
+
+$legacyFilesystemArtifact =
+    Join-Path $OutputDir "uNode-$version`_legacy-littlefs.bin"
+
+Write-Host "Building LittleFS image"
 
 $webVersion = [ordered]@{
     project = "uNode"
@@ -146,31 +207,6 @@ $webVersion |
             -Path $webVersionPath `
             -Content $_
     }
-
-$firmwareArtifact =
-    Join-Path $OutputDir "$artifactPrefix-firmware.bin"
-
-Copy-Item `
-    -LiteralPath $firmwareSource.FullName `
-    -Destination $firmwareArtifact `
-    -Force
-
-$mklittlefs =
-    Get-ChildItem `
-        -Path (Join-Path $env:LOCALAPPDATA "Arduino15\packages\esp8266") `
-        -Recurse `
-        -File `
-        -Filter "mklittlefs.exe" |
-    Select-Object -First 1
-
-if (!$mklittlefs) {
-    throw "mklittlefs.exe not found in the installed ESP8266 Arduino package"
-}
-
-$filesystemArtifact =
-    Join-Path $OutputDir "$artifactPrefix-littlefs.bin"
-
-Write-Host "Building LittleFS image"
 
 try {
     & $mklittlefs.FullName `
@@ -195,15 +231,30 @@ try {
     }
 }
 
+Copy-Item `
+    -LiteralPath $filesystemArtifact `
+    -Destination $legacyFilesystemArtifact `
+    -Force
+
 $firmwareHash =
     Get-FileHash `
         -Algorithm SHA256 `
         -LiteralPath $firmwareArtifact
 
+$legacyFirmwareHash =
+    Get-FileHash `
+        -Algorithm SHA256 `
+        -LiteralPath $legacyFirmwareArtifact
+
 $filesystemHash =
     Get-FileHash `
         -Algorithm SHA256 `
         -LiteralPath $filesystemArtifact
+
+$legacyFilesystemHash =
+    Get-FileHash `
+        -Algorithm SHA256 `
+        -LiteralPath $legacyFilesystemArtifact
 
 $manifest = [ordered]@{
     project = "uNode"
@@ -211,22 +262,46 @@ $manifest = [ordered]@{
     generatedAt = (Get-Date).ToUniversalTime().ToString("o")
     fqbn = $Fqbn
     flashLayout = "4M1M"
-    littleFs = [ordered]@{
-        size = 1024000
-        blockSize = 8192
-        pageSize = 256
-        file = (Split-Path $filesystemArtifact -Leaf)
-        sha256 = $filesystemHash.Hash
-    }
-    firmware = [ordered]@{
-        file = (Split-Path $firmwareArtifact -Leaf)
-        size = (Get-Item $firmwareArtifact).Length
-        sha256 = $firmwareHash.Hash
+    profiles = [ordered]@{
+        normal = [ordered]@{
+            hardwareProfile = "normal"
+            buildProperties = @()
+            firmware = [ordered]@{
+                file = (Split-Path $firmwareArtifact -Leaf)
+                size = (Get-Item $firmwareArtifact).Length
+                sha256 = $firmwareHash.Hash
+            }
+            littleFs = [ordered]@{
+                size = 1024000
+                blockSize = 8192
+                pageSize = 256
+                file = (Split-Path $filesystemArtifact -Leaf)
+                sha256 = $filesystemHash.Hash
+            }
+        }
+        legacy = [ordered]@{
+            hardwareProfile = "legacy"
+            buildProperties = @(
+                "compiler.cpp.extra_flags=-DUSE_LEGACY_HARDWARE=1"
+            )
+            firmware = [ordered]@{
+                file = (Split-Path $legacyFirmwareArtifact -Leaf)
+                size = (Get-Item $legacyFirmwareArtifact).Length
+                sha256 = $legacyFirmwareHash.Hash
+            }
+            littleFs = [ordered]@{
+                size = 1024000
+                blockSize = 8192
+                pageSize = 256
+                file = (Split-Path $legacyFilesystemArtifact -Leaf)
+                sha256 = $legacyFilesystemHash.Hash
+            }
+        }
     }
 }
 
 $manifestPath =
-    Join-Path $OutputDir "$artifactPrefix-manifest.json"
+    Join-Path $OutputDir "uNode-$version-manifest.json"
 
 $manifest |
     ConvertTo-Json -Depth 5 |
@@ -238,6 +313,8 @@ $manifest |
 
 Write-Host ""
 Write-Host "Artifacts written to $OutputDir"
-Write-Host "Firmware : $firmwareArtifact"
-Write-Host "LittleFS : $filesystemArtifact"
-Write-Host "Manifest : $manifestPath"
+Write-Host "Firmware normal : $firmwareArtifact"
+Write-Host "LittleFS normal : $filesystemArtifact"
+Write-Host "Firmware legacy : $legacyFirmwareArtifact"
+Write-Host "LittleFS legacy : $legacyFilesystemArtifact"
+Write-Host "Manifest        : $manifestPath"

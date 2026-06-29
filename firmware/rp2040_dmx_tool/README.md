@@ -14,8 +14,19 @@ Default pins are intended for Raspberry Pi Pico / Arduino-Pico `Serial1`:
 - `GPIO1`: DMX RX from RS-485 receiver output.
 - optional `DMX_DIR_PIN`: RS-485 DE/!RE direction control, disabled by default.
 
-Adjust the pin definitions at the top of `rp2040_dmx_tool.ino` if your
-transceiver uses different wiring.
+Adjust the pin definitions in `DmxToolConfig.h` if your transceiver uses
+different wiring. The pin macros are guarded with `#ifndef`, so they can also
+be overridden by compiler flags.
+
+If `DMX_DIR_PIN` is set to a valid GPIO, the tool drives the bus transceiver
+automatically:
+
+- RX mode: `DMX_DIR_RX_LEVEL`
+- TX mode and line-noise generation: `DMX_DIR_TX_LEVEL`
+- Idle/stop: direction pin, TX, and RX are released as inputs
+
+For a common tied `DE` + `!RE` transceiver input, use the defaults
+`DMX_DIR_TX_LEVEL HIGH` and `DMX_DIR_RX_LEVEL LOW`.
 
 ## Dependencies
 
