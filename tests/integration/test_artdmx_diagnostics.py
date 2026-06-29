@@ -192,6 +192,7 @@ def test_wrong_universe_warning_clears_after_valid_artdmx(
 ) -> None:
     config = preserved_config.copy()
     config["direction"] = 0  # Art-Net -> DMX
+    config["liveProtocol"] = 0
     step("Switching node to Art-Net -> DMX for diagnostics test")
     unode_client.save_config(config)
 
@@ -242,6 +243,7 @@ def test_artdmx_sequence_drops_duplicate_and_out_of_order_packets(
 ) -> None:
     config = preserved_config.copy()
     config["direction"] = 0  # Art-Net -> DMX
+    config["liveProtocol"] = 0
     step("Switching node to Art-Net -> DMX for ArtDmx sequence test")
     unode_client.save_config(config)
     universe = configured_port_address(config)
@@ -317,6 +319,7 @@ def test_artdmx_sequence_zero_disables_sequence_filter_and_wraparound_is_newer(
 ) -> None:
     config = preserved_config.copy()
     config["direction"] = 0  # Art-Net -> DMX
+    config["liveProtocol"] = 0
     step("Switching node to Art-Net -> DMX for sequence-zero/wrap test")
     unode_client.save_config(config)
     universe = configured_port_address(config)

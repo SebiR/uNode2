@@ -106,6 +106,7 @@ def _parser_probe_packets(universe: int) -> list[tuple[str, bytes]]:
 
 def _mutated_runtime_config(original: dict, rng: random.Random, iteration: int) -> dict:
     config = original.copy()
+    config["liveProtocol"] = 0
     config["direction"] = iteration % 2
     config["mergeMode"] = rng.choice([0, 1])
     config["failsafeMode"] = rng.choice([0, 1, 2, 3])
@@ -172,7 +173,9 @@ def test_host_soak_artnet_and_runtime_stability(
     grace = _reachability_grace_seconds()
     rng = random.Random(0xA27E7)
     original_config = unode_client.get_config()
-    universe = configured_port_address(original_config)
+    artnet_config = original_config.copy()
+    artnet_config["liveProtocol"] = 0
+    universe = configured_port_address(artnet_config)
     deadline = time.monotonic() + duration
     stats = SoakStats()
 
@@ -183,6 +186,10 @@ def test_host_soak_artnet_and_runtime_stability(
     )
 
     try:
+        if int(original_config.get("liveProtocol", 0)) != 0:
+            step("Switching node to Art-Net live protocol for host-only soak")
+            unode_client.save_config(artnet_config)
+
         initial_status = _read_status_with_timeout(unode_client)
         initial_boot_count = int(initial_status["bootCount"])
         initial_reset_reason = str(initial_status.get("resetReason", ""))

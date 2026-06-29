@@ -1329,6 +1329,7 @@ def test_short_dmx_input_from_rp2040_reaches_artnet_receiver_without_full_paddin
 ) -> None:
     config = preserved_config.copy()
     config["direction"] = 1  # DMX -> Art-Net
+    config["liveProtocol"] = 0  # Art-Net output from DMX input
     config["net"] = 0
     config["subnetId"] = 0
     config["universe"] = 1
@@ -1412,6 +1413,7 @@ def test_dmx_input_from_rp2040_preserves_full_512_slot_artdmx(
 ) -> None:
     config = preserved_config.copy()
     config["direction"] = 1  # DMX -> Art-Net
+    config["liveProtocol"] = 0  # Art-Net output from DMX input
     config["net"] = 0
     config["subnetId"] = 0
     config["universe"] = 1

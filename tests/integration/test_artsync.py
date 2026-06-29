@@ -11,6 +11,7 @@ def _configure_artnet_output_for_artsync(
 ) -> tuple[dict, int]:
     config = preserved_config.copy()
     config["direction"] = 0  # Art-Net -> DMX
+    config["liveProtocol"] = 0  # Art-Net live data
 
     reset_config = config.copy()
     reset_config["direction"] = 1  # DMX -> Art-Net, clears ArtSync/sequence state.

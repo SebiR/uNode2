@@ -95,6 +95,7 @@ def _scenario_values(index: int, slots: int) -> list[int]:
 def _configure_unode_input(unode_client: UNodeClient, preserved_config: dict) -> tuple[dict, int]:
     config = preserved_config.copy()
     config["direction"] = 1  # DMX -> Art-Net
+    config["liveProtocol"] = 0  # Art-Net output from DMX input
     config["net"] = 0
     config["subnetId"] = 0
     config["universe"] = 1
