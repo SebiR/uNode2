@@ -11,6 +11,44 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-06-29
+
+### Fixed
+
+- ArtAddress `AcCancelMerge` now locks the next accepted ArtDmx source by both
+  sender IP and Physical field, matching the `IP + Physical` source identity
+  used by ArtDmx merging and sequencing.
+- DMX-to-Art-Net forwarding now preserves the received physical DMX frame
+  length instead of always transmitting 512-slot ArtDmx packets. Local test
+  overrides and Art-Net-to-DMX output paths continue to use full 512-slot
+  frames.
+
+### Tests
+
+- Added hardware-in-the-loop coverage for HTP and LTP ArtDmx merging with two
+  Physical sources from one test host.
+- Added merge edge-case tests for stale source timeout, third-source rejection,
+  and ArtAddress `AcCancelMerge`.
+- Strengthened the short-frame DMX input HIL test to require that a 6-slot DMX
+  input frame is forwarded as a 6-slot ArtDmx packet.
+- Added API authentication regression coverage for protected write endpoints,
+  config download, login failure/success, and logout token invalidation.
+
+## [0.20.0] - 2026-06-28
+
+### Changed
+
+- Reworked the web interface with the new technical light/dark design used in
+  the signal-flow mockup.
+- Replaced the classic dashboard cards with a live signal-flow dashboard plus
+  compact statistics.
+- Moved login/logout into the System tab's Access Control card and added a
+  lock indicator next to the node ID in the header.
+- Kept static IP values visible while DHCP is selected, but disabled the fields
+  until Static IP mode is active.
+- Modernized OTA controls and disabled update buttons until matching files are
+  selected.
+
 ## [0.19.6] - 2026-06-28
 
 ### Fixed

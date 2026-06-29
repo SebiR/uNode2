@@ -18,3 +18,11 @@ def test_status_endpoint_reports_expected_basics(unode_client: UNodeClient) -> N
     assert status["flashLayout"] == "4M1M"
     assert isinstance(status["uptime"], int)
     assert isinstance(status["artNetDiagnostics"], dict)
+    assert isinstance(status["artNetSources"], list)
+
+    for source in status["artNetSources"]:
+        assert isinstance(source["ip"], str)
+        assert isinstance(source["name"], str)
+        assert isinstance(source["physical"], int)
+        assert isinstance(source["lastSeenAge"], int)
+        assert isinstance(source["winning"], bool)

@@ -32,6 +32,32 @@
 
 <body>
 
+    <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+        <symbol id="icon-console" viewBox="0 0 24 24">
+            <path d="M4 8h4v4h-4l0 -4"></path>
+            <path d="M6 4l0 4"></path>
+            <path d="M6 12l0 8"></path>
+            <path d="M10 14h4v4h-4l0 -4"></path>
+            <path d="M12 4l0 10"></path>
+            <path d="M12 18l0 2"></path>
+            <path d="M16 5h4v4h-4l0 -4"></path>
+            <path d="M18 4l0 1"></path>
+            <path d="M18 9l0 11"></path>
+        </symbol>
+        <symbol id="icon-bulb" viewBox="0 0 24 24">
+            <path d="M3 12h1m8 -9v1m8 8h1m-15.4 -6.4l.7 .7m12.1 -.7l-.7 .7"></path>
+            <path d="M9 16a5 5 0 1 1 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3"></path>
+            <path d="M9.7 17l4.6 0"></path>
+        </symbol>
+        <symbol id="icon-dmx" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="8"></circle>
+            <circle cx="9" cy="10" r="1"></circle>
+            <circle cx="15" cy="10" r="1"></circle>
+            <circle cx="12" cy="15" r="1"></circle>
+            <path d="M12 4v3"></path>
+        </symbol>
+    </svg>
+
     <div
         id="restartOverlay"
         class="restartOverlay"
@@ -45,16 +71,27 @@
         </div>
     </div>
 
-    <div class="header">
+    <div class="header topbar">
 		<div class="title">
-			&micro;Node 2.0 - 
-			<span id="chipId"></span>
+            <img src="images/favicon-32x32.png" class="brandIcon" alt="">
+			<span>&micro;Node 2.0 &middot; <span id="chipId"></span></span>
+            <span
+                id="authLockState"
+                class="lockState"
+                title="Settings unlocked">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"></path>
+                    <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"></path>
+                    <path id="authLockShackle" d="M8 11v-5a4 4 0 0 1 7.8 -1.2"></path>
+                </svg>
+            </span>
 			<button
 				id="detectNodeButton"
 				class="locateButton"
 				onclick="detectNode()">
 				Locate
 			</button>
+            <span class="subtitle"><span id="statusName">Node01</span> &middot; <span id="firmware">0.1.0</span></span>
 		</div>
 
         <img src="images/logo.png" class="logo" alt="Logo">
@@ -63,34 +100,33 @@
     <div class="statusbar">
 
 		<div class="statusInfo">
-		<span id="statusName">Node01</span>
+		<span>
+            <span
+                id="wifiIndicator"
+                class="indicator">
+                &#9679;
+            </span>
+            WiFi <span id="statusRSSI">N/A</span>
+        </span>
 
-		<span
-			id="wifiIndicator"
-			class="indicator">
-			&#9679;
-		</span>
+		<span>
+            <span
+                id="artnetIndicator"
+                class="indicator">
+                &#9679;
+            </span>
+            Art-Net
+        </span>
 
-		<span
-			id="artnetIndicator"
-			class="indicator">
-			&#9679;
-		</span>
-        | IP:
-		<span id="statusIP">0.0.0.0</span>
-		| WiFi:
-		<span id="statusRSSI">---</span>
-		| 
-		<span id="dmxMode">
-		[Direction]
-		</span>
+		<span>IP <span id="statusIP">0.0.0.0</span></span>
+		<span id="dmxMode" class="statusPill">N/A</span>
 		</div>
 
 		<div
 			id="statusWarning"
 			class="statusWarning"
 			hidden>
-			&#9888; <span id="statusWarningText">---</span>
+            &#9888; <span id="statusWarningText">N/A</span>
 		</div>
 
 		<div
@@ -125,22 +161,15 @@
 			</select>
 		</label>
 
-		<button
-			id="authButton"
-			type="button"
-			class="authButton"
-			onclick="toggleAuth()">
-			Login
-		</button>
     </div>
 
     <div class="menu">
-        <button onclick="showPage('dashboard')">Dashboard</button>
-        <button onclick="showPage('artnet')">Art-Net</button>
-        <button onclick="showPage('network')">Network</button>
-        <button onclick="showPage('hardware')">Hardware</button>
-        <button onclick="showPage('test')">DMX Test</button>
-        <button onclick="showPage('system')">System</button>
+        <button class="active" onclick="showPage('dashboard')" data-page-button="dashboard">Dashboard</button>
+        <button onclick="showPage('artnet')" data-page-button="artnet">Art-Net</button>
+        <button onclick="showPage('network')" data-page-button="network">Network</button>
+        <button onclick="showPage('hardware')" data-page-button="hardware">Hardware</button>
+        <button onclick="showPage('test')" data-page-button="test">DMX Test</button>
+        <button onclick="showPage('system')" data-page-button="system">System</button>
     </div>
 
     <div class="content">
@@ -149,30 +178,72 @@
 
         <div id="dashboard" class="page active">
 
+            <h1 class="pageTitle">Dashboard</h1>
+            <p class="pageIntro">Live signal flow and compact runtime status.</p>
+
             <div class="card">
-                <h2>General</h2>
+                <h2>Signal Flow</h2>
 
-                <div class="statusgrid">
-                    <div class="label">Name</div>
-                    <div id="name">Node01</div>
+                <div id="flowArtNetToDmx" class="flow">
+                    <div id="flowArtNetSourceNode" class="flowNode idle">
+                        <div class="flowIcon"><svg><use href="#icon-console"></use></svg></div>
+                        <div>
+                            <h3 id="flowArtNetSource">N/A</h3>
+                            <div class="meta" id="flowArtNetSourceMeta">N/A</div>
+                        </div>
+                    </div>
 
-                    <div class="label">Firmware</div>
-                    <div id="firmware">0.1.0</div>
+                    <div class="arrow"></div>
 
-                    <div class="label">Hostname</div>
-                    <div id="hostname">artnetnode</div>
+                    <div id="flowNodeBox" class="flowNode ok">
+                        <div class="flowIcon"><img src="images/favicon-32x32.png" alt=""></div>
+                        <div>
+                            <h3>&micro;Node</h3>
+                            <div class="meta" id="flowNodeMeta">N/A</div>
+                        </div>
+                    </div>
 
-                    <div class="label">IP Address</div>
-                    <div id="ip">0.0.0.0</div>
-					
-					<div class="label">MAC Address</div>
-					<div id="mac">---</div>
+                    <div class="arrow"></div>
 
-					<div class="label">Signal Quality</div>
-					<div id="wifiInfo">---</div>
+                    <div id="flowDmxOutNode" class="flowNode idle">
+                        <div class="flowIcon"><svg><use href="#icon-dmx"></use></svg></div>
+                        <div>
+                            <h3>DMX OUT</h3>
+                            <div class="meta" id="flowDmxOutMeta">N/A</div>
+                        </div>
+                    </div>
+                </div>
 
-                    <div class="label">Uptime</div>
-                    <div id="uptime">0 ms</div>
+                <div id="flowDmxToArtNet" class="flow" hidden>
+                    <div id="flowDmxInNode" class="flowNode idle">
+                        <div class="flowIcon"><svg><use href="#icon-dmx"></use></svg></div>
+                        <div>
+                            <h3>DMX IN</h3>
+                            <div class="meta" id="flowDmxInMeta">N/A</div>
+                        </div>
+                    </div>
+
+                    <div class="arrow"></div>
+
+                    <div id="flowNodeOutputBox" class="flowNode ok">
+                        <div class="flowIcon"><img src="images/favicon-32x32.png" alt=""></div>
+                        <div>
+                            <h3>&micro;Node</h3>
+                            <div class="meta" id="flowNodeOutputMeta">N/A</div>
+                        </div>
+                    </div>
+
+                    <div class="arrow"></div>
+
+                    <div class="flowStack" id="flowSubscribers">
+                        <div id="flowSubscriberNode" class="flowNode idle">
+                            <div class="flowIcon"><svg><use href="#icon-bulb"></use></svg></div>
+                            <div>
+                                <h3>Art-Net Subscribers</h3>
+                                <div class="meta" id="flowSubscriberMeta">N/A</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div
@@ -185,35 +256,51 @@
             </div>
 
             <div class="card">
-                <h2 id="artnetCardTitle">Art-Net Input</h2>
+                <h2>Statistics</h2>
 
-                <div class="statusgrid">
-                    <div id="artnetSummaryLabel" class="label">ArtDmx Packets</div>
-                    <div id="artnetSummary">0</div>
+                <div class="metricGrid compactStats">
+                    <div class="metric">
+                        <strong id="artnetCardTitle">Art-Net Input</strong>
+                        <span id="artnetSummary">N/A</span>
+                    </div>
 
-					<div class="label">ArtSync</div>
-					<div id="artSyncSummary">0</div>
+                    <div class="metric">
+                        <strong id="dmxCardTitle">DMX Output</strong>
+                        <span id="dmxSummary">N/A</span>
+                    </div>
 
-					<div class="label">ArtPolls</div>
-					<div id="artPollSummary">0</div>
+                    <div class="metric">
+                        <strong>ArtSync</strong>
+                        <span id="artSyncSummary">N/A</span>
+                    </div>
 
-					<div id="artnetSubscribersLabel" class="label">Subscriber</div>
-					<div id="artnetSubscribers">0</div>
+                    <div class="metric">
+                        <strong>ArtPolls</strong>
+                        <span id="artPollSummary">N/A</span>
+                    </div>
 
-					<div class="label">Output Failsafe</div>
-					<div id="failsafeStatus">---</div>
+                    <div class="metric">
+                        <strong>Uptime</strong>
+                        <span id="uptime">N/A</span>
+                    </div>
                 </div>
             </div>
 
             <div class="card">
-                <h2 id="dmxCardTitle">DMX Input</h2>
+                <h2>Device</h2>
 
                 <div class="statusgrid">
-                    <div id="dmxSummaryLabel" class="label">DMX Frames</div>
-                    <div id="dmxSummary">0</div>
+                    <div class="label">Name</div>
+                    <div id="name">Node01</div>
 
-                    <div id="dmxStatusLabel" class="label">Status</div>
-                    <div id="dmxStatus">---</div>
+                    <div class="label">Hostname</div>
+                    <div id="hostname">artnetnode</div>
+
+                    <div class="label">IP Address</div>
+                    <div id="ip">0.0.0.0</div>
+					
+					<div class="label">MAC Address</div>
+					<div id="mac">N/A</div>
                 </div>
             </div>
 			
@@ -327,7 +414,7 @@
 
 				<p>
 					ArtDmx is sent by unicast to all subscribers of Universe
-					<span id="subscriberUniverse">0</span>.
+					<span id="subscriberUniverse">N/A</span>.
 				</p>
 
 				<button
@@ -821,16 +908,10 @@
 					</div>
 
 					<div class="label">Bus Guarding</div>
-					<div id="rs485GuardStatus">---</div>
+					<div id="rs485GuardStatus">N/A</div>
 
 					<div class="label">Effective Termination</div>
-					<div id="terminationStatus">---</div>
-
-					<div class="label">Driver</div>
-					<div id="rs485DriverStatus">---</div>
-
-					<div class="label">Receiver</div>
-					<div id="rs485ReceiverStatus">---</div>
+					<div id="terminationStatus">N/A</div>
 				</div>
             </div>
 
@@ -840,149 +921,159 @@
 
         <div id="system" class="page">
 		
-		    <div class="card">
-                <h2>Storage</h2>
-				<div class="statusgrid">
-
-					<div class="label">Total Flash</div>
-					<div id="flashTotal">---</div>
-
-					<div class="label">Firmware Size</div>
-					<div id="flashSketch">---</div>
-
-					<div class="label">Free OTA Space</div>
-					<div id="flashFree">---</div>
-
-					<div class="label">LittleFS Used</div>
-					<div id="fsUsed">---</div>
-
-					<div class="label">LittleFS Free</div>
-					<div id="fsFree">---</div>
-
-				</div>
-            </div>
-
-		    <div class="card">
-                <h2>Runtime Diagnostics</h2>
-				<div class="statusgrid">
-
-					<div class="label">Free Heap</div>
-					<div id="freeHeap">---</div>
-
-					<div class="label">Minimum Free Heap</div>
-					<div id="minimumFreeHeap">---</div>
-
-					<div class="label">Largest Free Block</div>
-					<div id="maxFreeBlock">---</div>
-
-					<div class="label">Heap Fragmentation</div>
-					<div id="heapFragmentation">---</div>
-
-					<div class="label">SoftAP Status</div>
-					<div id="softAPStatus">---</div>
-
-					<div class="label">Reset Reason</div>
-					<div id="resetReason">---</div>
-
-					<div class="label">Reset Info</div>
-					<div id="resetInfo" class="diagnosticText">---</div>
-
-					<div class="label">Boot Count</div>
-					<div id="bootCount">---</div>
-
-					<div class="label">Config Schema</div>
-					<div id="configSchemaVersion">---</div>
-
-					<div class="label">Web Assets</div>
-					<div id="webAssetVersionInfo">---</div>
-
-				</div>
-
-				<button
-					class="action secondary"
-					onclick="showPage('diagnostics')">
-					Open Detailed Diagnostics
-				</button>
-            </div>
-
-            <div class="card">
-
-                <h2>Firmware Update</h2>
-
-                <p>
-                    Upload a firmware binary built for the 4M1M flash layout.
-                </p>
-
-                <input
-                    id="firmwareFile"
-                    type="file"
-                    accept=".bin,.bin.gz">
-
-                <br>
-
-                <button
-                    class="action"
-                    onclick="uploadFirmware()">
-                    Update Firmware
-                </button>
-
-            </div>
-
-            <div class="card">
-
-                <h2>LittleFS Update</h2>
-
-                <p>
-                    This replaces the complete filesystem, including the
-                    stored configuration. Download the configuration first if
-                    you want to restore it afterwards.
-                </p>
-
-                <input
-                    id="filesystemFile"
-                    type="file"
-                    accept=".bin,.img">
-
-                <br>
-
-                <button
-                    class="action"
-                    onclick="uploadFilesystem()">
-                    Update LittleFS
-                </button>
-
-            </div>
+            <h1 class="pageTitle">System</h1>
+            <p class="pageIntro">Configuration, updates, diagnostics and access control.</p>
 
             <div class="card">
 
                 <h2>Configuration</h2>
 
-				<button
-					class="action"
-					onclick="downloadConfig()">
-					Download Configuration
-				</button>
+                <div class="buttonRow">
+                    <button
+                        class="action"
+                        onclick="downloadConfig()">
+                        Download Configuration
+                    </button>
 
-				<input
-					id="configFile"
-					type="file"
-					accept=".json">
-				<button
-					class="action"
-					onclick="uploadConfig()">
-					Upload Configuration
-				</button>
+                    <input
+                        id="configFile"
+                        type="file"
+                        accept=".json">
+                    <button
+                        class="action"
+                        onclick="uploadConfig()">
+                        Upload Configuration
+                    </button>
+                </div>
 
             </div>
 
             <div class="card">
 
-                <h2>System</h2>
+                <h2>OTA Update</h2>
+
+                <p>
+                    Upload firmware and LittleFS images built for the 4M1M flash layout.
+                </p>
+
+                <div class="settingsGrid">
+                    <div class="settingsSection">
+                        <h3>Firmware</h3>
+                        <input
+                            id="firmwareFile"
+                            type="file"
+                            accept=".bin,.bin.gz">
+                    </div>
+
+                    <div class="settingsSection">
+                        <h3>LittleFS</h3>
+                        <input
+                            id="filesystemFile"
+                            type="file"
+                            accept=".bin,.img">
+                        <p class="helpText">
+                            LittleFS replaces the web interface and stored configuration.
+                            Download the configuration first if you want to restore it.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="buttonRow">
+                    <button
+                        id="updateFirmwareButton"
+                        class="action"
+                        onclick="uploadFirmware()"
+                        disabled>
+                        Update Firmware
+                    </button>
+
+                    <button
+                        id="updateFilesystemButton"
+                        class="action"
+                        onclick="uploadFilesystem()"
+                        disabled>
+                        Update LittleFS
+                    </button>
+
+                    <button
+                        id="updateBothButton"
+                        class="action"
+                        onclick="uploadBoth()"
+                        disabled>
+                        Update Both
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="card">
+
+                <h2>Diagnostics</h2>
+                <div class="metricGrid">
+                    <div class="metric"><strong>Free Heap</strong><span id="freeHeap">N/A</span></div>
+                    <div class="metric"><strong>Minimum Heap</strong><span id="minimumFreeHeap">N/A</span></div>
+                    <div class="metric"><strong>Fragmentation</strong><span id="heapFragmentation">N/A</span></div>
+                    <div class="metric"><strong>Reset Reason</strong><span id="resetReason">N/A</span></div>
+                    <div class="metric"><strong>Boot Count</strong><span id="bootCount">N/A</span></div>
+                    <div class="metric"><strong>Web Assets</strong><span id="webAssetVersionInfo">N/A</span></div>
+                </div>
+
+				<div class="buttonRow">
+                    <button
+                        class="action secondary"
+                        onclick="showPage('diagnostics')">
+                        Open Detailed Diagnostics
+                    </button>
+                </div>
+
+                <div class="statusgrid" hidden>
+                    <div class="label">Total Flash</div><div id="flashTotal">N/A</div>
+                    <div class="label">Firmware Size</div><div id="flashSketch">N/A</div>
+                    <div class="label">Free OTA Space</div><div id="flashFree">N/A</div>
+                    <div class="label">LittleFS Used</div><div id="fsUsed">N/A</div>
+                    <div class="label">LittleFS Free</div><div id="fsFree">N/A</div>
+                    <div class="label">Largest Free Block</div><div id="maxFreeBlock">N/A</div>
+                    <div class="label">SoftAP Status</div><div id="softAPStatus">N/A</div>
+                    <div class="label">Reset Info</div><div id="resetInfo" class="diagnosticText">N/A</div>
+                    <div class="label">Config Schema</div><div id="configSchemaVersion">N/A</div>
+                </div>
+
+            </div>
+
+            <div class="card">
+
+                <h2>Access Control</h2>
+
+                <div class="statusgrid">
+                    <div class="label">Current State</div>
+                    <div id="authStateText">N/A</div>
+                </div>
+
+                <div class="formRows">
+                    <label>
+                        <span>Password</span>
+                        <input
+                            id="loginPassword"
+                            type="password"
+                            autocomplete="current-password"
+                            placeholder="Enter password">
+                    </label>
+                </div>
+
+                <div class="buttonRow">
+                    <button
+                        id="authButton"
+                        type="button"
+                        class="action authButton"
+                        onclick="toggleAuth()">
+                        Login
+                    </button>
+                </div>
 
 				<div class="formRows">
 
 				<label>
-					<span>Admin Password</span>
+					<span>New Password</span>
 					<input
 						id="adminPassword"
 						type="password"
@@ -993,16 +1084,21 @@
 				</div>
 
 				<p class="helpText">
-					When a password is set, the interface stays readable but
-					changes require login. Leave empty and apply to disable the
-					password.
+					When a password is set, the interface stays readable but changes
+                    require login. Leave empty and apply to disable the password.
 				</p>
 
 				<button
 					class="action"
 					onclick="setAdminPassword()">
-					Apply Password
+					Set Password
 				</button>
+
+            </div>
+
+            <div class="card">
+
+                <h2>System</h2>
 
 				<button
 					id="rebootButton"

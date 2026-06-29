@@ -16,6 +16,14 @@ struct ArtNetSubscriberInfo {
   uint32_t lastSeenMillis;
 };
 
+struct ArtNetSourceInfo {
+  IPAddress ip;
+  uint8_t physical;
+  uint32_t lastSeenMillis;
+  bool active;
+  bool winning;
+};
+
 /** @brief Initializes the Art-Net UDP socket, node identity, and callbacks. */
 bool initArtNet();
 /** @brief Processes incoming packets, polling, and subscriber expiry. */
@@ -93,6 +101,12 @@ uint32_t getArtNetMergeLockDropCount();
 uint32_t getArtNetMergeThirdSourceDropCount();
 /** @return Number of ArtSync timeouts returning to asynchronous output. */
 uint32_t getArtNetSyncTimeoutCount();
+/** @return Number of currently active ArtDmx merge/input sources. */
+uint8_t getArtNetSourceCount();
+/** @brief Copies one active ArtDmx source record. */
+bool getArtNetSource(
+  uint8_t index,
+  ArtNetSourceInfo& source);
 /** @return Number of ArtPollReply attempts made by this node. */
 uint32_t getArtPollCount();
 /** @return millis() timestamp of the last ArtPollReply attempt. */

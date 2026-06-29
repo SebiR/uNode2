@@ -1,0 +1,1651 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>uNode Signal Flow Technical Mockup</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --panel-soft: #f8fafc;
+      --border: #cbd5e1;
+      --border-strong: #94a3b8;
+      --text: #111827;
+      --muted: #64748b;
+      --line: #3f6f9f;
+      --line-muted: #94a3b8;
+      --bar: #34495e;
+      --bar-soft: #405a70;
+      --bar-text: #ffffff;
+      --ok: #15803d;
+      --warn: #b45309;
+      --inactive: #64748b;
+      font-family: Segoe UI, system-ui, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #111827;
+      --panel: #1f2937;
+      --panel-soft: #172033;
+      --border: #374151;
+      --border-strong: #64748b;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --line: #7aa2c8;
+      --line-muted: #64748b;
+      --bar: #1e293b;
+      --bar-soft: #263449;
+      --bar-text: #f9fafb;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --inactive: #94a3b8;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bar);
+      color: var(--bar-text);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 240px;
+    }
+
+    .brand img {
+      width: 34px;
+      height: 34px;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 1.05rem;
+    }
+
+    .brand-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .lock-state {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 19px;
+      height: 19px;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: 5px;
+      color: var(--bar-text);
+      opacity: 0.9;
+    }
+
+    .lock-state svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .brand span {
+      display: block;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.82rem;
+    }
+
+    .brand .lock-state {
+      display: inline-flex;
+    }
+
+    .top-logo {
+      height: 36px;
+      width: auto;
+      object-fit: contain;
+      margin-left: 8px;
+    }
+
+    .statusline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 0.86rem;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+      background: var(--ok);
+    }
+
+    .dot.cyan {
+      background: var(--line);
+    }
+
+    .status-pill {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--bar-text);
+      font-weight: 600;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 10px 22px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bar-soft);
+    }
+
+    .nav button {
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 6px;
+      padding: 7px 11px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--bar-text);
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .nav button.active {
+      border-color: rgba(255, 255, 255, 0.55);
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+    }
+
+    .page {
+      padding: 24px 28px 32px;
+    }
+
+    .page[hidden] {
+      display: none;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 1.45rem;
+    }
+
+    .intro {
+      margin: 0 0 20px;
+      color: var(--muted);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .diagram-tabs {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .diagram-tabs button {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 11px;
+      background: var(--panel);
+      color: var(--muted);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .diagram-tabs button.active {
+      border-color: var(--line);
+      background: color-mix(in srgb, var(--line) 8%, var(--panel));
+      color: var(--line);
+    }
+
+    .flow-view[hidden] {
+      display: none;
+    }
+
+    .view-toggle {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .view-toggle button {
+      border: 0;
+      border-right: 1px solid var(--border);
+      padding: 7px 12px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .view-toggle button:last-child {
+      border-right: 0;
+    }
+
+    .view-toggle button.active {
+      background: #3f6f9f;
+      color: #ffffff;
+    }
+
+    [data-theme="dark"] .view-toggle button.active {
+      background: #426b94;
+    }
+
+    .theme-toggle {
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      padding: 7px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--bar-text);
+    }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .primary-action {
+      border: 1px solid color-mix(in srgb, var(--line) 58%, var(--border));
+      border-radius: 6px;
+      padding: 8px 12px;
+      background: color-mix(in srgb, var(--line) 12%, var(--panel));
+      color: var(--text);
+      font-weight: 750;
+    }
+
+    .dashboard {
+      display: grid;
+      gap: 16px;
+      max-width: 1080px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 16px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.02rem;
+      font-weight: 700;
+    }
+
+    .classic-placeholder {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel-soft);
+      padding: 10px 12px;
+    }
+
+    .metric strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 1rem;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr 76px 1fr 76px 1fr;
+      align-items: center;
+      min-height: 138px;
+    }
+
+    .flow.merge {
+      grid-template-columns: 1fr 76px 1.05fr 76px 1fr;
+    }
+
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .node {
+      min-height: 72px;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--inactive);
+      border-radius: 6px;
+      background: var(--panel-soft);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      position: relative;
+    }
+
+    .node.small {
+      min-height: 54px;
+      padding: 8px 10px;
+    }
+
+    .node.active {
+      border-left-color: var(--ok);
+    }
+
+    .node.winner {
+      border-color: var(--warn);
+      border-left-color: var(--warn);
+    }
+
+    .node.more {
+      border-style: dashed;
+      color: var(--muted);
+    }
+
+    .icon {
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--line);
+      display: grid;
+      place-items: center;
+    }
+
+    .icon svg {
+      width: 22px;
+      height: 22px;
+      stroke-width: 1.9;
+    }
+
+    .icon svg * {
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .icon img {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+    }
+
+    .node h3 {
+      margin: 0 0 2px;
+      font-size: 0.94rem;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-top: 5px;
+      padding: 2px 7px;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      color: var(--text);
+      background: var(--panel);
+      font-size: 0.73rem;
+      font-weight: 700;
+    }
+
+    .badge.warn {
+      border-color: var(--warn);
+      color: var(--warn);
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .section {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      padding: 14px;
+    }
+
+    .section h3 {
+      margin: 0 0 12px;
+      font-size: 0.98rem;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .form-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-row label,
+    .form-label {
+      color: var(--text);
+      font-weight: 650;
+      font-size: 0.88rem;
+    }
+
+    input,
+    select {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 7px 9px;
+      font: inherit;
+    }
+
+    input:disabled,
+    select:disabled,
+    button:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+    }
+
+    .inline-fields {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .radio-cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .radio-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 11px;
+    }
+
+    .radio-card.active {
+      border-color: var(--line);
+      box-shadow: inset 4px 0 0 var(--line);
+    }
+
+    .radio-card strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .radio-card span {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .check-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .check-row input {
+      width: auto;
+    }
+
+    .arrow {
+      position: relative;
+      height: 3px;
+      background: var(--line);
+      margin: 0 12px;
+      border-radius: 999px;
+    }
+
+    .arrow::after {
+      content: "";
+      position: absolute;
+      right: -1px;
+      top: 50%;
+      transform: translateY(-50%) rotate(45deg);
+      width: 11px;
+      height: 11px;
+      border-top: 3px solid var(--line);
+      border-right: 3px solid var(--line);
+      border-radius: 1px;
+    }
+
+    .merge-arrows {
+      position: relative;
+      height: 124px;
+      margin: 0 10px;
+    }
+
+    .merge-arrows svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .merge-arrows path {
+      fill: none;
+      stroke: var(--line);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .merge-arrows path.dim {
+      stroke: var(--line-muted);
+    }
+
+    .merge-arrows.equal path.dim {
+      stroke: var(--line);
+    }
+
+    .merge-arrows .join {
+      fill: var(--panel);
+      stroke: var(--line);
+      stroke-width: 3;
+    }
+
+    .merge-arrow-head {
+      position: absolute;
+      left: calc(100% - 16px);
+      top: 50%;
+      transform: translateY(-50%) rotate(45deg);
+      width: 11px;
+      height: 11px;
+      border-top: 3px solid var(--line);
+      border-right: 3px solid var(--line);
+      border-radius: 1px;
+      box-sizing: border-box;
+    }
+
+    .center-node {
+      text-align: center;
+      grid-template-columns: 1fr;
+      justify-items: center;
+    }
+
+    .subscribers {
+      display: grid;
+      gap: 8px;
+    }
+
+    .caption {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .section.full {
+      grid-column: 1 / -1;
+    }
+
+    .status-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--panel);
+      padding: 9px 11px;
+    }
+
+    .status-item span {
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .secondary-action,
+    .danger-action {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      background: var(--panel);
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .danger-action {
+      border-color: color-mix(in srgb, #dc2626 50%, var(--border));
+      color: #b91c1c;
+    }
+
+    .mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    .mini-table th,
+    .mini-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 8px 6px;
+      text-align: left;
+    }
+
+    .mini-table th {
+      color: var(--muted);
+      font-weight: 750;
+    }
+
+    .fader-bank {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(70px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+
+    .fader {
+      display: grid;
+      gap: 8px;
+      justify-items: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 12px 8px;
+    }
+
+    .fader input[type="range"] {
+      writing-mode: vertical-lr;
+      direction: rtl;
+      width: 32px;
+      height: 130px;
+      padding: 0;
+    }
+
+    .dmx-grid {
+      display: grid;
+      grid-template-columns: repeat(16, minmax(0, 1fr));
+      gap: 4px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 0.76rem;
+    }
+
+    .dmx-cell {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--panel);
+      padding: 5px 3px;
+      text-align: center;
+    }
+
+    .dmx-cell.hot {
+      border-color: var(--line);
+      background: color-mix(in srgb, var(--line) 10%, var(--panel));
+      color: var(--text);
+      font-weight: 750;
+    }
+
+    @media (max-width: 820px) {
+      .page {
+        padding: 16px;
+      }
+
+      .classic-placeholder {
+        grid-template-columns: 1fr;
+      }
+
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .radio-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .fader-bank {
+        grid-template-columns: repeat(2, minmax(70px, 1fr));
+      }
+
+      .dmx-grid {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+      }
+
+      .flow,
+      .flow.merge {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .arrow {
+        width: 3px;
+        height: 34px;
+        margin: 0 auto;
+      }
+
+      .arrow::after {
+        right: 50%;
+        top: auto;
+        bottom: -1px;
+        transform: translateX(50%) rotate(135deg);
+      }
+
+      .merge-arrows {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+    <!-- Original Tabler Icons paths, inlined as symbols. Source: https://tabler.io/icons, MIT license. DMX/XLR stays custom. -->
+    <symbol id="icon-console" viewBox="0 0 24 24">
+      <path d="M4 8h4v4h-4l0 -4"></path>
+      <path d="M6 4l0 4"></path>
+      <path d="M6 12l0 8"></path>
+      <path d="M10 14h4v4h-4l0 -4"></path>
+      <path d="M12 4l0 10"></path>
+      <path d="M12 18l0 2"></path>
+      <path d="M16 5h4v4h-4l0 -4"></path>
+      <path d="M18 4l0 1"></path>
+      <path d="M18 9l0 11"></path>
+    </symbol>
+    <symbol id="icon-mobile" viewBox="0 0 24 24">
+      <path d="M6 5a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-14"></path>
+      <path d="M11 4h2"></path>
+      <path d="M12 17v.01"></path>
+    </symbol>
+    <symbol id="icon-desktop" viewBox="0 0 24 24">
+      <path d="M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10"></path>
+      <path d="M7 20h10"></path>
+      <path d="M9 16v4"></path>
+      <path d="M15 16v4"></path>
+    </symbol>
+    <symbol id="icon-bulb" viewBox="0 0 24 24">
+      <path d="M3 12h1m8 -9v1m8 8h1m-15.4 -6.4l.7 .7m12.1 -.7l-.7 .7"></path>
+      <path d="M9 16a5 5 0 1 1 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3"></path>
+      <path d="M9.7 17l4.6 0"></path>
+    </symbol>
+    <symbol id="icon-dmx" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8"></circle>
+      <circle cx="9" cy="10" r="1"></circle>
+      <circle cx="15" cy="10" r="1"></circle>
+      <circle cx="12" cy="15" r="1"></circle>
+      <path d="M12 4v3"></path>
+    </symbol>
+    <symbol id="icon-merge" viewBox="0 0 24 24">
+      <path d="M3 7h5l3.5 5h9.5"></path>
+      <path d="M3 17h5l3.495 -5"></path>
+      <path d="M18 15l3 -3l-3 -3"></path>
+    </symbol>
+    <symbol id="icon-route" viewBox="0 0 24 24">
+      <path d="M3 19a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"></path>
+      <path d="M19 7a2 2 0 1 0 0 -4a2 2 0 0 0 0 4"></path>
+      <path d="M11 19h5.5a3.5 3.5 0 0 0 0 -7h-8a3.5 3.5 0 0 1 0 -7h4.5"></path>
+    </symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24">
+      <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"></path>
+      <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"></path>
+      <path d="M8 11v-4a4 4 0 1 1 8 0v4"></path>
+    </symbol>
+    <symbol id="icon-lock-open" viewBox="0 0 24 24">
+      <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"></path>
+      <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"></path>
+      <path d="M8 11v-5a4 4 0 0 1 7.8 -1.2"></path>
+    </symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="brand">
+      <img src="../firmware/uNode_2/data/images/favicon-32x32.png" alt="">
+      <div>
+        <strong class="brand-title">uNode 2.0 · AABBCC <span class="lock-state" title="Settings locked"><svg><use href="#icon-lock"></use></svg></span></strong>
+        <span>IllumiNocte uNode · FW 0.19.6</span>
+      </div>
+    </div>
+    <div class="statusline">
+      <span><span class="dot"></span>WiFi 86%</span>
+      <span><span class="dot cyan"></span>Art-Net active</span>
+      <span>IP 192.168.1.121</span>
+      <span class="status-pill">Art-Net U1 → DMX</span>
+      <span class="status-pill">0 unsaved changes</span>
+      <button class="theme-toggle" onclick="document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark'">
+        Toggle light/dark
+      </button>
+      <img class="top-logo" src="../firmware/uNode_2/data/images/logo.png" alt="IllumiNocte">
+    </div>
+  </header>
+
+  <nav class="nav" aria-label="Main navigation mockup">
+    <button class="active" data-page-tab="dashboard">Dashboard</button>
+    <button data-page-tab="artnet">Art-Net</button>
+    <button data-page-tab="network">Network</button>
+    <button data-page-tab="hardware">Hardware</button>
+    <button data-page-tab="test">DMX Test</button>
+    <button data-page-tab="system">System</button>
+    <button data-page-tab="diagnostics">Diagnostics</button>
+  </nav>
+
+  <div class="page" data-page="dashboard">
+  <h1>Dashboard</h1>
+  <p class="intro">Technical signal-flow concept with current header/status/navigation context.</p>
+
+  <div class="toolbar">
+    <div class="view-toggle" aria-label="Dashboard view mockup">
+      <button>Classic</button>
+      <button class="active">Signal Flow</button>
+    </div>
+  </div>
+
+  <main class="dashboard">
+    <section class="panel">
+      <h2>Signal Flow</h2>
+      <div class="diagram-tabs" aria-label="Signal flow scenario mockup">
+        <button class="active" data-flow-tab="artnet-output">Art-Net → DMX</button>
+        <button data-flow-tab="merge-ltp">Merge LTP</button>
+        <button data-flow-tab="merge-htp">Merge HTP</button>
+        <button data-flow-tab="dmx-input">DMX → Art-Net</button>
+      </div>
+
+      <div class="flow flow-view" data-flow-view="artnet-output">
+        <div class="node active">
+          <div class="icon"><svg><use href="#icon-console"></use></svg></div>
+          <div>
+            <h3>QLC+ Controller</h3>
+            <div class="meta">192.168.1.100 · ArtDmx 44 fps<br>last packet 120 ms ago</div>
+            <span class="badge">Universe 1</span>
+          </div>
+        </div>
+
+        <div class="arrow"></div>
+
+        <div class="node center-node active">
+          <div class="icon"><img src="../firmware/uNode_2/data/images/favicon-32x32.png" alt=""></div>
+          <div>
+            <h3>uNode</h3>
+            <div class="meta">Art-Net input<br>Failsafe armed: Hold</div>
+          </div>
+        </div>
+
+        <div class="arrow"></div>
+
+        <div class="node active">
+          <div class="icon"><svg><use href="#icon-dmx"></use></svg></div>
+          <div>
+            <h3>DMX OUT</h3>
+            <div class="meta">XLR output active<br>512 slots · continuous</div>
+            <span class="badge">Sending DMX</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow merge flow-view" data-flow-view="merge-ltp" hidden>
+        <div class="stack">
+          <div class="node winner small">
+            <div class="icon"><svg><use href="#icon-console"></use></svg></div>
+            <div>
+              <h3>grandMA3</h3>
+              <div class="meta">192.168.1.123 · last 40 ms ago</div>
+            </div>
+          </div>
+          <div class="node active small">
+            <div class="icon"><svg><use href="#icon-console"></use></svg></div>
+            <div>
+              <h3>Test Controller</h3>
+              <div class="meta">192.168.1.55 · last 180 ms ago</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="merge-arrows">
+          <svg viewBox="0 0 90 124" aria-hidden="true">
+            <path d="M4 31 H34 Q46 31 46 43 V62 H74"></path>
+            <path class="dim" d="M4 93 H34 Q46 93 46 81 V62"></path>
+            <circle class="join" cx="46" cy="62" r="4"></circle>
+          </svg>
+          <span class="merge-arrow-head" aria-hidden="true"></span>
+        </div>
+
+        <div class="node center-node active">
+          <div class="icon"><svg><use href="#icon-merge"></use></svg></div>
+          <div>
+            <h3>uNode Merge</h3>
+            <div class="meta">Mode: LTP<br>2 active sources</div>
+            <span class="badge warn">Active source: grandMA3</span>
+          </div>
+        </div>
+
+        <div class="arrow"></div>
+
+        <div class="node active">
+          <div class="icon"><svg><use href="#icon-dmx"></use></svg></div>
+          <div>
+            <h3>DMX OUT</h3>
+            <div class="meta">Merged output<br>Failsafe: All to Zero</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow merge flow-view" data-flow-view="merge-htp" hidden>
+        <div class="stack">
+          <div class="node active small">
+            <div class="icon"><svg><use href="#icon-console"></use></svg></div>
+            <div>
+              <h3>grandMA3</h3>
+              <div class="meta">192.168.1.123 · last 40 ms ago</div>
+            </div>
+          </div>
+          <div class="node active small">
+            <div class="icon"><svg><use href="#icon-console"></use></svg></div>
+            <div>
+              <h3>Test Controller</h3>
+              <div class="meta">192.168.1.55 · last 180 ms ago</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="merge-arrows equal">
+          <svg viewBox="0 0 90 124" aria-hidden="true">
+            <path d="M4 31 H34 Q46 31 46 43 V62 H74"></path>
+            <path class="dim" d="M4 93 H34 Q46 93 46 81 V62"></path>
+            <circle class="join" cx="46" cy="62" r="4"></circle>
+          </svg>
+          <span class="merge-arrow-head" aria-hidden="true"></span>
+        </div>
+
+        <div class="node center-node active">
+          <div class="icon"><svg><use href="#icon-merge"></use></svg></div>
+          <div>
+            <h3>uNode Merge</h3>
+            <div class="meta">Mode: HTP<br>2 active sources</div>
+            <span class="badge">HTP mix</span>
+          </div>
+        </div>
+
+        <div class="arrow"></div>
+
+        <div class="node active">
+          <div class="icon"><svg><use href="#icon-dmx"></use></svg></div>
+          <div>
+            <h3>DMX OUT</h3>
+            <div class="meta">Highest-takes-precedence output<br>Failsafe: Hold</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow flow-view" data-flow-view="dmx-input" hidden>
+        <div class="node active">
+          <div class="icon"><svg><use href="#icon-dmx"></use></svg></div>
+          <div>
+            <h3>DMX IN</h3>
+            <div class="meta">44 fps · 512 slots<br>last frame 18 ms ago</div>
+          </div>
+        </div>
+
+        <div class="arrow"></div>
+
+        <div class="node center-node active">
+          <div class="icon"><img src="../firmware/uNode_2/data/images/favicon-32x32.png" alt=""></div>
+          <div>
+            <h3>uNode</h3>
+            <div class="meta">DMX → Art-Net<br>Universe 1</div>
+          </div>
+        </div>
+
+        <div class="arrow"></div>
+
+        <div class="subscribers">
+          <div class="node active small">
+            <div class="icon"><svg><use href="#icon-bulb"></use></svg></div>
+            <div>
+              <h3>Art-Net Fixture A</h3>
+              <div class="meta">192.168.1.100 · subscribed</div>
+            </div>
+          </div>
+          <div class="node active small">
+            <div class="icon"><svg><use href="#icon-bulb"></use></svg></div>
+            <div>
+              <h3>Art-Net Fixture B</h3>
+              <div class="meta">192.168.1.77 · last seen 3.2 s ago</div>
+            </div>
+          </div>
+          <div class="node active small">
+            <div class="icon"><svg><use href="#icon-bulb"></use></svg></div>
+            <div>
+              <h3>Art-Net Fixture C</h3>
+              <div class="meta">192.168.1.88 · subscribed</div>
+            </div>
+          </div>
+          <div class="node more small">
+            <div class="icon"><svg><use href="#icon-route"></use></svg></div>
+            <div>
+              <h3>+2 more</h3>
+              <div class="meta">5 subscribers total</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption">Mockup rule: show up to 3 subscribers, then collapse the rest into a compact “+N more” card.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Statistics</h2>
+      <div class="classic-placeholder">
+        <div class="metric">
+          <strong>424353 packets</strong>
+          <span>ArtDmx · 44 fps · last 120 ms ago</span>
+        </div>
+        <div class="metric">
+          <strong>12 syncs</strong>
+          <span>ArtSync · async · last 2.1 s ago</span>
+        </div>
+        <div class="metric">
+          <strong>DMX active</strong>
+          <span>Output source: Art-Net · Failsafe armed</span>
+        </div>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <div class="page" data-page="artnet" hidden>
+  <h1>Art-Net</h1>
+  <p class="intro">Runtime Art-Net configuration in the same compact technical layout.</p>
+
+  <main class="dashboard">
+    <section class="panel">
+      <h2>Art-Net Settings · Technical Style Mockup</h2>
+      <div class="settings-grid">
+        <div class="section">
+          <h3>Direction</h3>
+          <div class="radio-cards">
+            <div class="radio-card active">
+              <strong>Art-Net → DMX</strong>
+              <span>Receive ArtDmx and output physical DMX on the XLR connector.</span>
+            </div>
+            <div class="radio-card">
+              <strong>DMX → Art-Net</strong>
+              <span>Receive physical DMX and transmit ArtDmx to discovered subscribers.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Port Address</h3>
+          <div class="form-row">
+            <span class="form-label">Net / Sub / Universe</span>
+            <div class="inline-fields">
+              <input value="0" aria-label="Net">
+              <input value="0" aria-label="Subnet">
+              <input value="1" aria-label="Universe">
+            </div>
+          </div>
+          <p class="caption">Current Port-Address: Art-Net Universe 1</p>
+        </div>
+
+        <div class="section">
+          <h3>Output Behaviour</h3>
+          <div class="form-row">
+            <label for="mockMerge">Merge Mode</label>
+            <select id="mockMerge">
+              <option>HTP · Highest Takes Precedence</option>
+              <option selected>LTP · Latest Takes Precedence</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="mockFailsafe">Failsafe</label>
+            <select id="mockFailsafe">
+              <option>Hold Last Look</option>
+              <option>All to Zero</option>
+              <option selected>All to Full</option>
+              <option>Failsafe Scene</option>
+            </select>
+          </div>
+          <div class="action-row">
+            <button class="primary-action">Record Failsafe Scene</button>
+            <span class="caption">Stores the current DMX output as the backup/failsafe look.</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Node Identity</h3>
+          <div class="form-row">
+            <label for="mockShort">Short Name</label>
+            <input id="mockShort" value="IN_uNode">
+          </div>
+          <div class="form-row">
+            <label for="mockLong">Long Name</label>
+            <input id="mockLong" value="IllumiNocte uNode">
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Compatibility</h3>
+          <label class="check-row">
+            <input type="checkbox">
+            <span>Use legacy ArtPollReply for Art-Net 3 tools</span>
+          </label>
+          <p class="caption">Keeps older discovery tools working without reflashing firmware.</p>
+        </div>
+
+        <div class="section">
+          <h3>Live Status</h3>
+          <div class="metric">
+            <strong>Merge active · LTP</strong>
+            <span>2 sources · active source grandMA3 · timeout in 8.4 s</span>
+          </div>
+          <div class="metric" style="margin-top: 10px;">
+            <strong>ArtSync async</strong>
+            <span>12 syncs · last sync 2.1 s ago</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <div class="page" data-page="network" hidden>
+  <h1>Network</h1>
+  <p class="intro">Wi-Fi mode, addressing and stored credentials in the same dense card layout.</p>
+
+  <main class="dashboard">
+    <section class="panel">
+      <h2>Network Settings</h2>
+      <div class="settings-grid">
+        <div class="section">
+          <h3>Wi-Fi Mode</h3>
+          <div class="radio-cards">
+            <div class="radio-card active">
+              <strong>Client</strong>
+              <span>Join an existing Wi-Fi network and use DHCP or a static address.</span>
+            </div>
+            <div class="radio-card">
+              <strong>Access Point</strong>
+              <span>Create the uNode setup network at 2.0.0.1.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Known Wi-Fi Networks</h3>
+          <div class="status-list">
+            <div class="status-item">
+              <strong>Workshop-WiFi</strong>
+              <span>connected</span>
+            </div>
+            <div class="status-item">
+              <strong>uNode-Testbench</strong>
+              <span>stored</span>
+            </div>
+          </div>
+          <div class="button-row">
+            <button class="secondary-action">Clear saved Wi-Fi networks</button>
+          </div>
+          <p class="caption">Credentials are managed by WiFiManager. The node can only list and forget stored networks here.</p>
+        </div>
+
+        <div class="section">
+          <h3>IP Configuration</h3>
+          <div class="radio-cards">
+            <div class="radio-card active">
+              <strong>DHCP</strong>
+              <span>Address assigned by the network. Broadcast address is derived automatically.</span>
+            </div>
+            <div class="radio-card">
+              <strong>Static</strong>
+              <span>Use a fixed address when the installation requires stable routing.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Static Address</h3>
+          <div class="form-row">
+            <label for="mockIp">IP</label>
+            <input id="mockIp" value="192.168.1.121" disabled>
+          </div>
+          <div class="form-row">
+            <label for="mockMask">Subnet</label>
+            <input id="mockMask" value="255.255.255.0" disabled>
+          </div>
+          <div class="form-row">
+            <label for="mockGateway">Gateway</label>
+            <input id="mockGateway" value="192.168.1.1" disabled>
+          </div>
+          <p class="caption">Stored static values are kept, but disabled while DHCP is selected.</p>
+        </div>
+
+        <div class="section full">
+          <h3>Live Network Status</h3>
+          <div class="classic-placeholder">
+            <div class="metric">
+              <strong>192.168.1.121</strong>
+              <span>Client · RSSI -51 dBm</span>
+            </div>
+            <div class="metric">
+              <strong>2.0.0.255</strong>
+              <span>Derived Art-Net broadcast</span>
+            </div>
+            <div class="metric">
+              <strong>Connected</strong>
+              <span>Last reconnect 1 h 12 min ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <div class="page" data-page="hardware" hidden>
+  <h1>Hardware</h1>
+  <p class="intro">Physical options for LEDs, RS-485 handling and switchable termination.</p>
+
+  <main class="dashboard">
+    <section class="panel">
+      <h2>Hardware Settings</h2>
+      <div class="settings-grid">
+        <div class="section">
+          <h3>LEDs</h3>
+          <div class="form-row">
+            <label for="mockBrightness">Brightness</label>
+            <input id="mockBrightness" type="range" min="1" max="255" value="80">
+          </div>
+          <label class="check-row">
+            <input type="checkbox">
+            <span>Mute status LEDs</span>
+          </label>
+          <p class="caption">Preview changes are live, stored only after saving.</p>
+        </div>
+
+        <div class="section">
+          <h3>Locate</h3>
+          <div class="status-list">
+            <div class="status-item">
+              <strong>Locate state</strong>
+              <span>Inactive</span>
+            </div>
+            <div class="status-item">
+              <strong>LED output</strong>
+              <span>Normal brightness</span>
+            </div>
+          </div>
+          <div class="button-row">
+            <button class="primary-action">Start Locate</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>RS-485 Bus</h3>
+          <div class="form-row">
+            <label for="mockTermination">Termination</label>
+            <select id="mockTermination">
+              <option>Off</option>
+              <option>On</option>
+              <option selected>Auto by direction</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="mockGuarding">Bus Guarding</label>
+            <select id="mockGuarding">
+              <option selected>Disabled on legacy hardware</option>
+              <option>Mute transceiver during boot</option>
+              <option>Auto direction guard</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Button</h3>
+          <div class="form-row">
+            <label for="mockButtonAction">Action while running</label>
+            <select id="mockButtonAction">
+              <option selected>Locate node</option>
+              <option>Toggle status LEDs</option>
+              <option>Show network mode</option>
+              <option>No action</option>
+            </select>
+          </div>
+          <p class="caption">Holding the button during power-up always starts Recovery Mode.</p>
+        </div>
+
+        <div class="section">
+          <h3>Hardware Status</h3>
+          <div class="status-list">
+            <div class="status-item">
+              <strong>Termination</strong>
+              <span>On · DMX input mode</span>
+            </div>
+            <div class="status-item">
+              <strong>Button</strong>
+              <span>Ready · hold on boot for Recovery</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <div class="page" data-page="test" hidden>
+  <h1>DMX Test</h1>
+  <p class="intro">Temporary local override, quick patterns and a compact DMX monitor.</p>
+
+  <main class="dashboard">
+    <section class="panel">
+      <h2>Manual Override</h2>
+      <div class="settings-grid">
+        <div class="section">
+          <h3>Control</h3>
+          <div class="form-row">
+            <label for="mockStartAddress">Start Address</label>
+            <input id="mockStartAddress" type="number" value="1" min="1" max="512">
+          </div>
+          <label class="check-row">
+            <input type="checkbox">
+            <span>Disable override timeout until restart</span>
+          </label>
+          <p class="caption">Moving a fader overrides Art-Net/DMX for 10 seconds unless held.</p>
+          <div class="button-row">
+            <button class="primary-action">Blackout Visible</button>
+            <button class="primary-action">Full On Visible</button>
+            <button class="secondary-action">Release Override</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Visible Channels</h3>
+          <div class="fader-bank">
+            <div class="fader"><strong>Ch 001</strong><input type="range" min="0" max="255" value="0"><span>0</span></div>
+            <div class="fader"><strong>Ch 002</strong><input type="range" min="0" max="255" value="128"><span>128</span></div>
+            <div class="fader"><strong>Ch 003</strong><input type="range" min="0" max="255" value="255"><span>255</span></div>
+            <div class="fader"><strong>Ch 004</strong><input type="range" min="0" max="255" value="32"><span>32</span></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Patterns</h3>
+          <div class="form-row">
+            <label for="mockPatternRange">Range</label>
+            <input id="mockPatternRange" value="1 – 512">
+          </div>
+          <div class="form-row">
+            <label for="mockPatternSpeed">Speed</label>
+            <select id="mockPatternSpeed">
+              <option>0.25 s</option>
+              <option selected>0.5 s</option>
+              <option>1.0 s</option>
+            </select>
+          </div>
+          <div class="button-row">
+            <button class="primary-action">Start Channel Chase</button>
+            <button class="primary-action">Start Find Address</button>
+            <button class="secondary-action">Previous</button>
+            <button class="secondary-action">Next</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Override Status</h3>
+          <div class="metric">
+            <strong>Active · 7.8 s left</strong>
+            <span>Source: Web test · outputting channels 1–4</span>
+          </div>
+        </div>
+
+        <div class="section full">
+          <h3>DMX Monitor</h3>
+          <div class="dmx-grid">
+            <div class="dmx-cell">001<br>00</div><div class="dmx-cell hot">002<br>80</div><div class="dmx-cell hot">003<br>FF</div><div class="dmx-cell">004<br>20</div>
+            <div class="dmx-cell">005<br>00</div><div class="dmx-cell">006<br>00</div><div class="dmx-cell">007<br>00</div><div class="dmx-cell">008<br>00</div>
+            <div class="dmx-cell">009<br>00</div><div class="dmx-cell">010<br>00</div><div class="dmx-cell">011<br>00</div><div class="dmx-cell">012<br>00</div>
+            <div class="dmx-cell">013<br>00</div><div class="dmx-cell">014<br>00</div><div class="dmx-cell">015<br>00</div><div class="dmx-cell">016<br>00</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <div class="page" data-page="system" hidden>
+  <h1>System</h1>
+  <p class="intro">Maintenance, authentication, updates and compact runtime diagnostics.</p>
+
+  <main class="dashboard">
+    <section class="panel">
+      <h2>System</h2>
+      <div class="settings-grid">
+        <div class="section">
+          <h3>Device</h3>
+          <div class="status-list">
+            <div class="status-item"><strong>Firmware</strong><span>0.19.6</span></div>
+            <div class="status-item"><strong>LittleFS</strong><span>0.19.6 · matching</span></div>
+            <div class="status-item"><strong>Boot count</strong><span>2 · last reset external</span></div>
+          </div>
+          <div class="button-row">
+            <button class="primary-action">Save & Restart</button>
+            <button class="secondary-action">Reboot</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Access Control</h3>
+          <div class="status-list">
+            <div class="status-item">
+              <strong>Current state</strong>
+              <span>Locked · read-only</span>
+            </div>
+          </div>
+          <div class="form-row" style="margin-top: 12px;">
+            <label for="mockLoginPassword">Password</label>
+            <input id="mockLoginPassword" type="password" placeholder="enter password">
+          </div>
+          <div class="button-row">
+            <button class="primary-action">Login</button>
+          </div>
+          <hr style="border: 0; border-top: 1px solid var(--border); margin: 14px 0;">
+          <p class="caption">When logged in, this card changes to password management:</p>
+          <div class="form-row" style="margin-top: 10px;">
+            <label for="mockNewPassword">New Password</label>
+            <input id="mockNewPassword" type="password" placeholder="empty = no password">
+          </div>
+          <div class="button-row">
+            <button class="primary-action">Set Password</button>
+            <button class="secondary-action">Logout</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Configuration</h3>
+          <div class="button-row">
+            <button class="secondary-action">Download Config</button>
+            <button class="secondary-action">Upload Config</button>
+            <button class="danger-action">Factory Reset</button>
+          </div>
+          <p class="caption">Uploaded config files are schema-checked before they are accepted.</p>
+        </div>
+
+        <div class="section">
+          <h3>OTA Update</h3>
+          <div class="form-row">
+            <label>Firmware</label>
+            <input type="file">
+          </div>
+          <div class="form-row">
+            <label>LittleFS</label>
+            <input type="file">
+          </div>
+          <div class="button-row">
+            <button class="primary-action" disabled>Update Firmware</button>
+            <button class="primary-action" disabled>Update LittleFS</button>
+            <button class="primary-action" disabled>Update Both</button>
+          </div>
+          <p class="caption">Update buttons become available after selecting the matching file. “Update Both” uploads firmware and filesystem in one guided operation.</p>
+        </div>
+
+        <div class="section full">
+          <h3>Diagnostics Preview</h3>
+          <div class="classic-placeholder">
+            <div class="metric"><strong>32.4 kB</strong><span>Free heap</span></div>
+            <div class="metric"><strong>44 fps</strong><span>DMX runtime</span></div>
+            <div class="metric"><strong>0</strong><span>Parser errors since boot</span></div>
+          </div>
+          <div class="button-row">
+            <button class="secondary-action" data-page-jump="diagnostics">Open Diagnostics</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <div class="page" data-page="diagnostics" hidden>
+  <h1>Diagnostics</h1>
+  <p class="intro">Low-level counters for protocol hardening, timing checks and field troubleshooting.</p>
+
+  <main class="dashboard">
+    <section class="panel">
+      <h2>Diagnostics</h2>
+      <div class="settings-grid">
+        <div class="section">
+          <h3>Art-Net Parser</h3>
+          <table class="mini-table">
+            <tr><th>Counter</th><th>Value</th></tr>
+            <tr><td>Oversized UDP packets</td><td>0</td></tr>
+            <tr><td>Short packets</td><td>0</td></tr>
+            <tr><td>Invalid Art-Net ID</td><td>0</td></tr>
+            <tr><td>Unsupported opcodes</td><td>2</td></tr>
+            <tr><td>Malformed packets</td><td>0</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <h3>Art-Net Runtime</h3>
+          <table class="mini-table">
+            <tr><th>Metric</th><th>Value</th></tr>
+            <tr><td>ArtDmx packets</td><td>424353</td></tr>
+            <tr><td>Wrong universe</td><td>0</td></tr>
+            <tr><td>Sequence drops</td><td>0</td></tr>
+            <tr><td>ArtSync timeouts</td><td>1</td></tr>
+            <tr><td>Merge sources</td><td>2 active</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <h3>DMX Runtime</h3>
+          <table class="mini-table">
+            <tr><th>Metric</th><th>Value</th></tr>
+            <tr><td>Frames</td><td>102408</td></tr>
+            <tr><td>FPS</td><td>44.0</td></tr>
+            <tr><td>Last slots</td><td>512</td></tr>
+            <tr><td>Short frames</td><td>0</td></tr>
+            <tr><td>Failsafe state</td><td>Armed</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <h3>Runtime</h3>
+          <div class="status-list">
+            <div class="status-item"><strong>Uptime</strong><span>1 d 03 h 12 min</span></div>
+            <div class="status-item"><strong>Free heap</strong><span>32.4 kB</span></div>
+            <div class="status-item"><strong>Reset reason</strong><span>External System</span></div>
+            <div class="status-item"><strong>NodeReport</strong><span>#0001 [0000] OK</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  </div>
+  <script>
+    document.querySelectorAll('[data-flow-tab]').forEach(button => {
+      button.addEventListener('click', () => {
+        const target = button.dataset.flowTab;
+
+        document.querySelectorAll('[data-flow-tab]').forEach(item => {
+          item.classList.toggle('active', item === button);
+        });
+
+        document.querySelectorAll('[data-flow-view]').forEach(view => {
+          view.hidden = view.dataset.flowView !== target;
+        });
+      });
+    });
+
+    function showMockPage(target) {
+      document.querySelectorAll('[data-page-tab]').forEach(item => {
+        item.classList.toggle('active', item.dataset.pageTab === target);
+      });
+
+      document.querySelectorAll('[data-page]').forEach(page => {
+        page.hidden = page.dataset.page !== target;
+      });
+    }
+
+    document.querySelectorAll('[data-page-tab]').forEach(button => {
+      button.addEventListener('click', () => showMockPage(button.dataset.pageTab));
+    });
+
+    document.querySelectorAll('[data-page-jump]').forEach(button => {
+      button.addEventListener('click', () => showMockPage(button.dataset.pageJump));
+    });
+  </script>
+</body>
+</html>

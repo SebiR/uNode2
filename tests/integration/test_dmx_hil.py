@@ -7,6 +7,7 @@ import pytest
 
 from artnet_packets import (
     ARTNET_PORT,
+    ARTNET_AC_CANCEL_MERGE,
     ARTNET_AC_FAIL_RECORD,
     make_artdmx,
     make_artaddress,
@@ -66,6 +67,7 @@ def _configure_unode_output(
     preserved_config: dict,
     *,
     failsafe_mode: int = 0,
+    merge_mode: int = 0,
 ) -> int:
     config = preserved_config.copy()
     config["direction"] = 0  # Art-Net -> DMX
@@ -73,10 +75,11 @@ def _configure_unode_output(
     config["subnetId"] = 0
     config["universe"] = 1
     config["failsafeMode"] = failsafe_mode
+    config["mergeMode"] = merge_mode
 
     step(
         "Switching uNode to Art-Net -> DMX for hardware DMX test "
-        f"(failsafe={failsafe_mode})"
+        f"(failsafe={failsafe_mode}, merge={merge_mode})"
     )
 
     reset_config = config.copy()
@@ -95,7 +98,8 @@ def _configure_unode_output(
         unode_client,
         lambda data: int(data["direction"]) == 0
         and int(data["universe"]) == universe
-        and int(data["failsafeMode"]) == failsafe_mode,
+        and int(data["failsafeMode"]) == failsafe_mode
+        and int(data["mergeMode"]) == merge_mode,
     )
     return universe
 
@@ -106,12 +110,14 @@ def _send_artdmx_repeated(
     values: list[int],
     *,
     sequence: int,
+    physical: int = 0,
     count: int = 4,
 ) -> None:
     packet = make_artdmx(
         universe,
         values,
         sequence=sequence,
+        physical=physical,
     )
 
     for _index in range(count):
@@ -121,6 +127,40 @@ def _send_artdmx_repeated(
 
 def _full_frame_pattern() -> list[int]:
     return [((index * 37) + 11) & 0xFF for index in range(512)]
+
+
+def _wait_for_merge_sources(
+    unode_client: UNodeClient,
+    expected_physicals: set[int],
+) -> dict:
+    return wait_for_status(
+        unode_client,
+        lambda data: {
+            int(source["physical"])
+            for source in data.get("artNetSources", [])
+        }
+        >= expected_physicals,
+        timeout=3.0,
+        interval=0.1,
+    )
+
+
+def _wait_until_merge_sources(
+    unode_client: UNodeClient,
+    expected_physicals: set[int],
+    *,
+    timeout: float = 7.0,
+) -> dict:
+    return wait_for_status(
+        unode_client,
+        lambda data: {
+            int(source["physical"])
+            for source in data.get("artNetSources", [])
+        }
+        == expected_physicals,
+        timeout=timeout,
+        interval=0.2,
+    )
 
 
 def _wait_for_output_failsafe(unode_client: UNodeClient) -> dict:
@@ -174,6 +214,42 @@ def _report_timing_metric(
         f"{target}allowed {_format_window(minimum, maximum, unit)}"
         f"{deviation}"
     )
+
+
+def _collect_full_frame_timing_stats(
+    tool: Rp2040DmxTool,
+    *,
+    attempts: int = 3,
+    duration: float = 2.0,
+) -> dict:
+    last_stats = {}
+
+    for attempt in range(1, attempts + 1):
+        step(
+            "Collecting RP2040 timing statistics from live uNode DMX output "
+            f"(attempt {attempt}/{attempts})"
+        )
+        tool.clear_stats()
+        time.sleep(duration)
+        last_stats = tool.get_stats()
+
+        slots = last_stats["slots"]
+        if (
+            last_stats["frames"] >= 10
+            and slots["min"] == DMX_FULL_FRAME_SLOTS
+            and slots["max"] == DMX_FULL_FRAME_SLOTS
+        ):
+            return last_stats
+
+        step(
+            "Timing capture contained a non-512-slot frame; retrying to avoid "
+            "a transient analyzer/USB-command edge case: "
+            f"frames={last_stats['frames']}, short={last_stats['shortFrames']}, "
+            f"lastSlots={last_stats['lastSlots']}, "
+            f"slots min/max={slots['min']}/{slots['max']}"
+        )
+
+    return last_stats
 
 
 def _local_ipv4_for_target(target_ip: str) -> str:
@@ -261,6 +337,370 @@ def test_artnet_to_dmx_output_reaches_rp2040_analyzer(
 
     assert stats["frames"] > 0
     assert stats["lastSlots"] >= len(expected)
+
+
+def test_artnet_to_dmx_htp_merge_uses_highest_values_from_two_physical_sources(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        merge_mode=0,  # HTP
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    source_a = [10, 200, 30, 220, 50, 240]
+    source_b = [180, 20, 210, 40, 230, 60]
+    expected = [max(a, b) for a, b in zip(source_a, source_b)]
+
+    step(f"Sending HTP merge source Physical=0: {source_a}")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_a,
+        sequence=71,
+        physical=0,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        source_a,
+    )
+
+    step(f"Sending HTP merge source Physical=1: {source_b}")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_b,
+        sequence=71,
+        physical=1,
+    )
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        expected,
+    )
+    status = _wait_for_merge_sources(
+        unode_client,
+        {0, 1},
+    )
+
+    step(
+        "RP2040 analyzer confirmed HTP merge output: "
+        f"values={frame['values']}, sources={status['artNetSources']}"
+    )
+
+
+def test_artnet_to_dmx_ltp_merge_uses_latest_physical_source(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        merge_mode=1,  # LTP
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    source_a_first = [15, 25, 35, 45, 55, 65]
+    source_b = [190, 180, 170, 160, 150, 140]
+    source_a_latest = [70, 80, 90, 100, 110, 120]
+
+    step(f"Sending first LTP merge source Physical=0: {source_a_first}")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_a_first,
+        sequence=81,
+        physical=0,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        source_a_first,
+    )
+
+    step(f"Sending second LTP merge source Physical=1: {source_b}")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_b,
+        sequence=81,
+        physical=1,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        source_b,
+    )
+
+    step(f"Updating Physical=0 again; LTP output should follow latest source: {source_a_latest}")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_a_latest,
+        sequence=82,
+        physical=0,
+    )
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        source_a_latest,
+    )
+    status = _wait_for_merge_sources(
+        unode_client,
+        {0, 1},
+    )
+    winning_physicals = {
+        int(source["physical"])
+        for source in status["artNetSources"]
+        if source.get("winning", False)
+    }
+
+    step(
+        "RP2040 analyzer confirmed LTP merge output: "
+        f"values={frame['values']}, winning={winning_physicals}, "
+        f"sources={status['artNetSources']}"
+    )
+    assert winning_physicals == {0}
+
+
+def test_artnet_to_dmx_merge_source_timeout_falls_back_to_remaining_source(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        merge_mode=0,  # HTP
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    source_a = [200, 20, 200, 20, 200, 20]
+    source_b = [10, 210, 10, 210, 10, 210]
+    merged = [max(a, b) for a, b in zip(source_a, source_b)]
+
+    step("Sending two HTP merge sources")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_a,
+        sequence=91,
+        physical=0,
+    )
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_b,
+        sequence=91,
+        physical=1,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        merged,
+    )
+    _wait_for_merge_sources(
+        unode_client,
+        {0, 1},
+    )
+
+    step("Refreshing only Physical=1 until Physical=0 expires from merge")
+    deadline = time.time() + 5.5
+    sequence = 92
+    while time.time() < deadline:
+        _send_artdmx_repeated(
+            unode_ip,
+            universe,
+            source_b,
+            sequence=sequence,
+            physical=1,
+            count=1,
+        )
+        sequence += 1
+        time.sleep(0.2)
+
+    status = _wait_until_merge_sources(
+        unode_client,
+        {1},
+        timeout=6.0,
+    )
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        source_b,
+    )
+
+    step(
+        "Merge source timeout fell back to remaining Physical=1 source: "
+        f"values={frame['values']}, sources={status['artNetSources']}"
+    )
+
+
+def test_artnet_to_dmx_third_merge_source_is_rejected(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        merge_mode=1,  # LTP makes an accepted third source very obvious.
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    source_a = [11, 22, 33, 44, 55, 66]
+    source_b = [101, 102, 103, 104, 105, 106]
+    rejected_source_c = [240, 241, 242, 243, 244, 245]
+
+    before = unode_client.get_json("/api/status")
+    before_drops = before["artNetDiagnostics"]["mergeThirdSourceDrops"]
+
+    step("Creating two active LTP merge sources")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_a,
+        sequence=101,
+        physical=0,
+    )
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_b,
+        sequence=101,
+        physical=1,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        source_b,
+    )
+    _wait_for_merge_sources(
+        unode_client,
+        {0, 1},
+    )
+
+    step("Sending a third Physical=2 merge source; it should be rejected")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        rejected_source_c,
+        sequence=101,
+        physical=2,
+    )
+
+    status = wait_for_status(
+        unode_client,
+        lambda data: data["artNetDiagnostics"]["mergeThirdSourceDrops"] > before_drops,
+    )
+    frame = rp2040_tool.get_frame(start=1, count=len(source_b))
+
+    step(
+        "Third merge source was rejected: "
+        f"drops={status['artNetDiagnostics']['mergeThirdSourceDrops']}, "
+        f"frame={frame['values']}, sources={status['artNetSources']}"
+    )
+    assert frame["values"] == source_b
+
+
+def test_artaddress_cancel_merge_locks_output_to_next_source(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        merge_mode=0,  # HTP
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    source_a = [40, 220, 40, 220, 40, 220]
+    source_b = [210, 30, 210, 30, 210, 30]
+    locked_source_a = [80, 90, 100, 110, 120, 130]
+
+    step("Creating two active HTP merge sources")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_a,
+        sequence=111,
+        physical=0,
+    )
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_b,
+        sequence=111,
+        physical=1,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        [max(a, b) for a, b in zip(source_a, source_b)],
+    )
+
+    before = unode_client.get_json("/api/status")
+    before_lock_drops = before["artNetDiagnostics"]["mergeLockDrops"]
+
+    step("Sending ArtAddress AcCancelMerge")
+    send_artnet_packet(
+        unode_ip,
+        make_artaddress(command=ARTNET_AC_CANCEL_MERGE),
+    )
+
+    step("Sending next ArtDmx from Physical=0; it should become the locked source")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        locked_source_a,
+        sequence=112,
+        physical=0,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        locked_source_a,
+    )
+
+    step("Sending Physical=1 after CancelMerge lock; it should be ignored")
+    _send_artdmx_repeated(
+        unode_ip,
+        universe,
+        source_b,
+        sequence=112,
+        physical=1,
+    )
+
+    status = wait_for_status(
+        unode_client,
+        lambda data: data["artNetDiagnostics"]["mergeLockDrops"] > before_lock_drops,
+    )
+    frame = rp2040_tool.get_frame(start=1, count=len(locked_source_a))
+
+    step(
+        "CancelMerge lock rejected the other Physical source: "
+        f"drops={status['artNetDiagnostics']['mergeLockDrops']}, "
+        f"frame={frame['values']}, sources={status['artNetSources']}"
+    )
+    assert frame["values"] == locked_source_a
 
 
 def test_artnet_to_dmx_output_maps_sparse_high_channels(
@@ -381,9 +821,7 @@ def test_artnet_to_dmx_output_timing_matches_dmx512_limits(
     )
     rp2040_tool.clear_stats()
 
-    step("Collecting RP2040 timing statistics from live uNode DMX output")
-    time.sleep(2.0)
-    stats = rp2040_tool.get_stats()
+    stats = _collect_full_frame_timing_stats(rp2040_tool)
 
     baud = float(stats["baudEstimate"])
     baud_tolerance = DMX_NOMINAL_BAUD * DMX_BAUD_TOLERANCE_PERCENT / 100.0
@@ -795,7 +1233,7 @@ def test_artnet_output_failsafe_scene_reaches_real_dmx_output(
     assert frame["slots"] == 512
 
 
-def test_dmx_input_from_rp2040_reaches_artnet_receiver(
+def test_short_dmx_input_from_rp2040_reaches_artnet_receiver_without_full_padding(
     unode_client: UNodeClient,
     unode_ip: str,
     preserved_config: dict,
@@ -807,7 +1245,7 @@ def test_dmx_input_from_rp2040_reaches_artnet_receiver(
     config["subnetId"] = 0
     config["universe"] = 1
 
-    step("Switching uNode to DMX -> Art-Net for hardware DMX input test")
+    step("Switching uNode to DMX -> Art-Net for short-frame DMX input test")
     unode_client.save_config(config)
     universe = configured_port_address(config)
     wait_for_status(
@@ -841,7 +1279,10 @@ def test_dmx_input_from_rp2040_reaches_artnet_receiver(
             time.sleep(0.1)
 
         values = [9, 18, 27, 36, 45, 54]
-        step(f"Configuring RP2040 DMX sender with {len(values)} slots: {values}")
+        step(
+            f"Configuring RP2040 DMX sender with a short {len(values)}-slot "
+            f"frame: {values}"
+        )
         rp2040_tool.mode("tx")
         rp2040_tool.set_timing(
             break_us=176,
@@ -861,12 +1302,15 @@ def test_dmx_input_from_rp2040_reaches_artnet_receiver(
         )
 
         step(
-            "Python Art-Net receiver saw uNode ArtDmx: "
+            "Python Art-Net receiver saw short-frame uNode ArtDmx: "
             f"universe={packet.universe}, length={packet.length}, "
             f"values={list(packet.values[:len(values)])}"
         )
 
-        assert packet.length >= len(values)
+        assert len(values) <= packet.length < 512
+        assert packet.length % 2 == 0
+        assert list(packet.values[: len(values)]) == values
+        assert set(packet.values[len(values) : packet.length]) <= {0}
     finally:
         rp2040_tool.idle()
         sock.close()

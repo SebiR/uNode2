@@ -140,7 +140,7 @@ static void processDMXInput() {
 
   const bool frameChanged = setDmxFrame(
     frameSnapshot,
-    DMX_CHANNEL_COUNT,
+    slots,
     true);
 
   dmxFrameCounter += receivedFrames;

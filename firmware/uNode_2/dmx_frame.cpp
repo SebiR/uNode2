@@ -4,6 +4,7 @@ static const uint32_t DMX_TEST_OVERRIDE_TIMEOUT_MS = 10000;
 
 static uint8_t sourceChannels[DMX_CHANNEL_COUNT];
 static uint8_t testChannels[DMX_CHANNEL_COUNT];
+static uint16_t sourceLength = DMX_CHANNEL_COUNT;
 static uint32_t frameVersion = 0;
 static bool testOverrideActive = false;
 static bool testOverrideTimeoutEnabled = true;
@@ -21,6 +22,7 @@ static void markChanged() {
 void initDmxFrame() {
   memset(sourceChannels, 0, sizeof(sourceChannels));
   memset(testChannels, 0, sizeof(testChannels));
+  sourceLength = DMX_CHANNEL_COUNT;
   testOverrideActive = false;
   testOverrideTimeoutEnabled = true;
   testOverrideUntilMillis = 0;
@@ -100,6 +102,11 @@ bool setDmxFrame(
     markChanged();
   }
 
+  if (sourceLength != length) {
+    sourceLength = length;
+    markChanged();
+  }
+
   return changed;
 }
 
@@ -112,6 +119,11 @@ bool setDmxChannel(
   }
 
   sourceChannels[index] = value;
+
+  if (sourceLength <= index) {
+    sourceLength = index + 1;
+  }
+
   markChanged();
   return true;
 }
@@ -133,6 +145,14 @@ void copyDmxFrame(
 
   length = min(length, DMX_CHANNEL_COUNT);
   memcpy(destination, getEffectiveChannels(), length);
+}
+
+uint16_t getDmxFrameLength() {
+  updateDmxTestOverride();
+
+  return testOverrideActive
+    ? DMX_CHANNEL_COUNT
+    : sourceLength;
 }
 
 uint32_t getDmxFrameVersion() {

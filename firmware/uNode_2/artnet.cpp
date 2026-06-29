@@ -65,6 +65,7 @@ static uint8_t lastMergeSourceIndex = 0;
 static bool cancelMergePending = false;
 static bool mergeLockedToSingleSource = false;
 static IPAddress mergeLockIP;
+static uint8_t mergeLockPhysical = 0;
 static bool artSyncActive = false;
 static bool artSyncPendingOutput = false;
 static uint32_t lastArtSyncMillis = 0;
@@ -802,6 +803,7 @@ static void clearArtDmxMerge() {
   cancelMergePending = false;
   mergeLockedToSingleSource = false;
   mergeLockIP = IPAddress();
+  mergeLockPhysical = 0;
   artnet.setPortOutputMergeStatus(
     false,
     config.mergeMode == MERGE_LTP);
@@ -1066,6 +1068,7 @@ static void expireStaleMergeSources(
   if (getActiveMergeSourceCount() == 0) {
     mergeLockedToSingleSource = false;
     mergeLockIP = IPAddress();
+    mergeLockPhysical = 0;
   }
 
   if (lastMergeSourceIndex == 0
@@ -1092,12 +1095,18 @@ static bool applyArtDmxToMerge(
 
   if (mergeLockedToSingleSource
       && getActiveMergeSourceCount() > 0
-      && artnet.getSenderIp() != mergeLockIP) {
+      && (artnet.getSenderIp() != mergeLockIP
+          || artnet.getIncomingPhysical()
+             != mergeLockPhysical)) {
     mergeLockDropCounter++;
     LOG_WARN_PRINT("Ignoring ArtDmx after AcCancelMerge lock: ");
     LOG_PRINT(LOG_LEVEL_WARN, artnet.getSenderIp());
+    LOG_PRINT(LOG_LEVEL_WARN, " physical=");
+    LOG_PRINT(LOG_LEVEL_WARN, artnet.getIncomingPhysical());
     LOG_PRINT(LOG_LEVEL_WARN, " locked=");
-    LOG_PRINTLN(LOG_LEVEL_WARN, mergeLockIP);
+    LOG_PRINT(LOG_LEVEL_WARN, mergeLockIP);
+    LOG_PRINT(LOG_LEVEL_WARN, " physical=");
+    LOG_PRINTLN(LOG_LEVEL_WARN, mergeLockPhysical);
     return false;
   }
 
@@ -1105,6 +1114,7 @@ static bool applyArtDmxToMerge(
       && getActiveMergeSourceCount() == 0) {
     mergeLockedToSingleSource = false;
     mergeLockIP = IPAddress();
+    mergeLockPhysical = 0;
   }
 
   int8_t index =
@@ -1113,9 +1123,12 @@ static bool applyArtDmxToMerge(
   if (cancelMergePending) {
     const IPAddress lockedIP =
       artnet.getSenderIp();
+    const uint8_t lockedPhysical =
+      artnet.getIncomingPhysical();
     clearArtDmxMerge();
     mergeLockedToSingleSource = true;
     mergeLockIP = lockedIP;
+    mergeLockPhysical = lockedPhysical;
     index = 0;
   }
 
@@ -1788,9 +1801,15 @@ bool sendArtNetFrame() {
   artnet.setUniverse(
     getConfiguredUniverse());
 
-  artnet.setLength(512);
+  const uint16_t length =
+    constrain(
+      getDmxFrameLength(),
+      (uint16_t)2,
+      (uint16_t)DMX_CHANNEL_COUNT);
 
-  for (int i = 0; i < 512; i++) {
+  artnet.setLength(length);
+
+  for (uint16_t i = 0; i < length; i++) {
     artnet.setByte(
       i,
       getDmxChannel(i));
@@ -1936,6 +1955,43 @@ uint32_t getArtNetMergeThirdSourceDropCount() {
 
 uint32_t getArtNetSyncTimeoutCount() {
   return artSyncTimeoutCounter;
+}
+
+uint8_t getArtNetSourceCount() {
+  return getActiveMergeSourceCount();
+}
+
+bool getArtNetSource(
+  uint8_t index,
+  ArtNetSourceInfo& source) {
+  uint8_t activeIndex = 0;
+
+  for (uint8_t i = 0; i < 2; i++) {
+    if (!mergeSources[i].active) {
+      continue;
+    }
+
+    if (activeIndex == index) {
+      source.ip =
+        mergeSources[i].senderIP;
+      source.physical =
+        mergeSources[i].physical;
+      source.lastSeenMillis =
+        mergeSources[i].lastMillis;
+      source.active = true;
+      source.winning =
+        getActiveMergeSourceCount() == 1
+        || config.mergeMode == MERGE_HTP
+        || i == lastMergeSourceIndex;
+      return true;
+    }
+
+    activeIndex++;
+  }
+
+  source.active = false;
+  source.winning = false;
+  return false;
 }
 
 uint32_t getArtPollCount() {

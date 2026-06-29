@@ -10,6 +10,15 @@ function showPage(page)
     document
         .getElementById(page)
         .classList.add('active');
+
+    document
+        .querySelectorAll('[data-page-button]')
+        .forEach(button =>
+        {
+            button.classList.toggle(
+                'active',
+                button.dataset.pageButton === page);
+        });
 }
 
 const themeStorageKey = 'uNodeTheme';
@@ -77,6 +86,7 @@ let authToken =
     sessionStorage.getItem('uNodeAuthToken') || '';
 let authEnabled = false;
 let authAuthenticated = false;
+let lastKnownUniverse = null;
 
 function isUiLocked()
 {
@@ -117,7 +127,7 @@ function updateProtectedUi()
 
     document
         .querySelectorAll(
-            '.content input, .content select, .content button, #detectNodeButton')
+            '.content input:not(#loginPassword), .content select, .content button:not(#authButton), #detectNodeButton')
         .forEach(element =>
         {
             element.disabled =
@@ -143,6 +153,13 @@ function updateProtectedUi()
         updateHardwareStatus(
             lastHardwareStatus);
     }
+
+    if (document.getElementById('dhcp'))
+    {
+        updateIPMode();
+    }
+
+    updateOtaButtons();
 }
 
 function updateAuthButton()
@@ -150,6 +167,21 @@ function updateAuthButton()
     const button =
         document.getElementById(
             'authButton');
+
+    const stateText =
+        document.getElementById(
+            'authStateText');
+
+    const lockState =
+        document.getElementById(
+            'authLockState');
+
+    const lockShackle =
+        document.getElementById(
+            'authLockShackle');
+    const loginPassword =
+        document.getElementById(
+            'loginPassword');
 
     if (!button)
     {
@@ -168,6 +200,12 @@ function updateAuthButton()
     {
         button.textContent =
             'No Password';
+
+        if (stateText)
+        {
+            stateText.textContent =
+                'No password configured';
+        }
     }
     else
     {
@@ -175,6 +213,37 @@ function updateAuthButton()
             authAuthenticated
                 ? 'Logout'
                 : 'Login';
+
+        if (stateText)
+        {
+            stateText.textContent =
+                authAuthenticated
+                    ? 'Unlocked for this browser'
+                    : 'Locked · read-only';
+        }
+    }
+
+    if (lockState)
+    {
+        lockState.title =
+            (!authEnabled || authAuthenticated)
+                ? 'Settings unlocked'
+                : 'Settings locked';
+    }
+
+    if (lockShackle)
+    {
+        lockShackle.setAttribute(
+            'd',
+            (!authEnabled || authAuthenticated)
+                ? 'M8 11v-5a4 4 0 0 1 7.8 -1.2'
+                : 'M8 11v-4a4 4 0 1 1 8 0v4');
+    }
+
+    if (loginPassword)
+    {
+        loginPassword.disabled =
+            !authEnabled || authAuthenticated;
     }
 }
 
@@ -235,8 +304,14 @@ async function toggleAuth()
         return;
     }
 
+    const passwordInput =
+        document.getElementById(
+            'loginPassword');
+
     const password =
-        prompt('Admin password');
+        passwordInput
+            ? passwordInput.value
+            : prompt('Admin password');
 
     if (password === null)
     {
@@ -266,6 +341,11 @@ async function toggleAuth()
             'Login failed: ' +
             await response.text());
         return;
+    }
+
+    if (passwordInput)
+    {
+        passwordInput.value = '';
     }
 
     const data =
@@ -370,11 +450,12 @@ async function loadStatus()
 		document.getElementById('chipId').textContent =
 			'' + data.chipId;
 
-		document.getElementById('wifiInfo').textContent =
-			data.wifiQuality +
-			' % (' +
-			data.rssi +
-			' dBm)';
+		setTextIfPresent(
+            'wifiInfo',
+            data.wifiQuality +
+            ' % (' +
+            data.rssi +
+            ' dBm)');
 
         document.getElementById('statusRSSI').textContent =
             data.wifiQuality + '%';
@@ -398,23 +479,29 @@ async function loadStatus()
         updateDetailedDiagnostics(data);
         updateStatusMessages(data);
 
-        document.getElementById('uptime').textContent =
-            formatUptime(data.uptime);
+        setTextIfPresent(
+            'uptime',
+            formatUptime(data.uptime));
 
-        document.getElementById('flashTotal').textContent =
-            formatKB(data.flashSize);
+        setTextIfPresent(
+            'flashTotal',
+            formatKB(data.flashSize));
 
-        document.getElementById('flashSketch').textContent =
-            formatKB(data.sketchSize);
+        setTextIfPresent(
+            'flashSketch',
+            formatKB(data.sketchSize));
 
-        document.getElementById('flashFree').textContent =
-            formatKB(data.freeSketch);
+        setTextIfPresent(
+            'flashFree',
+            formatKB(data.freeSketch));
 
-        document.getElementById('fsUsed').textContent =
-            formatKB(data.fsUsed);
+        setTextIfPresent(
+            'fsUsed',
+            formatKB(data.fsUsed));
 
-        document.getElementById('fsFree').textContent =
-            formatKB(data.fsTotal - data.fsUsed);
+        setTextIfPresent(
+            'fsFree',
+            formatKB(data.fsTotal - data.fsUsed));
 
         setTextIfPresent('freeHeap', formatKB(data.freeHeap || 0));
         setTextIfPresent('minimumFreeHeap', formatKB(data.minimumFreeHeap || 0));
@@ -466,8 +553,31 @@ function setTextIfPresent(id, value)
 
     if (element)
     {
-        element.textContent = value;
+        element.textContent =
+            value === undefined
+            || value === null
+            || value === ''
+                ? 'N/A'
+                : value;
     }
+}
+
+function setFlowNodeState(id, state)
+{
+    const element =
+        document.getElementById(id);
+
+    if (!element)
+    {
+        return;
+    }
+
+    element.classList.remove(
+        'idle',
+        'ok',
+        'warn',
+        'error');
+    element.classList.add(state);
 }
 
 function formatAge(ageMs)
@@ -503,17 +613,11 @@ function updateDashboardModeLabels(data)
         'artnetCardTitle',
         artnetToDmx ? 'Art-Net Input' : 'Art-Net Output');
     setTextIfPresent(
-        'artnetSummaryLabel',
-        artnetToDmx ? 'ArtDmx Packets' : 'ArtDmx Output');
-    setTextIfPresent(
         'artnetSubscribersLabel',
         artnetToDmx ? 'Subscribers' : 'Art-Net Subscribers');
     setTextIfPresent(
         'dmxCardTitle',
         artnetToDmx ? 'DMX Output' : 'DMX Input');
-    setTextIfPresent(
-        'dmxSummaryLabel',
-        artnetToDmx ? 'DMX Output' : 'DMX Frames');
     setTextIfPresent(
         'dmxStatusLabel',
         artnetToDmx ? 'Source' : 'Input Status');
@@ -525,6 +629,108 @@ function updateDashboardRuntime(data)
         data.direction == 0;
 
     updateDashboardModeLabels(data);
+
+    const flowArtNetToDmx =
+        document.getElementById('flowArtNetToDmx');
+    const flowDmxToArtNet =
+        document.getElementById('flowDmxToArtNet');
+
+    if (flowArtNetToDmx)
+    {
+        flowArtNetToDmx.hidden =
+            !artnetToDmx;
+    }
+
+    if (flowDmxToArtNet)
+    {
+        flowDmxToArtNet.hidden =
+            artnetToDmx;
+    }
+
+    if (data.universe !== undefined
+        && data.universe !== null)
+    {
+        lastKnownUniverse =
+            data.universe;
+    }
+
+    const universeText =
+        lastKnownUniverse === null
+            ? 'N/A'
+            : 'U' + lastKnownUniverse;
+    const artNetSources =
+        Array.isArray(data.artNetSources)
+            ? data.artNetSources
+            : [];
+    const winningSource =
+        artNetSources.find(source => source.winning)
+        || artNetSources[0];
+
+    setTextIfPresent(
+        'flowNodeMeta',
+        'Art-Net input · ' + universeText);
+    setTextIfPresent(
+        'flowNodeOutputMeta',
+        'DMX input · ' + universeText);
+
+    setTextIfPresent(
+        'flowArtNetSource',
+        winningSource
+            ? (winningSource.name || winningSource.ip || 'Art-Net Controller')
+            : 'N/A');
+    setTextIfPresent(
+        'flowArtNetSourceMeta',
+        winningSource
+            ? ((winningSource.ip || 'unknown IP')
+                + ' · '
+                + getArtSyncStateText(data)
+                + ' · last '
+                + formatAge(winningSource.lastSeenAge))
+            : 'No active ArtDmx source');
+    setTextIfPresent(
+        'flowDmxOutMeta',
+        data.failsafeActive
+            ? 'Failsafe active · ' + data.failsafeModeName
+            : (data.dmxTestOverride
+                ? 'Web test override active'
+                : (data.artnetActive
+                    ? 'Sending physical DMX'
+                    : 'Idle')));
+    setTextIfPresent(
+        'flowDmxInMeta',
+        data.dmxFrames === undefined
+            ? 'N/A'
+            : ((data.dmxFrames ?? 0)
+                + ' frames · '
+                + (data.dmxFPS ?? 0)
+                + ' fps · last '
+                + formatAge(data.lastDMXFrameAge)));
+    setTextIfPresent(
+        'flowSubscriberMeta',
+        data.artnetSubscribers === undefined
+            ? 'N/A'
+            : ((data.artnetSubscribers ?? 0)
+                + ' subscribers · '
+                + (data.dmxActive ? 'sending ArtDmx' : 'idle')));
+
+    setFlowNodeState(
+        'flowArtNetSourceNode',
+        winningSource ? 'ok' : 'idle');
+    setFlowNodeState(
+        'flowNodeBox',
+        data.wifiConnected === false ? 'warn' : 'ok');
+    setFlowNodeState(
+        'flowDmxOutNode',
+        data.failsafeActive ? 'warn' : (data.artnetActive || data.dmxTestOverride ? 'ok' : 'idle'));
+    setFlowNodeState(
+        'flowDmxInNode',
+        data.dmxActive ? 'ok' : 'idle');
+    setFlowNodeState(
+        'flowNodeOutputBox',
+        data.wifiConnected === false ? 'warn' : 'ok');
+    setFlowNodeState(
+        'flowSubscriberNode',
+        (data.artnetSubscribers ?? 0) > 0 ? 'ok' : 'idle');
 
     setTextIfPresent(
         'artSyncSummary',
@@ -563,11 +769,15 @@ function updateDashboardRuntime(data)
                 + ')');
         setTextIfPresent(
             'dmxSummary',
-            data.failsafeActive
+            (data.failsafeActive
                 ? 'Failsafe active'
                 : (data.dmxTestOverride
                     ? 'Test override'
-                    : (data.artnetActive ? 'Sending DMX' : 'Idle')));
+                    : (data.artnetActive ? 'Sending DMX' : 'Idle')))
+            + ' · Failsafe '
+            + (data.failsafeActive ? 'active' : 'armed')
+            + ': '
+            + (data.failsafeModeName || 'N/A'));
         setTextIfPresent(
             'dmxStatus',
             data.dmxTestOverride
@@ -586,7 +796,7 @@ function updateDashboardRuntime(data)
                 + (data.dmxFPS ?? 0)
                 + ' fps (last '
                 + formatAge(data.lastDMXFrameAge)
-                + ')');
+                + ') · Failsafe not used');
         setTextIfPresent(
             'dmxStatus',
             data.dmxActive
@@ -2173,6 +2383,49 @@ function uploadFilesystem()
         'LittleFS update');
 }
 
+function updateOtaButtons()
+{
+    const firmwareSelected =
+        document.getElementById('firmwareFile')
+        && document.getElementById('firmwareFile').files.length > 0;
+    const filesystemSelected =
+        document.getElementById('filesystemFile')
+        && document.getElementById('filesystemFile').files.length > 0;
+    const locked =
+        isUiLocked();
+
+    const firmwareButton =
+        document.getElementById('updateFirmwareButton');
+    const filesystemButton =
+        document.getElementById('updateFilesystemButton');
+    const bothButton =
+        document.getElementById('updateBothButton');
+
+    if (firmwareButton)
+    {
+        firmwareButton.disabled =
+            locked || !firmwareSelected;
+    }
+
+    if (filesystemButton)
+    {
+        filesystemButton.disabled =
+            locked || !filesystemSelected;
+    }
+
+    if (bothButton)
+    {
+        bothButton.disabled =
+            locked || !firmwareSelected || !filesystemSelected;
+    }
+}
+
+function uploadBoth()
+{
+    alert(
+        'Combined firmware + LittleFS update needs firmware-side transaction support. Upload the two files separately for now.');
+}
+
 function createDMXMonitor()
 {
     const monitor =
@@ -2212,9 +2465,23 @@ function updateIPMode()
     document.getElementById(
         'staticSettings'
     ).style.display =
-        useDhcp
-        ? 'none'
-        : 'block';
+        'block';
+
+    [
+        'ipAddress',
+        'subnetMask',
+        'gateway'
+    ].forEach(id =>
+    {
+        const element =
+            document.getElementById(id);
+
+        if (element)
+        {
+            element.disabled =
+                useDhcp || isUiLocked();
+        }
+    });
 
     validateStaticIpSettings(
         readConfigForm());
@@ -3018,6 +3285,22 @@ document
         'change',
         updateIPMode);
 
+[
+    'firmwareFile',
+    'filesystemFile'
+].forEach(id =>
+{
+    const element =
+        document.getElementById(id);
+
+    if (element)
+    {
+        element.addEventListener(
+            'change',
+            updateOtaButtons);
+    }
+});
+
 loadAuthStatus();
 loadStatus();
 loadConfig();
@@ -3104,16 +3387,16 @@ ws.onmessage =
 			data.leds.activity);
 	}
 
-    updateHardwareStatus(data);
-    updateDetailedDiagnostics(data);
-    updateStatusMessages(data);
-
 	// LED transitions are also sent as small, LED-only messages. Do not
 	// overwrite status fields with missing values in those messages.
 	if(data.uptime === undefined)
 	{
 		return;
 	}
+
+    updateHardwareStatus(data);
+    updateDetailedDiagnostics(data);
+    updateStatusMessages(data);
 
     updateDashboardRuntime(data);
 

@@ -100,6 +100,12 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Implement Blackout for the selected channels.
 - [x] Add one bulk API request for all test-channel values instead of sending
       one HTTP request per channel.
+- [ ] Add an optional Art-Osc / TouchOSC remote-control input for the DMX Test
+      override mode. First MVP scope: receive Art-Osc `AUT` messages on UDP
+      port 7000, map `FADER_A`, `SWITCH_A`, `MACRO_A`, and optionally `XY_A`
+      to temporary test override actions, and keep the existing override
+      timeout/hold behaviour. Treat this as a test-mode remote, not as a full
+      Art-Osc implementation.
 - [ ] Optionally add a master fader.
 - [x] Disable or hide test output in DMX-to-Art-Net mode, or add an explicit
       DMX-input override mode.

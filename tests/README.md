@@ -121,6 +121,10 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
   asynchronous output.
 - The ArtIpProg integration test sends a safe enquiry, verifies ArtIpProgReply
   network fields, and checks that the node remains reachable afterwards.
+- The auth protection test temporarily enables the web/API password, verifies
+  that read-only status endpoints remain reachable, verifies that mutating API
+  endpoints reject anonymous requests, checks login failure/success, and then
+  restores the original authentication state.
 - Parser diagnostics tests send malformed UDP/Art-Net packets and verify the
   counters for oversized packets, short packets, invalid IDs, unsupported
   protocol versions, malformed ArtDmx lengths, and unsupported opcodes.
@@ -132,13 +136,19 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
 - The DMX hardware-in-the-loop tests send ArtDmx to uNode, receive the real DMX
   output with the RP2040 analyzer, and compare channel values across low,
   middle, and high DMX channel ranges.
+- The DMX hardware-in-the-loop tests also verify Art-Net merge behaviour by
+  sending two ArtDmx sources from one test host with different Physical fields:
+  HTP must output the per-channel maximum, LTP must follow the latest source,
+  stale sources must expire, third sources must be rejected, ArtAddress
+  `AcCancelMerge` must lock output to the next source, and `/api/status` must
+  report the active Physical sources.
 - The DMX hardware-in-the-loop tests also verify ArtSync buffering/flush and
   ArtSync timeout flush on the real DMX output, plus all four output failsafe
   modes after Art-Net timeout: Hold, All-to-Zero, All-to-Full, and Failsafe
   Scene. The Failsafe Scene test records and verifies all 512 DMX slots.
-- The DMX input hardware-in-the-loop test uses the RP2040 as a physical DMX
-  sender, advertises the Python test process as an Art-Net subscriber, and
-  verifies that uNode forwards the received DMX slots as ArtDmx.
+- The DMX input hardware-in-the-loop tests use the RP2040 as a physical DMX
+  sender, advertise the Python test process as an Art-Net subscriber, and
+  verify that uNode forwards both short and full received DMX frames as ArtDmx.
 - Full-frame DMX tests verify all 512 slots in both directions, including the
   final slots near channel 512.
 - The DMX output timing test measures Break, Mark-After-Break, frame/data time,

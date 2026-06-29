@@ -8,8 +8,8 @@
 // -----------------------------------------------------------------------------
 
 #define FW_VERSION_MAJOR 0
-#define FW_VERSION_MINOR 19
-#define FW_VERSION_PATCH 6
+#define FW_VERSION_MINOR 21
+#define FW_VERSION_PATCH 0
 
 #define FW_STRINGIFY_IMPL(value) #value
 #define FW_STRINGIFY(value) FW_STRINGIFY_IMPL(value)

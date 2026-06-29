@@ -37,6 +37,9 @@ void copyDmxFrame(
   uint8_t* destination,
   uint16_t length = DMX_CHANNEL_COUNT);
 
+/** @return Number of meaningful channels in the effective shared frame. */
+uint16_t getDmxFrameLength();
+
 /** @return Version incremented whenever frame data changes. */
 uint32_t getDmxFrameVersion();
 
