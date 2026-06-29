@@ -17,7 +17,12 @@ from artnet_packets import (
 )
 from helpers import configured_port_address, send_artnet_packet, step, wait_for_status
 from rp2040_dmx_tool import Rp2040DmxTool
-from sacn_packets import SACN_PORT, make_sacn_dmx
+from sacn_packets import (
+    SACN_PORT,
+    make_sacn_dmx,
+    parse_sacn_dmx,
+    sacn_multicast_address,
+)
 from unode_client import UNodeClient
 
 DMX_SPEC_BREAK_MIN_US = 92
@@ -324,6 +329,49 @@ def _wait_for_artdmx_from_unode(
 
     raise AssertionError(
         "Timed out waiting for ArtDmx from uNode "
+        f"universe={universe}, expected={expected}, last={last_packet}"
+    )
+
+
+def _join_sacn_multicast(sock: socket.socket, *, local_ip: str, universe: int) -> None:
+    group_ip = sacn_multicast_address(universe)
+    membership = socket.inet_aton(group_ip) + socket.inet_aton(local_ip)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, membership)
+
+
+def _wait_for_sacn_from_unode(
+    sock: socket.socket,
+    *,
+    unode_ip: str,
+    universe: int,
+    expected: list[int],
+    timeout: float = 5.0,
+):
+    deadline = time.time() + timeout
+    last_packet = None
+
+    while time.time() < deadline:
+        remaining = max(0.05, deadline - time.time())
+        sock.settimeout(remaining)
+        try:
+            data, sender = sock.recvfrom(1024)
+        except socket.timeout:
+            break
+
+        if sender[0] != unode_ip:
+            continue
+
+        try:
+            packet = parse_sacn_dmx(data)
+        except ValueError:
+            continue
+
+        last_packet = packet
+        if packet.universe == universe and list(packet.values[: len(expected)]) == expected:
+            return packet
+
+    raise AssertionError(
+        "Timed out waiting for sACN from uNode "
         f"universe={universe}, expected={expected}, last={last_packet}"
     )
 
@@ -1478,6 +1526,79 @@ def test_dmx_input_from_rp2040_preserves_full_512_slot_artdmx(
         )
 
         assert packet.length == 512
+        assert list(packet.values) == values
+    finally:
+        rp2040_tool.idle()
+        sock.close()
+
+
+def test_dmx_input_from_rp2040_is_sent_as_full_512_slot_sacn(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    config = preserved_config.copy()
+    config["direction"] = 1  # DMX -> network
+    config["liveProtocol"] = 1  # sACN output from DMX input
+    config["net"] = 0
+    config["subnetId"] = 0
+    config["universe"] = 1
+
+    step("Switching uNode to DMX -> sACN for full-frame input test")
+    unode_client.save_config(config)
+    universe = configured_port_address(config)
+    wait_for_status(
+        unode_client,
+        lambda data: int(data["direction"]) == 1
+        and int(data["universe"]) == universe
+        and int(data.get("liveProtocol", -1)) == 1,
+    )
+
+    receiver_ip = _local_ipv4_for_target(unode_ip)
+    multicast_ip = sacn_multicast_address(universe)
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        try:
+            sock.bind(("", SACN_PORT))
+            _join_sacn_multicast(sock, local_ip=receiver_ip, universe=universe)
+        except OSError as error:
+            pytest.skip(f"UDP {SACN_PORT} or multicast join is unavailable: {error}")
+
+        values = _full_frame_pattern()
+        step(
+            "Configuring RP2040 DMX sender with a full 512-slot frame for "
+            f"sACN multicast {multicast_ip}"
+        )
+        rp2040_tool.mode("tx")
+        rp2040_tool.set_timing(
+            break_us=176,
+            mab_us=16,
+            fps=40,
+        )
+        rp2040_tool.set_frame(values, slots=512)
+
+        step("Starting RP2040 DMX sender and waiting for full sACN from uNode")
+        rp2040_tool.tx("start")
+
+        packet = _wait_for_sacn_from_unode(
+            sock,
+            unode_ip=unode_ip,
+            universe=universe,
+            expected=values,
+        )
+
+        step(
+            "Python sACN receiver confirmed exact 512-slot DMX payload: "
+            f"universe={packet.universe}, priority={packet.priority}, "
+            f"sequence={packet.sequence}, source='{packet.source_name}', "
+            f"first={list(packet.values[:4])}, last={list(packet.values[-4:])}"
+        )
+
+        assert packet.priority == 100
+        assert len(packet.values) == 512
         assert list(packet.values) == values
     finally:
         rp2040_tool.idle()
