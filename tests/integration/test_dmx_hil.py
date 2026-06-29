@@ -17,6 +17,7 @@ from artnet_packets import (
 )
 from helpers import configured_port_address, send_artnet_packet, step, wait_for_status
 from rp2040_dmx_tool import Rp2040DmxTool
+from sacn_packets import SACN_PORT, make_sacn_dmx
 from unode_client import UNodeClient
 
 DMX_SPEC_BREAK_MIN_US = 92
@@ -68,9 +69,11 @@ def _configure_unode_output(
     *,
     failsafe_mode: int = 0,
     merge_mode: int = 0,
+    live_protocol: int = 0,
 ) -> int:
     config = preserved_config.copy()
     config["direction"] = 0  # Art-Net -> DMX
+    config["liveProtocol"] = live_protocol
     config["net"] = 0
     config["subnetId"] = 0
     config["universe"] = 1
@@ -78,8 +81,9 @@ def _configure_unode_output(
     config["mergeMode"] = merge_mode
 
     step(
-        "Switching uNode to Art-Net -> DMX for hardware DMX test "
-        f"(failsafe={failsafe_mode}, merge={merge_mode})"
+        "Switching uNode to network -> DMX for hardware DMX test "
+        f"(liveProtocol={live_protocol}, failsafe={failsafe_mode}, "
+        f"merge={merge_mode})"
     )
 
     reset_config = config.copy()
@@ -98,6 +102,7 @@ def _configure_unode_output(
         unode_client,
         lambda data: int(data["direction"]) == 0
         and int(data["universe"]) == universe
+        and int(data.get("liveProtocol", 0)) == live_protocol
         and int(data["failsafeMode"]) == failsafe_mode
         and int(data["mergeMode"]) == merge_mode,
     )
@@ -122,6 +127,31 @@ def _send_artdmx_repeated(
 
     for _index in range(count):
         send_artnet_packet(unode_ip, packet)
+        time.sleep(0.05)
+
+
+def _send_sacn_repeated(
+    unode_ip: str,
+    universe: int,
+    values: list[int],
+    *,
+    sequence: int,
+    count: int = 4,
+) -> None:
+    for index in range(count):
+        packet = make_sacn_dmx(
+            universe=universe,
+            values=values,
+            sequence=((sequence + index - 1) % 255) + 1,
+            source_name="uNode pytest sACN",
+        )
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            sock.sendto(packet, (unode_ip, SACN_PORT))
+        finally:
+            sock.close()
+
         time.sleep(0.05)
 
 
@@ -331,6 +361,64 @@ def test_artnet_to_dmx_output_reaches_rp2040_analyzer(
     stats = rp2040_tool.get_stats()
     step(
         "RP2040 analyzer stats: "
+        f"frames={stats['frames']}, fps={stats['fps']}, "
+        f"lastBreakUs={stats['lastBreakUs']}, lastMabUs={stats['lastMabUs']}"
+    )
+
+    assert stats["frames"] > 0
+    assert stats["lastSlots"] >= len(expected)
+
+
+def test_sacn_to_dmx_output_reaches_rp2040_analyzer(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        live_protocol=1,
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    expected = [13, 37, 73, 101, 149, 211]
+    step(f"Sending sACN to uNode Universe {universe}: {expected}")
+    _send_sacn_repeated(
+        unode_ip,
+        universe,
+        expected,
+        sequence=41,
+    )
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        expected,
+    )
+    step(
+        "RP2040 analyzer saw expected sACN-driven DMX values: "
+        f"slots={frame['slots']}, values={frame['values']}"
+    )
+
+    status = wait_for_status(
+        unode_client,
+        lambda data: int(data.get("liveProtocol", -1)) == 1
+        and data.get("sacnActive") is True
+        and int(data.get("sacnPackets", 0)) > 0,
+    )
+    step(
+        "uNode sACN status: "
+        f"packets={status.get('sacnPackets')}, "
+        f"fps={status.get('sacnFPS')}, "
+        f"last={status.get('lastSacnPacketAge')} ms"
+    )
+
+    stats = rp2040_tool.get_stats()
+    step(
+        "RP2040 analyzer stats after sACN: "
         f"frames={stats['frames']}, fps={stats['fps']}, "
         f"lastBreakUs={stats['lastBreakUs']}, lastMabUs={stats['lastMabUs']}"
     )
