@@ -31,6 +31,7 @@ static void setDefaults(Config& target) {
   target.universe = 1;
   target.failsafeMode = FAILSAFE_HOLD;
   target.mergeMode = MERGE_HTP;
+  target.liveProtocol = LIVE_PROTOCOL_ARTNET;
   target.terminationMode = TERMINATION_AUTO;
   target.busGuardMode = BUS_GUARD_OFF;
   target.legacyArtPollReply = false;
@@ -313,6 +314,8 @@ static bool applyJson(
     doc["failsafeMode"] | static_cast<int>(candidate.failsafeMode);
   const int mergeMode =
     doc["mergeMode"] | static_cast<int>(candidate.mergeMode);
+  const int liveProtocol =
+    doc["liveProtocol"] | static_cast<int>(candidate.liveProtocol);
   const int terminationMode =
     doc["terminationMode"] | static_cast<int>(candidate.terminationMode);
   const int busGuardMode =
@@ -345,6 +348,12 @@ static bool applyJson(
     return false;
   }
 
+  if (liveProtocol < LIVE_PROTOCOL_ARTNET
+      || liveProtocol > LIVE_PROTOCOL_SACN) {
+    error = "Live protocol must be Art-Net or sACN";
+    return false;
+  }
+
   if (terminationMode < TERMINATION_OFF
       || terminationMode > TERMINATION_AUTO) {
     error = "Termination mode must be Off, On, or Auto";
@@ -364,6 +373,8 @@ static bool applyJson(
     static_cast<FailsafeMode>(failsafeMode);
   candidate.mergeMode =
     static_cast<MergeMode>(mergeMode);
+  candidate.liveProtocol =
+    static_cast<LiveProtocol>(liveProtocol);
   candidate.terminationMode =
     static_cast<TerminationMode>(terminationMode);
   candidate.busGuardMode =
@@ -399,6 +410,7 @@ static void configToJsonDocument(
   doc["universe"] = source.universe;
   doc["failsafeMode"] = source.failsafeMode;
   doc["mergeMode"] = source.mergeMode;
+  doc["liveProtocol"] = source.liveProtocol;
   doc["terminationMode"] = source.terminationMode;
   doc["busGuardMode"] = source.busGuardMode;
   doc["legacyArtPollReply"] = source.legacyArtPollReply;

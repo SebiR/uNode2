@@ -608,10 +608,14 @@ function updateDashboardModeLabels(data)
 {
     const artnetToDmx =
         data.direction == 0;
+    const liveProtocolName =
+        data.liveProtocol == 1
+            ? 'sACN'
+            : 'Art-Net';
 
     setTextIfPresent(
         'artnetCardTitle',
-        artnetToDmx ? 'Art-Net Input' : 'Art-Net Output');
+        artnetToDmx ? liveProtocolName + ' Input' : liveProtocolName + ' Output');
     setTextIfPresent(
         'artnetSubscribersLabel',
         artnetToDmx ? 'Subscribers' : 'Art-Net Subscribers');
@@ -864,6 +868,11 @@ async function loadConfig()
             'mergeMode'
         ).value =
             cfg.mergeMode ?? 0;
+
+        document.getElementById(
+            'liveProtocol'
+        ).value =
+            cfg.liveProtocol ?? 0;
 
         document.getElementById(
             'legacyArtPollReply'
@@ -1211,6 +1220,7 @@ const configFieldIds =
     'universe',
     'failsafeMode',
     'mergeMode',
+    'liveProtocol',
     'terminationMode',
     'busGuardMode',
     'legacyArtPollReply'
@@ -1422,6 +1432,12 @@ function readConfigForm()
             parseInt(
                 document.getElementById(
                     'mergeMode'
+                ).value),
+
+        liveProtocol:
+            parseInt(
+                document.getElementById(
+                    'liveProtocol'
                 ).value),
 
         terminationMode:
@@ -1752,6 +1768,8 @@ async function revertConfigChanges()
         configBaseline.failsafeMode;
     document.getElementById('mergeMode').value =
         configBaseline.mergeMode;
+    document.getElementById('liveProtocol').value =
+        configBaseline.liveProtocol ?? 0;
     document.getElementById('terminationMode').value =
         configBaseline.terminationMode;
     document.getElementById('busGuardMode').value =
@@ -2518,11 +2536,16 @@ function updateDirectionMode()
         document.getElementById(
             'dmxToArtnet')
             .checked;
+    const usesArtNet =
+        parseInt(
+            document.getElementById(
+                'liveProtocol')
+                .value) === 0;
 
     document.getElementById(
         'artnetSubscriberSettings')
         .style.display =
-            sendsArtNet ? 'block' : 'none';
+            sendsArtNet && usesArtNet ? 'block' : 'none';
 
     document.getElementById(
         'failsafeSettings')
@@ -2532,7 +2555,7 @@ function updateDirectionMode()
     document.getElementById(
         'mergeSettings')
         .style.display =
-            sendsArtNet ? 'none' : 'block';
+            sendsArtNet || !usesArtNet ? 'none' : 'block';
 }
 
 function describeSubscriberPorts(subscriber)
@@ -3286,6 +3309,13 @@ document
 document
     .getElementById(
         'dmxToArtnet')
+    .addEventListener(
+        'change',
+        updateDirectionMode);
+
+document
+    .getElementById(
+        'liveProtocol')
     .addEventListener(
         'change',
         updateDirectionMode);

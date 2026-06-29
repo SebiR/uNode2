@@ -120,6 +120,8 @@ bool isOutputFailsafeActive();
 const char* getFailsafeModeName();
 /** @brief Stores the current output frame as the persistent failsafe scene. */
 bool recordFailsafeScene(String& error);
+/** @brief Loads the persistent failsafe scene into a 512-byte buffer. */
+bool loadFailsafeScene(uint8_t* scene);
 
 /** @brief Toggles the node between Locate and Normal indicator modes. */
 void toggleArtNetLocate();

@@ -327,8 +327,8 @@
 						name="direction"
 						value="0">
 					<span>
-						<strong>Art-Net &rarr; DMX</strong>
-						<small>Receive ArtDmx and output physical DMX.</small>
+						<strong>Network &rarr; DMX</strong>
+						<small>Receive ArtDmx or sACN and output physical DMX.</small>
 					</span>
 				</label>
 
@@ -339,12 +339,31 @@
 						name="direction"
 						value="1">
 					<span>
-						<strong>DMX &rarr; Art-Net</strong>
-						<small>Receive physical DMX and send ArtDmx.</small>
+						<strong>DMX &rarr; Network</strong>
+						<small>Receive physical DMX and send ArtDmx or sACN.</small>
 					</span>
 				</label>
 
 				</div>
+
+				</div>
+
+				<div class="settingsSection">
+
+				<h3>Live Protocol</h3>
+
+				<label>
+					<span>Live DMX Data</span>
+					<select id="liveProtocol">
+						<option value="0">Art-Net / ArtDmx</option>
+						<option value="1">sACN / E1.31 multicast</option>
+					</select>
+				</label>
+
+				<p class="helpText">
+					Art-Net management remains active in both modes. This setting
+					only selects the live DMX data protocol.
+				</p>
 
 				</div>
 

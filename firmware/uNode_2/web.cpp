@@ -3,6 +3,7 @@
 #include "config.h"
 #include "network.h"
 #include "artnet.h"
+#include "sacn.h"
 #include "leds.h"
 #include "dmx.h"
 #include "dmx_frame.h"
@@ -1157,6 +1158,42 @@ static void handleStatus() {
   doc["artnetActive"] =
     isArtNetActive();
 
+  doc["liveProtocol"] =
+    config.liveProtocol;
+
+  doc["sacnUniverse"] =
+    getSacnUniverse();
+
+  doc["sacnPackets"] =
+    getSacnPacketCount();
+
+  doc["sacnFPS"] =
+    getSacnFPS();
+
+  doc["lastSacnPacketAge"] =
+    getLastSacnPacketAge();
+
+  doc["sacnActive"] =
+    isSacnActive();
+
+  doc["sacnFailsafeActive"] =
+    isSacnFailsafeActive();
+
+  JsonObject sacnDiagnostics =
+    doc["sacnDiagnostics"].to<JsonObject>();
+  sacnDiagnostics["wrongUniversePackets"] =
+    getSacnWrongUniverseCount();
+  sacnDiagnostics["lastWrongUniverse"] =
+    getSacnLastWrongUniverse();
+  sacnDiagnostics["malformedPackets"] =
+    getSacnMalformedPacketCount();
+  sacnDiagnostics["sequenceDrops"] =
+    getSacnSequenceDropCount();
+  sacnDiagnostics["priorityDrops"] =
+    getSacnPriorityDropCount();
+  sacnDiagnostics["streamTerminated"] =
+    getSacnStreamTerminatedCount();
+
   doc["failsafeMode"] =
     config.failsafeMode;
 
@@ -1167,7 +1204,9 @@ static void handleStatus() {
     getFailsafeModeName();
 
   doc["failsafeActive"] =
-    isOutputFailsafeActive();
+    config.liveProtocol == LIVE_PROTOCOL_SACN
+      ? isSacnFailsafeActive()
+      : isOutputFailsafeActive();
 
   doc["legacyArtPollReply"] =
     config.legacyArtPollReply;

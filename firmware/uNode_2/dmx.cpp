@@ -2,6 +2,7 @@
 
 #include "dmx.h"
 #include "artnet.h"
+#include "sacn.h"
 #include "config.h"
 #include "dmx_frame.h"
 #include "hardware.h"
@@ -26,16 +27,24 @@ static uint32_t lastTransmittedSubscriberVersion = 0;
 static volatile uint32_t pendingInputFrames = 0;
 static volatile uint32_t bootGuardInputFrames = 0;
 
-/** @brief Attempts one subscriber-based ArtDmx transmission and records timing. */
-static bool transmitArtNetFrame(uint32_t now) {
+/** @brief Attempts one network DMX transmission and records timing. */
+static bool transmitNetworkFrame(uint32_t now) {
   lastArtNetTransmitAttemptMillis = now;
 
-  if (!sendArtNetFrame()) {
-    LOG_DEBUG("ArtDmx transmit skipped; no subscriber or socket unavailable");
+  const bool sent =
+    config.liveProtocol == LIVE_PROTOCOL_SACN
+      ? sendSacnFrame()
+      : sendArtNetFrame();
+
+  if (!sent) {
+    LOG_DEBUG("Network DMX transmit skipped");
     return false;
   }
 
-  LOG_TRACE("ArtDmx transmitted");
+  LOG_TRACE(
+    config.liveProtocol == LIVE_PROTOCOL_SACN
+      ? "sACN transmitted"
+      : "ArtDmx transmitted");
 
   lastArtNetTransmitMillis = now;
   lastTransmittedSubscriberVersion =
@@ -230,7 +239,7 @@ static void processDMXInput() {
       || lastArtNetTransmitAttemptMillis == 0
       || (lastArtNetTransmitMillis == 0
           && now - lastArtNetTransmitAttemptMillis >= 1000)) {
-    transmitArtNetFrame(now);
+    transmitNetworkFrame(now);
   }
 
   flashDMXInputLED();
@@ -259,7 +268,8 @@ void updateDMX() {
   }
 
   const bool subscriberUpdateDue =
-    subscriberVersion != lastTransmittedSubscriberVersion
+    config.liveProtocol == LIVE_PROTOCOL_ARTNET
+    && subscriberVersion != lastTransmittedSubscriberVersion
     && (lastArtNetTransmitAttemptMillis == 0
         || now - lastArtNetTransmitAttemptMillis >= 100);
 
@@ -272,7 +282,7 @@ void updateDMX() {
           || overrideExpired
           || (now - lastArtNetTransmitMillis >= 1000
               && now - lastArtNetTransmitAttemptMillis >= 1000))) {
-    transmitArtNetFrame(now);
+    transmitNetworkFrame(now);
   }
 
   if (config.direction == DMX_TO_ARTNET

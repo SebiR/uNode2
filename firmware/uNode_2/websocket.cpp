@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "artnet.h"
+#include "sacn.h"
 #include "dmx_frame.h"
 #include "dmx.h"
 #include "network.h"
@@ -218,6 +219,24 @@ void broadcastStatus() {
   doc["artnetActive"] =
     isArtNetActive();
 
+  doc["liveProtocol"] =
+    config.liveProtocol;
+
+  doc["sacnUniverse"] =
+    getSacnUniverse();
+
+  doc["sacnPackets"] =
+    getSacnPacketCount();
+
+  doc["sacnFPS"] =
+    getSacnFPS();
+
+  doc["lastSacnPacketAge"] =
+    getLastSacnPacketAge();
+
+  doc["sacnActive"] =
+    isSacnActive();
+
   doc["artSyncs"] =
     getArtSyncCounter();
 
@@ -243,7 +262,9 @@ void broadcastStatus() {
     config.mergeMode;
 
   doc["failsafeActive"] =
-    isOutputFailsafeActive();
+    config.liveProtocol == LIVE_PROTOCOL_SACN
+      ? isSacnFailsafeActive()
+      : isOutputFailsafeActive();
 
   doc["failsafeModeName"] =
     getFailsafeModeName();

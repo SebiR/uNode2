@@ -31,8 +31,13 @@ explicitly in each release entry.
   artifacts in one run, using version-only file names without build timestamps.
 - Added ArtPoll-based uNode auto-discovery to the PowerShell test runner when
   integration tests are started without an explicit `-NodeIp` or `-BaseUrl`.
-- Increased the configuration schema version to `3` for the new Bus Guarding
-  setting.
+- Added an initial sACN / ANSI E1.31 live-data mode. Art-Net management remains
+  active, while live DMX data can now be selected as ArtDmx or sACN multicast.
+- Added sACN packet validation, multicast Universe receive, DMX-to-sACN
+  multicast transmission, source/CID sequence tracking, priority drops, stream
+  terminated handling, timeout failsafe, status counters, and unit packet tests.
+- Increased the configuration schema version to `4` for the new live protocol
+  setting and Bus Guarding migration.
 
 ### Fixed
 

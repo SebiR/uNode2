@@ -64,28 +64,27 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [ ] Extend Detailed Diagnostics with dropped poll replies, subscriber
       overflow, and UDP transmission failures.
 
-## Priority 3b: sACN / ANSI E1.31 Future Protocol Option
+## Priority 3b: sACN / ANSI E1.31 Protocol Option
 
-- [ ] Add a hard protocol selection between **Art-Net** and **sACN / ANSI
-      E1.31** instead of running both protocols simultaneously on this
-      low-cost ESP8266 node.
-- [ ] Extend configuration storage with a protocol mode, sACN Universe
-      `1..63999`, sACN Source Name, priority, and a persistent CID/UUID.
-- [ ] Update the web UI so Art-Net-specific fields are shown only in Art-Net
-      mode and sACN-specific fields are shown only in sACN mode.
-- [ ] Implement sACN Data Packet reception on UDP port 5568, including packet
+- [x] Add a hard live-data protocol selection between **Art-Net** and
+      **sACN / ANSI E1.31** while keeping Art-Net management active.
+- [x] Extend configuration storage with a live protocol mode.
+- [x] Update the web UI with a Live Protocol selector and hide Art-Net
+      subscriber/merge controls when sACN live data is selected.
+- [x] Implement sACN Data Packet reception on UDP port 5568, including packet
       validation, source tracking by CID, sequence handling, priority handling,
       and timeout/failsafe integration.
-- [ ] Join the correct sACN multicast group for the configured Universe when
+- [x] Join the correct sACN multicast group for the configured Universe when
       receiving network-to-DMX data.
-- [ ] Implement DMX-to-sACN transmission with sequence numbers, configured
-      priority, source name, CID, and periodic refresh while DMX input remains
-      active.
+- [x] Implement DMX-to-sACN transmission with sequence numbers, source name,
+      CID, priority, and periodic refresh while DMX input remains active.
+- [ ] Add explicit user-configurable sACN Source Name, priority, and persistent
+      CID/UUID instead of deriving them from existing node identity.
 - [ ] Decide whether sACN Universe Discovery and Synchronization packets are
       required for the first implementation or should remain later additions.
-- [ ] Document that Art-Net remote configuration features such as ArtAddress and
-      ArtIpProg are Art-Net-specific and not available while sACN mode is
-      selected.
+- [x] Document that Art-Net remote configuration features such as ArtAddress and
+      ArtIpProg remain Art-Net management features while sACN mode is selected
+      for live data.
 
 ## Priority 4: DMX Test Page
 

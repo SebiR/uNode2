@@ -8,7 +8,7 @@
 // -----------------------------------------------------------------------------
 
 #define FW_VERSION_MAJOR 0
-#define FW_VERSION_MINOR 22
+#define FW_VERSION_MINOR 23
 #define FW_VERSION_PATCH 0
 
 #define FW_STRINGIFY_IMPL(value) #value
@@ -24,7 +24,7 @@
 #define FW_FLASH_LAYOUT "4M1M"
 #define FW_LITTLEFS_IMAGE_SIZE 0xFA000UL
 #define FW_WEB_ASSET_VERSION FW_VERSION
-#define CONFIG_SCHEMA_VERSION 3
+#define CONFIG_SCHEMA_VERSION 4
 
 // -----------------------------------------------------------------------------
 // Feature Switches
@@ -259,6 +259,11 @@ enum MergeMode {
   MERGE_LTP = 1
 };
 
+enum LiveProtocol {
+  LIVE_PROTOCOL_ARTNET = 0,
+  LIVE_PROTOCOL_SACN = 1
+};
+
 enum TerminationMode {
   TERMINATION_OFF = 0,
   TERMINATION_ON = 1,
@@ -307,6 +312,7 @@ struct Config {
   FailsafeMode failsafeMode;
 
   MergeMode mergeMode;
+  LiveProtocol liveProtocol;
 
   TerminationMode terminationMode;
   BusGuardMode busGuardMode;

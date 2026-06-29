@@ -1,13 +1,13 @@
 # uNode Mini Manual
 
-uNode is a compact ESP8266-based Art-Net 4 and DMX512 interface. It can operate
-as either an Art-Net-to-DMX output node or a DMX-to-Art-Net input node. Device
-configuration, monitoring, testing, and diagnostics are available through the
-integrated web interface.
+uNode is a compact ESP8266-based Art-Net 4, sACN / ANSI E1.31, and DMX512
+interface. It can operate as either a network-to-DMX output node or a
+DMX-to-network input node. Device configuration, monitoring, testing, and
+diagnostics are available through the integrated web interface.
 
-Future firmware versions may add ANSI E1.31 / sACN as an alternative network
-protocol. The intended product direction is a hard protocol selection between
-Art-Net and sACN rather than running both protocols at the same time.
+Art-Net management remains active so controllers can still discover, identify,
+locate, and configure the node. The **Live Protocol** setting selects whether
+live DMX data is transported as ArtDmx or as sACN multicast.
 
 ## Quick Start
 
@@ -15,7 +15,8 @@ Art-Net and sACN rather than running both protocols at the same time.
 2. Connect to its access point if it has not yet been configured for an
    existing Wi-Fi network.
 3. Open `http://2.0.0.1` in a browser.
-4. Select the required Wi-Fi mode, Art-Net Port-Address, and data direction.
+4. Select the required Wi-Fi mode, live protocol, Port-Address/Universe, and
+   data direction.
 5. Choose **Save** or **Save & Restart** in the status bar. Art-Net/DMX changes
    are applied live; network changes restart the node and the page reloads
    automatically.
@@ -28,18 +29,24 @@ The default access-point credentials are generated from the ESP8266 chip ID:
 
 The hexadecimal chip ID is displayed in the web interface.
 
-## Data Directions
+## Live Protocol and Data Directions
 
-| Mode | Network side | Physical side | Typical use |
+| Live Protocol | Behaviour |
+|---|---|
+| Art-Net / ArtDmx | Uses ArtDmx for live DMX data. Art-Net discovery and management are available. |
+| sACN / E1.31 | Uses multicast sACN Data Packets on UDP port `5568` for live DMX data. Art-Net discovery and management remain available. |
+
+| Direction | Network side | Physical side | Typical use |
 |---|---|---|---|
-| Art-Net to DMX | Receives ArtDmx | Outputs DMX512 | Driving fixtures from a lighting controller |
-| DMX to Art-Net | Sends ArtDmx | Receives DMX512 | Bringing a physical DMX source onto the network |
+| Network to DMX | Receives ArtDmx or sACN | Outputs DMX512 | Driving fixtures from a lighting controller |
+| DMX to Network | Sends ArtDmx or sACN | Receives DMX512 | Bringing a physical DMX source onto the network |
 
 The RS-485 transceiver direction is changed automatically when the configured
 mode changes.
 
 In DMX-to-Art-Net mode, uNode sends ArtDmx by unicast to discovered subscribers
-that advertise the configured Port-Address. A frame is sent after DMX data
+that advertise the configured Port-Address. In DMX-to-sACN mode, uNode sends
+sACN multicast to the configured Universe. A frame is sent after DMX data
 changes and at least once per second while DMX input remains active.
 
 ## Art-Net Addressing
@@ -55,6 +62,33 @@ Port-Address = (Net × 256) + (Subnet × 16) + Universe
 | Net | 0-127 |
 | Subnet | 0-15 |
 | Universe | 0-15 |
+
+For sACN, this same configured Port-Address is used as the sACN Universe. Since
+sACN Universe `0` is invalid, a configured Port-Address of `0` is transmitted
+and received as sACN Universe `1`.
+
+## Implemented sACN / ANSI E1.31 Functions
+
+The first sACN implementation focuses on live DMX data transport:
+
+- Receives sACN Data Packets on UDP port `5568`.
+- Joins the multicast group for the configured Universe when possible.
+- Validates the ACN packet identifier, root/framing/DMP vectors, PDU lengths,
+  Universe, property count, and DMX start code layout.
+- Tracks sources by CID with sequence handling.
+- Uses packet priority to ignore lower-priority sources while a higher-priority
+  source is active.
+- Supports Stream Terminated packets.
+- Applies the configured output failsafe after approximately five seconds
+  without valid sACN data.
+- Sends DMX input frames as sACN multicast with source name, CID, priority,
+  Universe, and sequence number.
+
+Not currently implemented:
+
+- sACN Universe Discovery.
+- sACN Synchronization packets.
+- Full per-address sACN priority/merge behaviour.
 
 ## Implemented Art-Net Functions
 
@@ -540,16 +574,15 @@ with DMX on this hardware.
 
 The following features are not implemented yet:
 
-- Optional sACN / ANSI E1.31 mode as an alternative to Art-Net.
 - RDM and ArtRdm.
 - Application-level ArtNzs processing.
+- sACN Universe Discovery and Synchronization packets.
+- User-configurable sACN source CID/UUID and priority.
 - Automatic rollback after a faulty firmware update.
 
-The planned sACN mode is expected to use a single selected protocol at a time.
-In sACN mode, Art-Net-specific remote configuration functions such as
-ArtAddress and ArtIpProg would not apply. Basic sACN support would focus on
-E1.31 Data Packets, Universe selection, source CID/name, priority, multicast
-receive, and DMX input transmission.
+Art-Net-specific remote configuration functions such as ArtAddress and
+ArtIpProg remain Art-Net management features. sACN is currently used only for
+live DMX data transport.
 
 The target hardware contains 4 MB of flash. The intended build layout is
 `4M1M`, providing a dedicated LittleFS area and sufficient firmware-update

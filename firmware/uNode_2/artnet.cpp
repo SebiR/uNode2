@@ -5,6 +5,7 @@
 #include "dmx_frame.h"
 #include "hardware.h"
 #include "leds.h"
+#include "sacn.h"
 
 #include "ArtnetnodeWifi.h"
 
@@ -192,7 +193,7 @@ bool recordFailsafeScene(
 }
 
 /** @brief Loads the persisted failsafe scene into the supplied buffer. */
-static bool loadFailsafeScene(
+bool loadFailsafeScene(
   uint8_t* scene) {
   if (!scene
       || !LittleFS.exists(FAILSAFE_SCENE_PATH)) {
@@ -549,6 +550,8 @@ bool applyArtNetRuntimeConfig(
     previous.net != config.net
     || previous.subnetId != config.subnetId
     || previous.universe != config.universe;
+  const bool liveProtocolChanged =
+    previous.liveProtocol != config.liveProtocol;
   const bool terminationChanged =
     previous.terminationMode != config.terminationMode;
 
@@ -590,6 +593,7 @@ bool applyArtNetRuntimeConfig(
 
   if (directionChanged) {
     resetArtNetRuntimeForDirectionChange();
+    handleSacnNetworkChange();
 
     artnet.setDirection(
       config.direction == ARTNET_TO_DMX);
@@ -615,7 +619,7 @@ bool applyArtNetRuntimeConfig(
       config.direction == ARTNET_TO_DMX
         ? "Direction set to DMX output"
         : "Direction set to DMX input");
-  } else if (portAddressChanged) {
+  } else if (portAddressChanged || liveProtocolChanged) {
     artnet.setStartingUniverse(
       getConfiguredUniverse());
 
@@ -623,6 +627,7 @@ bool applyArtNetRuntimeConfig(
     clearArtDmxSequences();
     clearArtDmxMerge();
     clearArtSyncState();
+    handleSacnNetworkChange();
     lastSubscriberPollMillis = 0;
     discoveryActive = false;
     artnetActive = false;
@@ -634,7 +639,9 @@ bool applyArtNetRuntimeConfig(
 
     artnet.setNodeReport(
       RcPowerOk,
-      "Port-Address changed");
+      liveProtocolChanged
+        ? "Live protocol changed"
+        : "Port-Address changed");
   }
 
   updateFailsafePollReplyStatus();
@@ -1177,6 +1184,11 @@ static void onDmxFrame(
     lastWrongUniverse = universe;
     lastWrongUniverseMillis =
       millis();
+    return;
+  }
+
+  if (config.liveProtocol != LIVE_PROTOCOL_ARTNET) {
+    directionDropCounter++;
     return;
   }
 

@@ -5,6 +5,7 @@
 #include "web.h"
 #include "leds.h"
 #include "artnet.h"
+#include "sacn.h"
 #include "websocket.h"
 #include "dmx.h"
 #include "dmx_frame.h"
@@ -118,6 +119,7 @@ void setup() {
   initNetwork();
 
   initArtNet();
+  initSacn();
 
   initWebSocket();
 
@@ -138,9 +140,11 @@ void loop() {
 
   if (updateNetwork()) {
     handleArtNetNetworkChange();
+    handleSacnNetworkChange();
   }
 
   updateArtNet();
+  updateSacn();
 
   updateLEDs();
 
