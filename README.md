@@ -30,6 +30,19 @@ Run the Python unit tests:
 .\tools\test.ps1
 ```
 
+Run integration tests against a real uNode. If no IP address is provided, the
+runner discovers the node by sending ArtPoll on the available IPv4 interfaces:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration
+```
+
+Useful explicit-target variant:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2.0.0.1
+```
+
 Build versioned firmware and LittleFS release artifacts:
 
 ```powershell

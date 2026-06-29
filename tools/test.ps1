@@ -1,6 +1,6 @@
 param(
     [switch]$Integration,
-    [string]$NodeIp = "2.0.0.1",
+    [string]$NodeIp = "",
     [string]$BaseUrl = "",
     [string]$Password = "",
     [string]$Rp2040Port = "",
@@ -22,7 +22,35 @@ Set-Location $projectRoot
 
 if ($BaseUrl.Length -eq 0)
 {
+    if ($Integration -and $NodeIp.Length -eq 0)
+    {
+        Write-Host "Discover : ArtPoll on available IPv4 interfaces" -ForegroundColor Cyan
+        $discoveredNodeIp =
+            python .\tools\discover_unode.py --first-ip --timeout 1.5
+
+        if ($LASTEXITCODE -eq 0 -and $discoveredNodeIp.Length -gt 0)
+        {
+            $NodeIp =
+                $discoveredNodeIp.Trim()
+            Write-Host "Found    : $NodeIp" -ForegroundColor Green
+        }
+        else
+        {
+            $NodeIp = "2.0.0.1"
+            Write-Host "Found    : none, falling back to $NodeIp" -ForegroundColor Yellow
+        }
+    }
+    elseif ($NodeIp.Length -eq 0)
+    {
+        $NodeIp = "2.0.0.1"
+    }
+
     $BaseUrl = "http://$NodeIp"
+}
+elseif ($NodeIp.Length -eq 0)
+{
+    $NodeIp =
+        ([Uri]$BaseUrl).Host
 }
 
 Write-Host "uNode test runner" -ForegroundColor Cyan

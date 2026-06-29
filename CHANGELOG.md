@@ -29,6 +29,8 @@ explicitly in each release entry.
   is already present on the bus.
 - Updated the release build script to generate both normal and legacy hardware
   artifacts in one run, using version-only file names without build timestamps.
+- Added ArtPoll-based uNode auto-discovery to the PowerShell test runner when
+  integration tests are started without an explicit `-NodeIp` or `-BaseUrl`.
 - Increased the configuration schema version to `3` for the new Bus Guarding
   setting.
 

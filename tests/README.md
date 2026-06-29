@@ -36,6 +36,16 @@ python -m pytest tests/integration
 Or:
 
 ```powershell
+.\tools\test.ps1 -Integration
+```
+
+When `-NodeIp` and `-BaseUrl` are omitted, the PowerShell runner sends ArtPoll
+on the available IPv4 interfaces and uses the first responding uNode. If no
+node is discovered, it falls back to the AP/recovery default `2.0.0.1`.
+
+You can still target a node explicitly:
+
+```powershell
 .\tools\test.ps1 -Integration -NodeIp 2.0.0.1
 ```
 
