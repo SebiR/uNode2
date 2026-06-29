@@ -30,7 +30,8 @@ explicitly in each release entry.
 - Added merge edge-case tests for stale source timeout, third-source rejection,
   and ArtAddress `AcCancelMerge`.
 - Strengthened the short-frame DMX input HIL test to require that a 6-slot DMX
-  input frame is forwarded as a 6-slot ArtDmx packet.
+  input frame is forwarded as a short, even-length ArtDmx packet instead of
+  being expanded to a full 512-slot packet.
 - Added API authentication regression coverage for protected write endpoints,
   config download, login failure/success, and logout token invalidation.
 
