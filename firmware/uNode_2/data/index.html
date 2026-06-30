@@ -365,6 +365,12 @@
 					only selects the live DMX data protocol.
 				</p>
 
+				<p
+					id="sacnUniverseHint"
+					class="helpText">
+					sACN Universe: N/A, derived from Art-Net Port-Address.
+				</p>
+
 				</div>
 
 				<div
@@ -396,7 +402,9 @@
 
 				<p class="helpText">
 					Priority 100 is the E1.31 default. Higher priority sources
-					take precedence over lower priority sources.
+					take precedence over lower priority sources. Lower-priority
+					sources are kept warm and resume automatically when the
+					higher-priority source terminates or times out.
 				</p>
 
 				</div>
@@ -1319,6 +1327,15 @@
 
 					<div class="label">Stream Terminated</div>
 					<div id="diagSacnStreamTerminated">0</div>
+
+					<div class="label">Active Sources</div>
+					<div id="diagSacnActiveSources">0</div>
+
+					<div class="label">Winning Priority</div>
+					<div id="diagSacnWinningPriority">0</div>
+
+					<div class="label">Source Timeouts</div>
+					<div id="diagSacnSourceTimeouts">0</div>
 				</div>
             </div>
 

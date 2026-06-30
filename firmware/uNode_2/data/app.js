@@ -410,6 +410,12 @@ async function loadStatus()
 				+ direction
 				+ ' DMX';
 
+        setTextIfPresent(
+            'sacnUniverseHint',
+            'sACN Universe: '
+            + (data.sacnUniverse ?? 'N/A')
+            + ', derived from Art-Net Port-Address.');
+
         document.getElementById('firmware').textContent =
             data.firmware +
             " (" +
@@ -1234,6 +1240,15 @@ function updateDetailedDiagnostics(data)
     setTextIfPresent(
         'diagSacnStreamTerminated',
         sacnDiagnostics.streamTerminated ?? 0);
+    setTextIfPresent(
+        'diagSacnActiveSources',
+        sacnDiagnostics.activeSources ?? 0);
+    setTextIfPresent(
+        'diagSacnWinningPriority',
+        sacnDiagnostics.winningPriority ?? 0);
+    setTextIfPresent(
+        'diagSacnSourceTimeouts',
+        sacnDiagnostics.sourceTimeouts ?? 0);
 }
 
 function updateStatusMessages(data)
@@ -1324,6 +1339,12 @@ function updateStatusMessages(data)
     {
         messages.push(
             'Firmware/Web files mismatch');
+    }
+
+    if (data.heapWarningActive)
+    {
+        messages.push(
+            'Heap headroom low - check diagnostics');
     }
 
     if (data.direction == 0

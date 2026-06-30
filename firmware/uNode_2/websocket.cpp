@@ -257,6 +257,12 @@ void broadcastStatus() {
     doc["sacnDiagnostics"].to<JsonObject>();
   sacnDiagnostics["protocolDrops"] =
     getSacnProtocolDropCount();
+  sacnDiagnostics["activeSources"] =
+    getSacnActiveSourceCount();
+  sacnDiagnostics["winningPriority"] =
+    getSacnWinningPriority();
+  sacnDiagnostics["sourceTimeouts"] =
+    getSacnSourceTimeoutCount();
 
   doc["artSyncs"] =
     getArtSyncCounter();

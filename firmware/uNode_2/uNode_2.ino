@@ -9,12 +9,41 @@
 #include "websocket.h"
 #include "dmx.h"
 #include "dmx_frame.h"
+#include "event_log.h"
 #include "hardware.h"
 
 #undef LOG_MODULE
 #define LOG_MODULE "BOOT"
 
 static bool recoveryBootMode = false;
+static uint32_t nextHeapWarningCheckMillis = 0;
+
+/** @brief Adds a throttled event when runtime heap gets critically tight. */
+static void monitorHeapHeadroom() {
+  const uint32_t now =
+    millis();
+
+  if ((int32_t)(now - nextHeapWarningCheckMillis) < 0) {
+    return;
+  }
+
+  nextHeapWarningCheckMillis =
+    now + HEAP_WARNING_CHECK_INTERVAL_MS;
+
+  if (ESP.getFreeHeap() < HEAP_WARNING_FREE_BYTES) {
+    logEvent(
+      "heap_low_free",
+      "Free heap is below warning threshold",
+      60000);
+  }
+
+  if (ESP.getMaxFreeBlockSize() < HEAP_WARNING_MAX_BLOCK_BYTES) {
+    logEvent(
+      "heap_low_block",
+      "Largest free heap block is below warning threshold",
+      60000);
+  }
+}
 
 /** @return True when the recovery button is held during early boot. */
 static bool isRecoveryButtonHeldAtBoot() {
@@ -151,6 +180,8 @@ void loop() {
   updateWebSocket();
 
   updateWeb();
+
+  monitorHeapHeadroom();
 #if !SERIAL_LOG_REPLACES_DMX
   updateDMX();
 #endif

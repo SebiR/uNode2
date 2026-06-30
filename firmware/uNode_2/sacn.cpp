@@ -17,7 +17,7 @@ static const uint16_t SACN_MIN_PACKET_SIZE = 126;
 static const uint16_t SACN_MAX_PACKET_SIZE = 638;
 static const uint32_t SACN_OUTPUT_TIMEOUT_MS = 2500;
 static const uint32_t SACN_BIND_RETRY_MS = 5000;
-static const uint32_t SACN_SOURCE_TIMEOUT_MS = 10000;
+static const uint32_t SACN_SOURCE_TIMEOUT_MS = SACN_OUTPUT_TIMEOUT_MS;
 static const uint8_t MAX_SACN_SOURCES = 4;
 
 static WiFiUDP sacnUdp;
@@ -39,6 +39,7 @@ static uint32_t protocolDropCounter = 0;
 static uint32_t directionDropCounter = 0;
 static uint32_t priorityDropCounter = 0;
 static uint32_t streamTerminatedCounter = 0;
+static uint32_t sourceTimeoutCounter = 0;
 static uint8_t outgoingSequence = 1;
 static uint8_t packetBuffer[SACN_MAX_PACKET_SIZE];
 
@@ -47,6 +48,8 @@ struct SacnSourceState {
   uint8_t sequence;
   uint8_t priority;
   uint32_t lastMillis;
+  uint16_t length;
+  uint8_t frame[DMX_CHANNEL_COUNT];
   bool active;
 };
 
@@ -107,9 +110,7 @@ uint16_t getSacnUniverse() {
   const uint16_t configured =
     getConfiguredUniverse();
 
-  return configured == 0
-    ? 1
-    : configured;
+  return configured + 1;
 }
 
 /** @brief Builds a stable pseudo-CID from the ESP chip ID. */
@@ -145,13 +146,35 @@ static void clearSources() {
 }
 
 /** @brief Expires inactive sACN sources. */
-static void expireSources(uint32_t now) {
+static bool expireSources(uint32_t now) {
+  bool expired = false;
+
   for (uint8_t i = 0; i < MAX_SACN_SOURCES; i++) {
     if (sources[i].active
         && now - sources[i].lastMillis >= SACN_SOURCE_TIMEOUT_MS) {
       sources[i].active = false;
+      sourceTimeoutCounter++;
+      logEvent(
+        "sacn_source_timeout",
+        "sACN source timed out");
+      expired = true;
     }
   }
+
+  return expired;
+}
+
+/** @return Number of currently active tracked sources. */
+static uint8_t countActiveSources() {
+  uint8_t count = 0;
+
+  for (uint8_t i = 0; i < MAX_SACN_SOURCES; i++) {
+    if (sources[i].active) {
+      count++;
+    }
+  }
+
+  return count;
 }
 
 /** @return Highest priority among active sACN sources. */
@@ -166,6 +189,53 @@ static uint8_t getHighestActivePriority() {
   }
 
   return highest;
+}
+
+/** @return Index of the currently highest-priority active source, or -1. */
+static int8_t getHighestActiveSourceIndex() {
+  int8_t bestIndex = -1;
+  uint8_t highest = 0;
+
+  for (uint8_t i = 0; i < MAX_SACN_SOURCES; i++) {
+    if (!sources[i].active) {
+      continue;
+    }
+
+    if (bestIndex < 0
+        || sources[i].priority > highest
+        || (sources[i].priority == highest
+            && sources[i].lastMillis > sources[bestIndex].lastMillis)) {
+      bestIndex = i;
+      highest = sources[i].priority;
+    }
+  }
+
+  return bestIndex;
+}
+
+/** @brief Applies the best currently active sACN source to DMX output. */
+static bool applyHighestActiveSource(uint32_t now) {
+  const int8_t sourceIndex =
+    getHighestActiveSourceIndex();
+
+  if (sourceIndex < 0) {
+    return false;
+  }
+
+  setDmxFrame(
+    sources[sourceIndex].frame,
+    sources[sourceIndex].length,
+    true);
+
+  sacnPacketCounter++;
+  sacnFpsCounter++;
+  lastSacnPacketMillis = now;
+  sacnActive = true;
+  sacnFailsafeActive = false;
+
+  flashDMXOutputLED();
+
+  return true;
 }
 
 /** @return Existing, free, or oldest source state slot. */
@@ -432,36 +502,38 @@ static void handleSacnPacket(
     return;
   }
 
-  const uint8_t highestPriority =
-    getHighestActivePriority();
-
-  if (priority < highestPriority
-      && (!existingSource
-          || source.priority < highestPriority)) {
-    priorityDropCounter++;
-    return;
-  }
-
   memcpy(source.cid, cid, 16);
   source.sequence = sequence;
   source.priority = priority;
   source.lastMillis = now;
+  source.length = slots;
+  memcpy(
+    source.frame,
+    packet + 126,
+    slots);
+  if (slots < DMX_CHANNEL_COUNT) {
+    memset(
+      source.frame + slots,
+      0,
+      DMX_CHANNEL_COUNT - slots);
+  }
   source.active = !streamTerminated;
 
   if (streamTerminated) {
     streamTerminatedCounter++;
+    applyHighestActiveSource(now);
     return;
   }
 
-  setDmxFrame(packet + 126, slots, true);
+  const uint8_t highestPriority =
+    getHighestActivePriority();
 
-  sacnPacketCounter++;
-  sacnFpsCounter++;
-  lastSacnPacketMillis = now;
-  sacnActive = true;
-  sacnFailsafeActive = false;
+  if (priority < highestPriority) {
+    priorityDropCounter++;
+    return;
+  }
 
-  flashDMXOutputLED();
+  applyHighestActiveSource(now);
 }
 
 void updateSacn() {
@@ -506,7 +578,18 @@ void updateSacn() {
   }
 
   now = millis();
-  expireSources(now);
+  const bool sourceExpired =
+    expireSources(now);
+
+  const bool outputTimedOut =
+    sacnActive
+    && now - lastSacnPacketMillis > SACN_OUTPUT_TIMEOUT_MS;
+
+  if (sourceExpired
+      || (outputTimedOut
+          && getHighestActiveSourceIndex() >= 0)) {
+    applyHighestActiveSource(now);
+  }
 
   if (sacnActive
       && now - lastSacnPacketMillis > SACN_OUTPUT_TIMEOUT_MS) {
@@ -681,4 +764,26 @@ uint32_t getSacnPriorityDropCount() {
 
 uint32_t getSacnStreamTerminatedCount() {
   return streamTerminatedCounter;
+}
+
+uint8_t getSacnActiveSourceCount() {
+  expireSources(millis());
+  return countActiveSources();
+}
+
+uint8_t getSacnWinningPriority() {
+  expireSources(millis());
+
+  const int8_t sourceIndex =
+    getHighestActiveSourceIndex();
+
+  if (sourceIndex < 0) {
+    return 0;
+  }
+
+  return sources[sourceIndex].priority;
+}
+
+uint32_t getSacnSourceTimeoutCount() {
+  return sourceTimeoutCounter;
 }

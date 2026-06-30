@@ -9,7 +9,7 @@
 
 #define FW_VERSION_MAJOR 0
 #define FW_VERSION_MINOR 23
-#define FW_VERSION_PATCH 6
+#define FW_VERSION_PATCH 7
 
 #define FW_STRINGIFY_IMPL(value) #value
 #define FW_STRINGIFY(value) FW_STRINGIFY_IMPL(value)
@@ -25,6 +25,10 @@
 #define FW_LITTLEFS_IMAGE_SIZE 0xFA000UL
 #define FW_WEB_ASSET_VERSION FW_VERSION
 #define CONFIG_SCHEMA_VERSION 5
+
+#define HEAP_WARNING_FREE_BYTES 12000UL
+#define HEAP_WARNING_MAX_BLOCK_BYTES 6000UL
+#define HEAP_WARNING_CHECK_INTERVAL_MS 5000UL
 
 // -----------------------------------------------------------------------------
 // Feature Switches

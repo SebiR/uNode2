@@ -13,6 +13,13 @@ explicitly in each release entry.
 
 ### Changed
 
+- sACN Universe is now consistently derived as Art-Net Port-Address + 1 and
+  shown that way in the Protocol page.
+- sACN priority handling now keeps lower-priority sources warm and falls back
+  to the best remaining active source when a higher-priority source sends
+  Stream_Terminated or times out.
+- Added low-heap headroom monitoring that records throttled runtime warnings in
+  the volatile event log and exposes the active warning state in `/api/status`.
 - Added a volatile in-memory event log for important runtime warnings,
   including protocol mismatches, wrong-universe packets, and output failsafe
   activation. The System page can display, download, and clear the current log.
@@ -64,6 +71,8 @@ explicitly in each release entry.
 
 ### Tests
 
+- Added sACN priority fallback coverage for warm lower-priority sources after
+  Stream_Terminated and source-loss timeout.
 - Added hardware-in-the-loop checks for sACN output failsafe behavior
   covering Hold, All-to-Zero, All-to-Full, and Backup Scene.
 - Added sACN hardening coverage for short frames, malformed packets,

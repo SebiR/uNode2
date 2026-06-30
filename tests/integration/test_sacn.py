@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import socket
+import time
 import uuid
 
 from helpers import configured_port_address, step, wait_for_status
@@ -33,8 +34,6 @@ def _configure_sacn_output(
     config = preserved_config.copy()
     config["direction"] = 0
     config["liveProtocol"] = 1
-    if configured_port_address(config) == 0:
-        config["universe"] = 1
 
     reset_config = config.copy()
     reset_config["liveProtocol"] = 0
@@ -46,7 +45,7 @@ def _configure_sacn_output(
         lambda data: int(data.get("liveProtocol", -1)) == 0,
     )
 
-    universe = configured_port_address(config)
+    universe = configured_port_address(config) + 1
     step(f"Switching node to sACN live protocol on Universe {universe}")
     response = unode_client.save_config(config)
     assert response.get("appliedLive") is True
@@ -225,10 +224,8 @@ def test_sacn_valid_packet_in_artnet_mode_increments_protocol_drop_counter(
     config = preserved_config.copy()
     config["direction"] = 0
     config["liveProtocol"] = 0
-    if configured_port_address(config) == 0:
-        config["universe"] = 1
 
-    universe = configured_port_address(config)
+    universe = configured_port_address(config) + 1
     step("Switching node to Art-Net live protocol before sACN protocol-drop test")
     unode_client.save_config(config)
     wait_for_status(
@@ -266,10 +263,8 @@ def test_sacn_valid_packet_in_dmx_input_mode_increments_direction_drop_counter(
     config = preserved_config.copy()
     config["direction"] = 1
     config["liveProtocol"] = 1
-    if configured_port_address(config) == 0:
-        config["universe"] = 1
 
-    universe = configured_port_address(config)
+    universe = configured_port_address(config) + 1
     step("Switching node to DMX input before sACN direction-drop test")
     unode_client.save_config(config)
     wait_for_status(
@@ -473,7 +468,10 @@ def test_sacn_priority_drops_lower_priority_source_while_higher_source_is_active
         > int(source_a["sacnPackets"]),
     )
 
-    step("Sending source A again below active highest priority; it should drop")
+    step(
+        "Sending source A again below active highest priority; it should be "
+        "tracked warm but not output"
+    )
     _send_sacn_unicast(
         unode_ip,
         make_sacn_dmx(
@@ -491,6 +489,8 @@ def test_sacn_priority_drops_lower_priority_source_while_higher_source_is_active
         > before_priority_drops,
     )
     assert int(dropped["sacnPackets"]) == int(source_b["sacnPackets"])
+    assert int(dropped["sacnDiagnostics"]["activeSources"]) >= 2
+    assert int(dropped["sacnDiagnostics"]["winningPriority"]) == 120
 
     step("Sending source B with next sequence; it should still be accepted")
     _send_sacn_unicast(
@@ -529,6 +529,23 @@ def test_sacn_stream_terminated_releases_high_priority_source(
     before_packets = int(before.get("sacnPackets", 0))
     before_terminated = int(before["sacnDiagnostics"]["streamTerminated"])
 
+    step("Sending lower-priority source A; it should be accepted")
+    _send_sacn_unicast(
+        unode_ip,
+        make_sacn_dmx(
+            universe=universe,
+            sequence=1,
+            priority=90,
+            values=[1, 2, 3, 4],
+            cid=CID_A,
+            source_name="uNode pytest low",
+        ),
+    )
+    low = wait_for_status(
+        unode_client,
+        lambda data: int(data.get("sacnPackets", 0)) > before_packets,
+    )
+
     step("Sending high-priority source B; it should be accepted")
     _send_sacn_unicast(
         unode_ip,
@@ -543,7 +560,7 @@ def test_sacn_stream_terminated_releases_high_priority_source(
     )
     high = wait_for_status(
         unode_client,
-        lambda data: int(data.get("sacnPackets", 0)) > before_packets,
+        lambda data: int(data.get("sacnPackets", 0)) > int(low["sacnPackets"]),
     )
 
     step("Sending Stream_Terminated from source B")
@@ -562,31 +579,104 @@ def test_sacn_stream_terminated_releases_high_priority_source(
     terminated = wait_for_status(
         unode_client,
         lambda data: int(data["sacnDiagnostics"]["streamTerminated"])
-        > before_terminated,
+        > before_terminated
+        and int(data.get("sacnPackets", 0)) > int(high["sacnPackets"])
+        and int(data["sacnDiagnostics"]["winningPriority"]) == 90,
     )
-    assert int(terminated["sacnPackets"]) == int(high["sacnPackets"])
+    assert int(terminated["sacnPackets"]) > int(high["sacnPackets"])
 
     step(
-        "Sending lower-priority source A after termination; it should now be accepted"
+        "sACN Stream_Terminated fell back to warm lower-priority source: "
+        f"streamTerminated={terminated['sacnDiagnostics']['streamTerminated']}, "
+        f"packets={terminated['sacnPackets']}, "
+        f"priority={terminated['sacnDiagnostics']['winningPriority']}"
     )
+
+
+def test_sacn_high_priority_timeout_falls_back_to_warm_lower_source(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+) -> None:
+    _config, universe = _configure_sacn_output(unode_client, preserved_config)
+
+    before = unode_client.get_json("/api/status")
+    before_packets = int(before.get("sacnPackets", 0))
+    before_timeouts = int(before["sacnDiagnostics"].get("sourceTimeouts", 0))
+
+    step("Sending lower-priority source A; it should be accepted")
     _send_sacn_unicast(
         unode_ip,
         make_sacn_dmx(
             universe=universe,
             sequence=1,
             priority=90,
-            values=[1, 2, 3, 4],
+            values=[10, 20, 30, 40],
             cid=CID_A,
             source_name="uNode pytest low",
         ),
     )
-    accepted = wait_for_status(
+    low = wait_for_status(
         unode_client,
-        lambda data: int(data.get("sacnPackets", 0)) > int(high["sacnPackets"]),
+        lambda data: int(data.get("sacnPackets", 0)) > before_packets,
+    )
+
+    step("Sending higher-priority source B; it should take over")
+    _send_sacn_unicast(
+        unode_ip,
+        make_sacn_dmx(
+            universe=universe,
+            sequence=1,
+            priority=120,
+            values=[110, 120, 130, 140],
+            cid=CID_B,
+            source_name="uNode pytest high",
+        ),
+    )
+    high = wait_for_status(
+        unode_client,
+        lambda data: int(data.get("sacnPackets", 0)) > int(low["sacnPackets"])
+        and int(data["sacnDiagnostics"]["winningPriority"]) == 120,
     )
 
     step(
-        "sACN Stream_Terminated released priority lock: "
-        f"streamTerminated={accepted['sacnDiagnostics']['streamTerminated']}, "
-        f"packets={accepted['sacnPackets']}"
+        "Keeping source A alive while source B stops; output should fall back "
+        "after source-loss timeout"
+    )
+    sequence = 2
+    deadline = time.time() + 4.0
+    while time.time() < deadline:
+        _send_sacn_unicast(
+            unode_ip,
+            make_sacn_dmx(
+                universe=universe,
+                sequence=sequence,
+                priority=90,
+                values=[11, 21, 31, 41],
+                cid=CID_A,
+                source_name="uNode pytest low",
+            ),
+        )
+        sequence += 1
+        time.sleep(0.25)
+
+        status = unode_client.get_json("/api/status")
+        if (
+            int(status["sacnDiagnostics"].get("sourceTimeouts", 0))
+            > before_timeouts
+            and int(status["sacnDiagnostics"]["winningPriority"]) == 90
+            and int(status.get("sacnPackets", 0)) > int(high["sacnPackets"])
+        ):
+            break
+
+    status = unode_client.get_json("/api/status")
+    assert int(status["sacnDiagnostics"].get("sourceTimeouts", 0)) > before_timeouts
+    assert int(status["sacnDiagnostics"]["winningPriority"]) == 90
+    assert int(status.get("sacnPackets", 0)) > int(high["sacnPackets"])
+
+    step(
+        "sACN source timeout fell back to warm lower-priority source: "
+        f"timeouts={status['sacnDiagnostics']['sourceTimeouts']}, "
+        f"priority={status['sacnDiagnostics']['winningPriority']}, "
+        f"packets={status['sacnPackets']}"
     )

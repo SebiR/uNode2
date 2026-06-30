@@ -1184,6 +1184,16 @@ static void handleStatus() {
   doc["minimumFreeHeap"] =
     minimumFreeHeap;
 
+  doc["heapWarningActive"] =
+    freeHeap < HEAP_WARNING_FREE_BYTES
+    || ESP.getMaxFreeBlockSize() < HEAP_WARNING_MAX_BLOCK_BYTES;
+
+  doc["heapWarningFreeThreshold"] =
+    HEAP_WARNING_FREE_BYTES;
+
+  doc["heapWarningBlockThreshold"] =
+    HEAP_WARNING_MAX_BLOCK_BYTES;
+
   doc["resetReason"] =
     ESP.getResetReason();
 
@@ -1323,6 +1333,12 @@ static void handleStatus() {
     getSacnPriorityDropCount();
   sacnDiagnostics["streamTerminated"] =
     getSacnStreamTerminatedCount();
+  sacnDiagnostics["activeSources"] =
+    getSacnActiveSourceCount();
+  sacnDiagnostics["winningPriority"] =
+    getSacnWinningPriority();
+  sacnDiagnostics["sourceTimeouts"] =
+    getSacnSourceTimeoutCount();
 
   doc["failsafeMode"] =
     config.failsafeMode;

@@ -42,6 +42,12 @@ uint32_t getSacnDirectionDropCount();
 uint32_t getSacnPriorityDropCount();
 /** @return Number of stream-terminated packets accepted. */
 uint32_t getSacnStreamTerminatedCount();
+/** @return Number of sACN sources currently considered alive. */
+uint8_t getSacnActiveSourceCount();
+/** @return Priority of the currently winning source, or zero when idle. */
+uint8_t getSacnWinningPriority();
+/** @return Number of sACN source-loss timeouts. */
+uint32_t getSacnSourceTimeoutCount();
 
 /** @return True when the current frame was sent as sACN multicast. */
 bool sendSacnFrame();
