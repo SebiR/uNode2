@@ -148,8 +148,14 @@ static StatusLedColor getStatusColor(
           return StatusLedColor::GREEN;
 #endif
 
+        case NETWORK_ACCESS_POINT_CONNECTED:
+          return StatusLedColor::GREEN;
+
         case NETWORK_ACCESS_POINT:
-          return StatusLedColor::BLUE;
+          return (now % 1000) < 200
+            ? StatusLedColor::BLUE
+            : StatusLedColor::OFF;
+
 
         case NETWORK_DISCONNECTED:
         default:

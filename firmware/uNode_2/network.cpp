@@ -98,7 +98,9 @@ static void updateNetworkLED() {
     else if (hasAccessPoint())
     {
         setNetworkLedState(
-            NETWORK_ACCESS_POINT);
+            WiFi.softAPgetStationNum() > 0
+                ? NETWORK_ACCESS_POINT_CONNECTED
+                : NETWORK_ACCESS_POINT);
         setNetworkSignalQuality(
             100);
     }
