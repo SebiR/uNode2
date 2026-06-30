@@ -3,6 +3,7 @@
 #include "config.h"
 #include "dmx.h"
 #include "dmx_frame.h"
+#include "event_log.h"
 #include "hardware.h"
 #include "leds.h"
 #include "sacn.h"
@@ -284,10 +285,18 @@ static void applyOutputFailsafe() {
   updateMergePollReplyStatus();
 
   if (sceneMissing) {
+    logEvent(
+      "artnet_failsafe",
+      "Art-Net output failsafe active; backup scene missing, output zero");
+
     artnet.setNodeReport(
       RcConfigErr,
       "Failsafe scene missing; output zero");
   } else {
+    logEvent(
+      "artnet_failsafe",
+      "Art-Net output failsafe active");
+
     artnet.setNodeReport(
       RcPowerOk,
       getFailsafeModeName(config.failsafeMode));
@@ -1185,11 +1194,17 @@ static void onDmxFrame(
     lastWrongUniverse = universe;
     lastWrongUniverseMillis =
       millis();
+    logEvent(
+      "artnet_wrong_universe",
+      "Received ArtDmx on wrong universe");
     return;
   }
 
   if (config.liveProtocol != LIVE_PROTOCOL_ARTNET) {
     protocolDropCounter++;
+    logEvent(
+      "artnet_protocol_mismatch",
+      "Received ArtDmx while sACN is selected");
     return;
   }
 

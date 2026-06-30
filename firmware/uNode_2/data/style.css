@@ -454,7 +454,8 @@ input[type=text],
 input[type=number],
 input[type=password],
 input[type=file],
-select {
+select,
+textarea {
     width: 100%;
     max-width: none;
     padding: 8px 9px;
@@ -465,8 +466,17 @@ select {
     font: inherit;
 }
 
+textarea.eventLogText {
+    min-height: 170px;
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
 input:disabled,
 select:disabled,
+textarea:disabled,
 button:disabled {
     opacity: 0.52;
     cursor: not-allowed;

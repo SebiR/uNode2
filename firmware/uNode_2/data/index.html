@@ -1101,6 +1101,45 @@
 
             <div class="card">
 
+                <h2>Event Log</h2>
+                <p class="helpText">
+                    Volatile runtime warnings since the last restart. Repeated
+                    events are folded into one line with a repeat counter.
+                </p>
+
+                <textarea
+                    id="eventLogText"
+                    class="eventLogText"
+                    rows="8"
+                    readonly>N/A</textarea>
+
+                <div class="buttonRow">
+                    <button
+                        id="eventLogRefreshButton"
+                        class="action secondary"
+                        onclick="refreshEventLog()">
+                        Refresh Log
+                    </button>
+
+                    <button
+                        id="eventLogDownloadButton"
+                        class="action secondary"
+                        onclick="downloadEventLog()">
+                        Download Log
+                    </button>
+
+                    <button
+                        id="eventLogClearButton"
+                        class="action secondary"
+                        onclick="clearEventLog()">
+                        Clear Log
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="card">
+
                 <h2>Access Control</h2>
 
                 <div class="statusgrid">

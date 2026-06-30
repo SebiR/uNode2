@@ -8,6 +8,7 @@
 #include "dmx.h"
 #include "dmx_frame.h"
 #include "hardware.h"
+#include "event_log.h"
 
 #include <ESP8266WebServer.h>
 #include <LittleFS.h>
@@ -53,6 +54,8 @@ static const uint32_t RTC_DIAGNOSTICS_MAGIC = 0x554E4F44UL;
 static uint32_t minimumFreeHeap = UINT32_MAX;
 static bool bootDiagnosticsInitialized = false;
 static uint32_t bootCount = 0;
+
+static bool requireAuth();
 
 struct WebAssetVersionInfo {
   String version;
@@ -358,6 +361,120 @@ static void sendConfigSaveResponse(
     200,
     "application/json",
     json);
+}
+
+/** @brief Appends the volatile in-memory event log to a JSON document. */
+static void addEventLogToJson(
+  JsonDocument& doc) {
+  JsonArray events =
+    doc["events"].to<JsonArray>();
+
+  EventLogEntry entry;
+
+  for (uint8_t i = 0;
+       i < getEventLogCount();
+       i++) {
+    if (!getEventLogEntry(
+          i,
+          entry)) {
+      continue;
+    }
+
+    JsonObject event =
+      events.add<JsonObject>();
+
+    event["uptime"] =
+      entry.uptimeMillis;
+    event["key"] =
+      entry.key;
+    event["message"] =
+      entry.message;
+    event["repeats"] =
+      entry.repeats;
+  }
+}
+
+/** @brief Responds with the volatile in-memory event log as JSON. */
+static void handleEventLog() {
+  JsonDocument doc;
+  addEventLogToJson(doc);
+
+  String json;
+  serializeJson(
+    doc,
+    json);
+
+  server.send(
+    200,
+    "application/json",
+    json);
+}
+
+/** @brief Downloads the volatile in-memory event log as plain text. */
+static void handleEventLogDownload() {
+  String text =
+    "uNode event log\r\n";
+  text +=
+    "Firmware: ";
+  text +=
+    FW_VERSION;
+  text +=
+    "\r\n\r\n";
+
+  EventLogEntry entry;
+
+  for (uint8_t i = 0;
+       i < getEventLogCount();
+       i++) {
+    if (!getEventLogEntry(
+          i,
+          entry)) {
+      continue;
+    }
+
+    text +=
+      "[";
+    text +=
+      String(entry.uptimeMillis);
+    text +=
+      " ms] ";
+    text +=
+      entry.message;
+
+    if (entry.repeats > 0) {
+      text +=
+        " (repeated ";
+      text +=
+        String(entry.repeats);
+      text +=
+        "x)";
+    }
+
+    text +=
+      "\r\n";
+  }
+
+  server.sendHeader(
+    "Content-Disposition",
+    "attachment; filename=\"unode-event-log.txt\"");
+  server.send(
+    200,
+    "text/plain",
+    text);
+}
+
+/** @brief Clears the volatile in-memory event log. */
+static void handleClearEventLog() {
+  if (!requireAuth()) {
+    return;
+  }
+
+  clearEventLog();
+
+  server.send(
+    200,
+    "text/plain",
+    "Event log cleared");
 }
 
 /** @return LittleFS web-asset version marker status. */
@@ -2183,6 +2300,21 @@ bool initWeb() {
     "/api/failsafe/record",
     HTTP_POST,
     handleRecordFailsafeScene);
+
+  server.on(
+    "/api/events",
+    HTTP_GET,
+    handleEventLog);
+
+  server.on(
+    "/api/events/download",
+    HTTP_GET,
+    handleEventLogDownload);
+
+  server.on(
+    "/api/events/clear",
+    HTTP_POST,
+    handleClearEventLog);
 
   server.on(
     "/api/update/firmware",

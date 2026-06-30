@@ -13,6 +13,11 @@ explicitly in each release entry.
 
 ### Changed
 
+- Added a volatile in-memory event log for important runtime warnings,
+  including protocol mismatches, wrong-universe packets, and output failsafe
+  activation. The System page can display, download, and clear the current log.
+- Protocol-mismatch status warnings now trigger only when the matching drop
+  counter increases, so old counters no longer keep re-triggering the banner.
 - Added protocol-mismatch diagnostics and a status-line warning when ArtDmx is
   received while sACN is selected, or sACN is received while Art-Net is selected.
 - Added persistent sACN Source Name and Priority settings to the Protocol page,

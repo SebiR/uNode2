@@ -3,6 +3,7 @@
 #include "artnet.h"
 #include "config.h"
 #include "dmx_frame.h"
+#include "event_log.h"
 #include "leds.h"
 
 #include <ESP8266WiFi.h>
@@ -211,6 +212,9 @@ static bool isSequenceNewer(
 static void applySacnFailsafe() {
   if (config.liveProtocol != LIVE_PROTOCOL_SACN) {
     protocolDropCounter++;
+    logEvent(
+      "sacn_protocol_mismatch",
+      "Received sACN while Art-Net is selected");
     return;
   }
 
@@ -248,6 +252,10 @@ static void applySacnFailsafe() {
   if (shouldSetFrame) {
     setDmxFrame(frame, DMX_CHANNEL_COUNT, true);
   }
+
+  logEvent(
+    "sacn_failsafe",
+    "sACN output failsafe active");
 }
 
 /** @brief Opens the sACN socket and joins the configured multicast group. */
@@ -371,6 +379,9 @@ static void handleSacnPacket(
   if (universe != getSacnUniverse()) {
     wrongUniverseCounter++;
     lastWrongUniverse = universe;
+    logEvent(
+      "sacn_wrong_universe",
+      "Received sACN on wrong universe");
     return;
   }
 

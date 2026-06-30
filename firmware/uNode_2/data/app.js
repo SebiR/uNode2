@@ -19,6 +19,11 @@ function showPage(page)
                 'active',
                 button.dataset.pageButton === page);
         });
+
+    if (page === 'system')
+    {
+        refreshEventLog();
+    }
 }
 
 const themeStorageKey = 'uNodeTheme';
@@ -127,7 +132,7 @@ function updateProtectedUi()
 
     document
         .querySelectorAll(
-            '.content input:not(#loginPassword), .content select, .content button:not(#authButton), #detectNodeButton')
+            '.content input:not(#loginPassword), .content select, .content button:not(#authButton):not(#eventLogRefreshButton):not(#eventLogDownloadButton), #detectNodeButton')
         .forEach(element =>
         {
             element.disabled =
@@ -1250,6 +1255,24 @@ function updateStatusMessages(data)
     const sacnDiagnostics =
         data.sacnDiagnostics;
     const messages = [];
+    const artNetProtocolDrops =
+        Number(
+            diagnostics?.protocolDrops ?? 0);
+    const sacnProtocolDrops =
+        Number(
+            sacnDiagnostics?.protocolDrops ?? 0);
+
+    if (lastArtNetProtocolDrops === null)
+    {
+        lastArtNetProtocolDrops =
+            artNetProtocolDrops;
+    }
+
+    if (lastSacnProtocolDrops === null)
+    {
+        lastSacnProtocolDrops =
+            sacnProtocolDrops;
+    }
 
     if (data.direction == 0
         && diagnostics
@@ -1271,7 +1294,7 @@ function updateStatusMessages(data)
 
     if (data.liveProtocol == 1
         && diagnostics
-        && (diagnostics.protocolDrops ?? 0) > 0)
+        && artNetProtocolDrops > lastArtNetProtocolDrops)
     {
         protocolMismatchWarningVisibleUntil =
             Date.now() + wrongUniverseWarningHoldMs;
@@ -1281,7 +1304,7 @@ function updateStatusMessages(data)
 
     if (data.liveProtocol == 0
         && sacnDiagnostics
-        && (sacnDiagnostics.protocolDrops ?? 0) > 0)
+        && sacnProtocolDrops > lastSacnProtocolDrops)
     {
         protocolMismatchWarningVisibleUntil =
             Date.now() + wrongUniverseWarningHoldMs;
@@ -1310,6 +1333,11 @@ function updateStatusMessages(data)
             'Output failsafe active: '
             + (data.failsafeModeName || 'configured mode'));
     }
+
+    lastArtNetProtocolDrops =
+        artNetProtocolDrops;
+    lastSacnProtocolDrops =
+        sacnProtocolDrops;
 
     if (data.dmxTestOverride)
     {
@@ -1351,6 +1379,8 @@ let wrongUniverseWarningVisibleUntil = 0;
 let lastWrongUniverseWarning = '?';
 let protocolMismatchWarningVisibleUntil = 0;
 let lastProtocolMismatchWarning = '';
+let lastArtNetProtocolDrops = null;
+let lastSacnProtocolDrops = null;
 
 const restartRequiredConfigKeys =
 [
@@ -2386,6 +2416,88 @@ async function uploadConfig()
     }
 
     await restartAndReload();
+}
+
+function formatEventLogLine(event)
+{
+    const repeatText =
+        event.repeats > 0
+            ? ' (repeated ' + event.repeats + 'x)'
+            : '';
+
+    return '['
+        + formatUptime(event.uptime || 0)
+        + '] '
+        + (event.message || 'Unknown event')
+        + repeatText;
+}
+
+async function refreshEventLog()
+{
+    const textArea =
+        document.getElementById(
+            'eventLogText');
+
+    if (!textArea)
+    {
+        return;
+    }
+
+    try
+    {
+        const response =
+            await fetch('/api/events');
+
+        if (!response.ok)
+        {
+            throw new Error(
+                await response.text());
+        }
+
+        const data =
+            await response.json();
+        const events =
+            data.events || [];
+
+        textArea.value =
+            events.length > 0
+                ? events
+                    .map(formatEventLogLine)
+                    .join('\n')
+                : 'No events since last restart.';
+    }
+    catch(error)
+    {
+        textArea.value =
+            'Failed to load event log: '
+            + error;
+    }
+}
+
+function downloadEventLog()
+{
+    window.location.href =
+        '/api/events/download';
+}
+
+async function clearEventLog()
+{
+    const response =
+        await authenticatedFetch(
+            '/api/events/clear',
+            {
+                method: 'POST'
+            });
+
+    if (!response.ok)
+    {
+        alert(
+            'Failed to clear event log: '
+            + await response.text());
+        return;
+    }
+
+    await refreshEventLog();
 }
 
 async function setAdminPassword()
@@ -3545,6 +3657,7 @@ document
 loadAuthStatus();
 loadStatus();
 loadConfig();
+refreshEventLog();
 createDMXMonitor();
 initializeTheme();
 initializeDmxTestControls();
