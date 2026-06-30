@@ -13,6 +13,9 @@ explicitly in each release entry.
 
 ### Changed
 
+- The network status LED now indicates weak Wi-Fi signal quality in client mode:
+  connected nodes stay green above 50%, blink amber below 50%, and blink red
+  below 25%. Legacy single-color LEDs use matching off/on blink patterns.
 - sACN Universe is now shown explicitly in the Protocol page and follows the
   configured Universe value used by controllers such as DMX Workshop.
 - sACN priority handling now keeps lower-priority sources warm and falls back

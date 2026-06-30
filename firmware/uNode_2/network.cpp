@@ -82,18 +82,32 @@ static IPAddress getActiveGateway() {
 static void updateNetworkLED() {
     if (WiFi.status() == WL_CONNECTED)
     {
+        const int rssi =
+            WiFi.RSSI();
+        const uint8_t quality =
+            constrain(
+                2 * (rssi + 100),
+                0,
+                100);
+
         setNetworkLedState(
             NETWORK_CONNECTED);
+        setNetworkSignalQuality(
+            quality);
     }
     else if (hasAccessPoint())
     {
         setNetworkLedState(
             NETWORK_ACCESS_POINT);
+        setNetworkSignalQuality(
+            100);
     }
     else
     {
         setNetworkLedState(
             NETWORK_DISCONNECTED);
+        setNetworkSignalQuality(
+            0);
     }
 }
 

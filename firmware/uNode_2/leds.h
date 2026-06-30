@@ -35,6 +35,8 @@ void updateLEDs();
 void setStatusLedMode(StatusLedMode mode);
 /** @brief Sets the current Wi-Fi state represented by the network LED. */
 void setNetworkLedState(NetworkLedState state);
+/** @brief Sets Wi-Fi signal quality in percent for connected-client indication. */
+void setNetworkSignalQuality(uint8_t qualityPercent);
 
 /** @brief Emits a short green Art-Net activity pulse. */
 void flashArtNetLED();

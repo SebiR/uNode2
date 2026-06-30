@@ -6,6 +6,7 @@
 static StatusLedMode statusMode = LED_OFF;
 static NetworkLedState networkState =
   NETWORK_DISCONNECTED;
+static uint8_t networkSignalQuality = 100;
 
 static uint32_t lastStatusBlink = 0;
 static bool statusBlinkState = false;
@@ -36,6 +37,15 @@ void setStatusLedMode(
 void setNetworkLedState(
   NetworkLedState state) {
   networkState = state;
+}
+
+void setNetworkSignalQuality(
+  uint8_t qualityPercent) {
+  networkSignalQuality =
+    constrain(
+      qualityPercent,
+      0,
+      100);
 }
 
 /** @brief Starts or extends a short activity pulse with the given color. */
@@ -108,7 +118,35 @@ static StatusLedColor getStatusColor(
     case LED_READY:
       switch (networkState) {
         case NETWORK_CONNECTED:
+#if USE_WS2812
+          if (networkSignalQuality < 25) {
+            return (now % 2000) < 200
+              ? StatusLedColor::RED
+              : StatusLedColor::GREEN;
+          }
+
+          if (networkSignalQuality < 50) {
+            return (now % 2000) < 200
+              ? StatusLedColor::ORANGE
+              : StatusLedColor::GREEN;
+          }
+
           return StatusLedColor::GREEN;
+#else
+          if (networkSignalQuality < 25) {
+            return (now % 2000) < 200
+              ? StatusLedColor::GREEN
+              : StatusLedColor::OFF;
+          }
+
+          if (networkSignalQuality < 50) {
+            return (now % 2000) < 200
+              ? StatusLedColor::OFF
+              : StatusLedColor::GREEN;
+          }
+
+          return StatusLedColor::GREEN;
+#endif
 
         case NETWORK_ACCESS_POINT:
           return StatusLedColor::BLUE;

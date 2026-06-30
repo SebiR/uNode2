@@ -19,7 +19,7 @@ static uint32_t getPixelColor(
       return pixels.Color(255, 0, 0);
 
     case StatusLedColor::ORANGE:
-      return pixels.Color(255, 80, 0);
+      return pixels.Color(255, 128, 0);
 
     case StatusLedColor::GREEN:
       return pixels.Color(0, 255, 0);
