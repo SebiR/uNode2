@@ -74,6 +74,7 @@ static uint32_t artSyncCounter = 0;
 static uint32_t wrongUniverseCounter = 0;
 static uint16_t lastWrongUniverse = 0;
 static uint32_t lastWrongUniverseMillis = 0;
+static uint32_t protocolDropCounter = 0;
 static uint32_t directionDropCounter = 0;
 static uint32_t sequenceDropCounter = 0;
 static uint32_t mergeLockDropCounter = 0;
@@ -1188,7 +1189,7 @@ static void onDmxFrame(
   }
 
   if (config.liveProtocol != LIVE_PROTOCOL_ARTNET) {
-    directionDropCounter++;
+    protocolDropCounter++;
     return;
   }
 
@@ -1951,6 +1952,10 @@ bool isArtNetWrongUniverseWarningActive() {
 
 uint32_t getArtNetDirectionDropCount() {
   return directionDropCounter;
+}
+
+uint32_t getArtNetProtocolDropCount() {
+  return protocolDropCounter;
 }
 
 uint32_t getArtNetSequenceDropCount() {

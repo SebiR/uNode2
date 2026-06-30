@@ -219,6 +219,15 @@ void broadcastStatus() {
   doc["artnetActive"] =
     isArtNetActive();
 
+  JsonObject artNetDiagnostics =
+    doc["artNetDiagnostics"].to<JsonObject>();
+  artNetDiagnostics["protocolDrops"] =
+    getArtNetProtocolDropCount();
+  artNetDiagnostics["wrongUniverseWarningActive"] =
+    isArtNetWrongUniverseWarningActive();
+  artNetDiagnostics["lastWrongUniverse"] =
+    getArtNetLastWrongUniverse();
+
   doc["liveProtocol"] =
     config.liveProtocol;
   doc["sacnSourceName"] =
@@ -243,6 +252,11 @@ void broadcastStatus() {
 
   doc["sacnActive"] =
     isSacnActive();
+
+  JsonObject sacnDiagnostics =
+    doc["sacnDiagnostics"].to<JsonObject>();
+  sacnDiagnostics["protocolDrops"] =
+    getSacnProtocolDropCount();
 
   doc["artSyncs"] =
     getArtSyncCounter();

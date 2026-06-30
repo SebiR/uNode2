@@ -1134,6 +1134,8 @@ static void handleStatus() {
     getArtNetLastWrongUniverseAge();
   artNetDiagnostics["wrongUniverseWarningActive"] =
     isArtNetWrongUniverseWarningActive();
+  artNetDiagnostics["protocolDrops"] =
+    getArtNetProtocolDropCount();
   artNetDiagnostics["directionDrops"] =
     getArtNetDirectionDropCount();
   artNetDiagnostics["sequenceDrops"] =

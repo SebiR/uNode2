@@ -13,6 +13,8 @@ explicitly in each release entry.
 
 ### Changed
 
+- Added protocol-mismatch diagnostics and a status-line warning when ArtDmx is
+  received while sACN is selected, or sACN is received while Art-Net is selected.
 - Added persistent sACN Source Name and Priority settings to the Protocol page,
   status API, WebSocket status, and outgoing sACN packets.
 - Added sACN counters to the Detailed Diagnostics page while keeping the

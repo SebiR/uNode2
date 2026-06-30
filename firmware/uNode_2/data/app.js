@@ -1170,6 +1170,9 @@ function updateDetailedDiagnostics(data)
             ? ((diagnostics.lastWrongUniverseAge ?? 0) + ' ms')
             : '---');
     setTextIfPresent(
+        'diagArtProtocolDrops',
+        diagnostics.protocolDrops ?? 0);
+    setTextIfPresent(
         'diagArtDirectionDrops',
         diagnostics.directionDrops ?? 0);
     setTextIfPresent(
@@ -1244,6 +1247,8 @@ function updateStatusMessages(data)
 
     const diagnostics =
         data.artNetDiagnostics;
+    const sacnDiagnostics =
+        data.sacnDiagnostics;
     const messages = [];
 
     if (data.direction == 0
@@ -1262,6 +1267,34 @@ function updateStatusMessages(data)
             'Recent ArtDmx on wrong universe U'
             + lastWrongUniverseWarning
             + ' - check controller/node universe');
+    }
+
+    if (data.liveProtocol == 1
+        && diagnostics
+        && (diagnostics.protocolDrops ?? 0) > 0)
+    {
+        protocolMismatchWarningVisibleUntil =
+            Date.now() + wrongUniverseWarningHoldMs;
+        lastProtocolMismatchWarning =
+            'Received ArtDmx while sACN is selected';
+    }
+
+    if (data.liveProtocol == 0
+        && sacnDiagnostics
+        && (sacnDiagnostics.protocolDrops ?? 0) > 0)
+    {
+        protocolMismatchWarningVisibleUntil =
+            Date.now() + wrongUniverseWarningHoldMs;
+        lastProtocolMismatchWarning =
+            'Received sACN while Art-Net is selected';
+    }
+
+    if (Date.now() < protocolMismatchWarningVisibleUntil)
+    {
+        messages.push(
+            'Protocol mismatch: '
+            + lastProtocolMismatchWarning
+            + ' - check settings');
     }
 
     if (data.webAssetVersionMatch === false)
@@ -1316,6 +1349,8 @@ let configWatchInitialized = false;
 let lastHardwareStatus = null;
 let wrongUniverseWarningVisibleUntil = 0;
 let lastWrongUniverseWarning = '?';
+let protocolMismatchWarningVisibleUntil = 0;
+let lastProtocolMismatchWarning = '';
 
 const restartRequiredConfigKeys =
 [

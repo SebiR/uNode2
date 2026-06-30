@@ -236,6 +236,42 @@ def test_wrong_universe_warning_clears_after_valid_artdmx(
     assert status["artNetDiagnostics"]["wrongUniversePackets"] > before_count
 
 
+def test_artdmx_in_sacn_mode_increments_protocol_drop_counter(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+) -> None:
+    config = preserved_config.copy()
+    config["direction"] = 0  # Protocol -> DMX
+    config["liveProtocol"] = 1  # sACN live data, ArtDmx should be rejected.
+    if configured_port_address(config) == 0:
+        config["universe"] = 1
+
+    step("Switching node to sACN live protocol before ArtDmx protocol-drop test")
+    unode_client.save_config(config)
+    universe = configured_port_address(config)
+    wait_for_status(
+        unode_client,
+        lambda data: int(data.get("liveProtocol", -1)) == 1
+        and int(data["direction"]) == 0,
+    )
+
+    before = unode_client.get_json("/api/status")
+    before_drops = int(before["artNetDiagnostics"].get("protocolDrops", 0))
+    before_packets = int(before["artnetPackets"])
+
+    step("Sending ArtDmx while sACN live data is selected")
+    _send_artdmx(unode_ip, universe, [1, 2, 3, 4])
+
+    status = wait_for_status(
+        unode_client,
+        lambda data: int(data["artNetDiagnostics"].get("protocolDrops", 0))
+        > before_drops,
+    )
+
+    assert int(status["artnetPackets"]) == before_packets
+
+
 def test_artdmx_sequence_drops_duplicate_and_out_of_order_packets(
     unode_client: UNodeClient,
     unode_ip: str,

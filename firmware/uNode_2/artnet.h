@@ -91,6 +91,8 @@ uint16_t getArtNetLastWrongUniverse();
 uint32_t getArtNetLastWrongUniverseAge();
 /** @return True when the wrong Port-Address warning is currently relevant. */
 bool isArtNetWrongUniverseWarningActive();
+/** @return ArtDmx packets ignored because Art-Net live data is disabled. */
+uint32_t getArtNetProtocolDropCount();
 /** @return ArtDmx packets ignored because the node is not in output mode. */
 uint32_t getArtNetDirectionDropCount();
 /** @return ArtDmx packets dropped by sequence tracking. */
