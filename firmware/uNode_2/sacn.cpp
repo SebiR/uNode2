@@ -18,7 +18,7 @@ static const uint16_t SACN_MAX_PACKET_SIZE = 638;
 static const uint32_t SACN_OUTPUT_TIMEOUT_MS = 2500;
 static const uint32_t SACN_BIND_RETRY_MS = 5000;
 static const uint32_t SACN_SOURCE_TIMEOUT_MS = SACN_OUTPUT_TIMEOUT_MS;
-static const uint8_t MAX_SACN_SOURCES = 4;
+static const uint8_t MAX_SACN_SOURCES = 2;
 
 static WiFiUDP sacnUdp;
 static bool sacnSocketReady = false;
@@ -110,7 +110,9 @@ uint16_t getSacnUniverse() {
   const uint16_t configured =
     getConfiguredUniverse();
 
-  return configured + 1;
+  return configured == 0
+    ? 1
+    : configured;
 }
 
 /** @brief Builds a stable pseudo-CID from the ESP chip ID. */

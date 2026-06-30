@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-static const uint8_t EVENT_LOG_CAPACITY = 32;
+static const uint8_t EVENT_LOG_CAPACITY = 16;
 
 static EventLogEntry entries[EVENT_LOG_CAPACITY];
 static uint8_t nextEntry = 0;

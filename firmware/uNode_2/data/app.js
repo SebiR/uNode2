@@ -414,7 +414,7 @@ async function loadStatus()
             'sacnUniverseHint',
             'sACN Universe: '
             + (data.sacnUniverse ?? 'N/A')
-            + ', derived from Art-Net Port-Address.');
+            + ', derived from the configured Universe.');
 
         document.getElementById('firmware').textContent =
             data.firmware +

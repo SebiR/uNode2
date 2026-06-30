@@ -45,7 +45,7 @@ def _configure_sacn_output(
         lambda data: int(data.get("liveProtocol", -1)) == 0,
     )
 
-    universe = configured_port_address(config) + 1
+    universe = configured_port_address(config)
     step(f"Switching node to sACN live protocol on Universe {universe}")
     response = unode_client.save_config(config)
     assert response.get("appliedLive") is True
@@ -225,7 +225,7 @@ def test_sacn_valid_packet_in_artnet_mode_increments_protocol_drop_counter(
     config["direction"] = 0
     config["liveProtocol"] = 0
 
-    universe = configured_port_address(config) + 1
+    universe = configured_port_address(config)
     step("Switching node to Art-Net live protocol before sACN protocol-drop test")
     unode_client.save_config(config)
     wait_for_status(
@@ -264,7 +264,7 @@ def test_sacn_valid_packet_in_dmx_input_mode_increments_direction_drop_counter(
     config["direction"] = 1
     config["liveProtocol"] = 1
 
-    universe = configured_port_address(config) + 1
+    universe = configured_port_address(config)
     step("Switching node to DMX input before sACN direction-drop test")
     unode_client.save_config(config)
     wait_for_status(

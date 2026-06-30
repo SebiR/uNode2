@@ -4,8 +4,8 @@
 
 struct EventLogEntry {
   uint32_t uptimeMillis;
-  char key[28];
-  char message[112];
+  char key[24];
+  char message[96];
   uint16_t repeats;
 };
 

@@ -13,11 +13,13 @@ explicitly in each release entry.
 
 ### Changed
 
-- sACN Universe is now consistently derived as Art-Net Port-Address + 1 and
-  shown that way in the Protocol page.
+- sACN Universe is now shown explicitly in the Protocol page and follows the
+  configured Universe value used by controllers such as DMX Workshop.
 - sACN priority handling now keeps lower-priority sources warm and falls back
   to the best remaining active source when a higher-priority source sends
   Stream_Terminated or times out.
+- Reduced the volatile event log and sACN source table sizes to keep more heap
+  headroom on ESP8266 builds.
 - Added low-heap headroom monitoring that records throttled runtime warnings in
   the volatile event log and exposes the active warning state in `/api/status`.
 - Added a volatile in-memory event log for important runtime warnings,

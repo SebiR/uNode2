@@ -111,7 +111,7 @@ def _configure_unode_output(
         and int(data["failsafeMode"]) == failsafe_mode
         and int(data["mergeMode"]) == merge_mode,
     )
-    return universe + 1 if live_protocol == 1 else universe
+    return universe
 
 
 def _send_artdmx_repeated(
@@ -1833,12 +1833,11 @@ def test_dmx_input_from_rp2040_is_sent_as_full_512_slot_sacn(
 
     step("Switching uNode to DMX -> sACN for full-frame input test")
     unode_client.save_config(config)
-    port_address = configured_port_address(config)
-    universe = port_address + 1
+    universe = configured_port_address(config)
     wait_for_status(
         unode_client,
         lambda data: int(data["direction"]) == 1
-        and int(data["universe"]) == port_address
+        and int(data["universe"]) == universe
         and int(data["sacnUniverse"]) == universe
         and int(data.get("liveProtocol", -1)) == 1,
     )
