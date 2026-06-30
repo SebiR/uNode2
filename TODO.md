@@ -78,10 +78,15 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       receiving network-to-DMX data.
 - [x] Implement DMX-to-sACN transmission with sequence numbers, source name,
       CID, priority, and periodic refresh while DMX input remains active.
-- [ ] Add explicit user-configurable sACN Source Name, priority, and persistent
-      CID/UUID instead of deriving them from existing node identity.
+- [x] Add explicit user-configurable sACN Source Name and priority.
+- [ ] Add a persistent configurable CID/UUID instead of deriving the outgoing
+      CID from the ESP chip identity.
+- [x] Keep lower-priority sACN sources warm and fall back to the best remaining
+      active source after Stream_Terminated or source timeout.
 - [ ] Decide whether sACN Universe Discovery and Synchronization packets are
       required for the first implementation or should remain later additions.
+- [x] Show the effective sACN Universe in the Protocol page and keep it aligned
+      with the configured Universe value used by common controllers.
 - [x] Document that Art-Net remote configuration features such as ArtAddress and
       ArtIpProg remain Art-Net management features while sACN mode is selected
       for live data.
@@ -134,7 +139,7 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Use safe RS-485 boot defaults on new hardware: `DE` pulled low and `/RE`
       pulled high so the MAX3485 is completely passive during reset, boot logs,
       and flashing.
-- [ ] Add optional boot bus guarding for split-control hardware: listen briefly
+- [x] Add optional boot bus guarding for split-control hardware: listen briefly
       after boot before enabling DMX output, detect existing DMX activity, and
       warn, block output, or optionally switch to DMX input according to a stored
       Hardware-tab setting.
@@ -185,6 +190,11 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       WebSocket updates.
 - [x] Add free heap, largest free block, minimum free heap, reset reason, and
       boot count to diagnostics.
+- [x] Add low-heap and largest-free-block runtime warnings to the volatile
+      event log and status line.
+- [x] Add a volatile runtime event log for important warnings such as protocol
+      mismatches, wrong Universe packets, failsafe activation, sACN source
+      timeouts, and heap headroom warnings.
 - [x] Add a browser-side connection watchdog that detects a missing node,
       shows reconnect status, and refreshes status/configuration after the node
       returns.
@@ -288,7 +298,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [ ] Add configuration import, migration, and interrupted-write tests.
 - [ ] Test `millis()` rollover behaviour for all timeout state machines.
 - [ ] Run long-duration soak tests with DMX traffic, WebSocket clients, Wi-Fi
-      interruptions, and repeated controller discovery.
+      interruptions, repeated controller discovery, and both Art-Net/sACN live
+      data modes.
 - [x] Add an initial host-only soak test for repeated HTTP/API reachability,
       ArtPollReply reachability, ArtDmx, ArtSync, malformed parser probes,
       runtime direction/failsafe/merge changes, reboot detection, reset-info
@@ -299,6 +310,9 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       variation, random UART garbage, optional line-noise bursts, below-spec
       frame injection, valid-frame recovery checks, ArtDmx forwarding checks,
       and reboot/reset monitoring.
+- [x] Expand soak profiles so host-only tests cover Art-Net-to-DMX and
+      sACN-to-DMX, while RP2040 HIL DMX-input soak covers DMX-to-Art-Net and
+      DMX-to-sACN.
 - [ ] Extend the RP2040 soak with simultaneous Art-Net output/DMX output
       monitoring and longer mixed-direction runs.
 - [ ] Test power loss during firmware, LittleFS, and configuration updates.
