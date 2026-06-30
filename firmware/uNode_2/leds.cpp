@@ -149,7 +149,11 @@ static StatusLedColor getStatusColor(
 #endif
 
         case NETWORK_ACCESS_POINT_CONNECTED:
+#if USE_WS2812
+          return StatusLedColor::BLUE;
+#else
           return StatusLedColor::GREEN;
+#endif
 
         case NETWORK_ACCESS_POINT:
           return (now % 1000) < 200

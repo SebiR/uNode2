@@ -17,7 +17,8 @@ explicitly in each release entry.
   connected nodes stay green above 50%, blink amber below 50%, and blink red
   below 25%. Legacy single-color LEDs use matching off/on blink patterns.
 - In AP mode, the network status LED now flashes while the AP is available but
-  no station is connected, and turns steady green once a station has joined.
+  no station is connected, and turns steady blue once a station has joined.
+  Legacy single-color LEDs turn steady on once a station has joined.
 - sACN Universe is now shown explicitly in the Protocol page and follows the
   configured Universe value used by controllers such as DMX Workshop.
 - sACN priority handling now keeps lower-priority sources warm and falls back
