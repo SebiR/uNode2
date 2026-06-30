@@ -330,6 +330,24 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       external Art-Net diagnostic consumers become useful; the web diagnostics
       page is the preferred diagnostics interface for now.
 
+## Future / Alternate Firmware Concepts
+
+- [ ] Explore a separate **uNode Wireless DMX** firmware inspired by CRMX-style
+      linking workflows: one transmitter node receives physical DMX and sends
+      it wirelessly to paired receiver nodes.
+- [ ] Prototype ESP-NOW based discovery, linking, unlinking, and credential
+      exchange before switching receivers to normal Wi-Fi client mode.
+- [ ] Use the transmitter as a dedicated SoftAP and keep receiver nodes as
+      clients for deterministic ArtDmx or compact live-data transport over the
+      private Wi-Fi link.
+- [ ] Define a one-button workflow for the alternate firmware: transmitter
+      link mode, receiver forget/unlink, and boot-held recovery mode.
+- [ ] Keep a minimal recovery AP/page in the alternate firmware so devices can
+      always be flashed back to the standard uNode firmware.
+- [ ] Evaluate ESP8266 constraints for the wireless-DMX concept, especially
+      ESP-NOW channel handling, SoftAP/client coexistence, latency, jitter,
+      receiver count, and basic pairing security.
+
 ## Deliberate Scope Decisions
 
 - The web interface uses English only; a localization framework is currently
