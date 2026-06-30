@@ -51,6 +51,8 @@ explicitly in each release entry.
 
 ### Fixed
 
+- Fixed a malformed HTML wrapper in the Protocol page that could cause later
+  GUI tabs to render empty after the sACN settings card.
 - Made the Network tab's "Forget Saved Wi-Fi Credentials" action use
   WiFiManager's ESP8266 persistent credential erase path instead of relying on
   a plain disconnect call.
