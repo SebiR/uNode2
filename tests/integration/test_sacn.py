@@ -20,6 +20,12 @@ def _send_sacn_unicast(unode_ip: str, packet: bytes) -> None:
         sock.close()
 
 
+def _mutated_packet(packet: bytes, offset: int, value: int) -> bytes:
+    data = bytearray(packet)
+    data[offset] = value & 0xFF
+    return bytes(data)
+
+
 def _configure_sacn_output(
     unode_client: UNodeClient,
     preserved_config: dict,
@@ -128,6 +134,143 @@ def test_sacn_wrong_universe_increments_diagnostic_counter(
     assert int(diagnostics["lastWrongUniverse"]) == wrong_universe
 
 
+def test_sacn_malformed_packets_increment_diagnostic_counter(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+) -> None:
+    _config, universe = _configure_sacn_output(unode_client, preserved_config)
+
+    before = unode_client.get_json("/api/status")
+    before_malformed = int(before["sacnDiagnostics"]["malformedPackets"])
+
+    probes = [
+        ("short packet", b"ASC"),
+        (
+            "bad ACN packet identifier",
+            _mutated_packet(
+                make_sacn_dmx(
+                    universe=universe,
+                    sequence=1,
+                    values=[1, 2],
+                ),
+                4,
+                ord("X"),
+            ),
+        ),
+        (
+            "non-zero start code",
+            _mutated_packet(
+                make_sacn_dmx(
+                    universe=universe,
+                    sequence=2,
+                    values=[1, 2],
+                ),
+                125,
+                1,
+            ),
+        ),
+    ]
+
+    for label, packet in probes:
+        step(f"Sending malformed sACN probe: {label}")
+        _send_sacn_unicast(unode_ip, packet)
+
+    status = wait_for_status(
+        unode_client,
+        lambda data: int(data["sacnDiagnostics"]["malformedPackets"])
+        >= before_malformed + len(probes),
+        timeout=3.0,
+    )
+
+    step(
+        "sACN malformed diagnostics: "
+        f"{before_malformed} -> {status['sacnDiagnostics']['malformedPackets']}"
+    )
+
+
+def test_sacn_valid_packet_in_artnet_mode_increments_protocol_drop_counter(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+) -> None:
+    config = preserved_config.copy()
+    config["direction"] = 0
+    config["liveProtocol"] = 0
+    if configured_port_address(config) == 0:
+        config["universe"] = 1
+
+    universe = configured_port_address(config)
+    step("Switching node to Art-Net live protocol before sACN protocol-drop test")
+    unode_client.save_config(config)
+    wait_for_status(
+        unode_client,
+        lambda data: int(data.get("liveProtocol", -1)) == 0
+        and int(data["direction"]) == 0,
+    )
+
+    before = unode_client.get_json("/api/status")
+    before_drops = int(before["sacnDiagnostics"]["protocolDrops"])
+
+    step("Sending valid sACN while Art-Net live data is selected")
+    _send_sacn_unicast(
+        unode_ip,
+        make_sacn_dmx(
+            universe=universe,
+            sequence=1,
+            values=[1, 2, 3, 4],
+        ),
+    )
+
+    status = wait_for_status(
+        unode_client,
+        lambda data: int(data["sacnDiagnostics"]["protocolDrops"]) > before_drops,
+        timeout=3.0,
+    )
+    assert int(status["sacnPackets"]) == int(before["sacnPackets"])
+
+
+def test_sacn_valid_packet_in_dmx_input_mode_increments_direction_drop_counter(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+) -> None:
+    config = preserved_config.copy()
+    config["direction"] = 1
+    config["liveProtocol"] = 1
+    if configured_port_address(config) == 0:
+        config["universe"] = 1
+
+    universe = configured_port_address(config)
+    step("Switching node to DMX input before sACN direction-drop test")
+    unode_client.save_config(config)
+    wait_for_status(
+        unode_client,
+        lambda data: int(data.get("liveProtocol", -1)) == 1
+        and int(data["direction"]) == 1,
+    )
+
+    before = unode_client.get_json("/api/status")
+    before_drops = int(before["sacnDiagnostics"]["directionDrops"])
+
+    step("Sending valid sACN while node is configured for DMX input")
+    _send_sacn_unicast(
+        unode_ip,
+        make_sacn_dmx(
+            universe=universe,
+            sequence=1,
+            values=[1, 2, 3, 4],
+        ),
+    )
+
+    status = wait_for_status(
+        unode_client,
+        lambda data: int(data["sacnDiagnostics"]["directionDrops"]) > before_drops,
+        timeout=3.0,
+    )
+    assert int(status["sacnPackets"]) == int(before["sacnPackets"])
+
+
 def test_sacn_sequence_drops_duplicate_and_out_of_order_packets(
     unode_client: UNodeClient,
     unode_ip: str,
@@ -210,6 +353,50 @@ def test_sacn_sequence_drops_duplicate_and_out_of_order_packets(
         f"packets {before_packets} -> {newer['sacnPackets']}"
     )
     assert int(newer["sacnDiagnostics"]["sequenceDrops"]) >= before_drops + 2
+
+
+def test_sacn_sequence_accepts_wraparound_as_newer(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+) -> None:
+    _config, universe = _configure_sacn_output(unode_client, preserved_config)
+
+    before = unode_client.get_json("/api/status")
+    before_packets = int(before.get("sacnPackets", 0))
+    before_drops = int(before["sacnDiagnostics"]["sequenceDrops"])
+
+    for sequence, values in [
+        (254, [1, 1, 1, 1]),
+        (255, [2, 2, 2, 2]),
+        (1, [3, 3, 3, 3]),
+    ]:
+        step(f"Sending sACN sequence {sequence}; it should be accepted")
+        _send_sacn_unicast(
+            unode_ip,
+            make_sacn_dmx(
+                universe=universe,
+                sequence=sequence,
+                values=values,
+                cid=CID_A,
+            ),
+        )
+        wait_for_status(
+            unode_client,
+            lambda data, minimum=before_packets + 1: int(
+                data.get("sacnPackets", 0)
+            )
+            >= minimum,
+        )
+        before_packets += 1
+
+    status = unode_client.get_json("/api/status")
+    step(
+        "sACN wraparound diagnostics: "
+        f"packets={status['sacnPackets']}, "
+        f"sequenceDrops={status['sacnDiagnostics']['sequenceDrops']}"
+    )
+    assert int(status["sacnDiagnostics"]["sequenceDrops"]) == before_drops
 
 
 def test_sacn_priority_drops_lower_priority_source_while_higher_source_is_active(

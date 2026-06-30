@@ -490,6 +490,61 @@ def test_sacn_to_dmx_output_reaches_rp2040_analyzer(
     assert stats["lastSlots"] >= len(expected)
 
 
+def test_sacn_to_dmx_short_frame_clears_remaining_real_dmx_output(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        live_protocol=1,
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    baseline = [200, 190, 180, 170, 160, 150, 140, 130, 120, 110, 100, 90]
+    short_values = [9, 18, 27, 36, 45, 54]
+    expected = short_values + [0] * (len(baseline) - len(short_values))
+
+    step(f"Sending longer sACN baseline frame: {baseline}")
+    _send_sacn_repeated(
+        unode_ip,
+        universe,
+        baseline,
+        sequence=51,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        baseline,
+        count=len(baseline),
+    )
+
+    step(
+        f"Sending short {len(short_values)}-slot sACN frame; "
+        "remaining DMX output slots should clear to zero"
+    )
+    _send_sacn_repeated(
+        unode_ip,
+        universe,
+        short_values,
+        sequence=61,
+    )
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        expected,
+        count=len(expected),
+    )
+    step(
+        "RP2040 analyzer confirmed short sACN clears remaining slots: "
+        f"values={frame['values']}"
+    )
+
+
 def test_sacn_output_failsafe_zero_reaches_real_dmx_output(
     unode_client: UNodeClient,
     unode_ip: str,

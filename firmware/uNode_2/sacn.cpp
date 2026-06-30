@@ -374,8 +374,13 @@ static void handleSacnPacket(
     return;
   }
 
-  if (config.direction != ARTNET_TO_DMX
-      || config.liveProtocol != LIVE_PROTOCOL_SACN) {
+  if (config.liveProtocol != LIVE_PROTOCOL_SACN) {
+    protocolDropCounter++;
+    return;
+  }
+
+  if (config.direction != ARTNET_TO_DMX) {
+    directionDropCounter++;
     return;
   }
 

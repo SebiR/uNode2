@@ -13,6 +13,8 @@ explicitly in each release entry.
 
 ### Changed
 
+- sACN now counts valid packets dropped because sACN live data is disabled or
+  the node is currently configured for DMX input.
 - Updated sACN network-data-loss handling to use the E1.31 2.5 second timeout
   instead of the previous 5 second live-data timeout.
 - Added a `USE_LEGACY_HARDWARE` build define that selects the original
@@ -51,6 +53,8 @@ explicitly in each release entry.
 
 - Added hardware-in-the-loop checks for sACN output failsafe behavior
   covering Hold, All-to-Zero, All-to-Full, and Backup Scene.
+- Added sACN hardening coverage for short frames, malformed packets,
+  protocol/direction drops, and sequence wraparound.
 
 ## [0.21.0] - 2026-06-29
 
