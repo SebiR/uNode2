@@ -388,9 +388,17 @@ interface.
 | Flashing red, 500 ms toggle interval | Connecting during startup |
 | Flashing orange, 150 ms toggle interval | WiFiManager configuration portal active |
 | Fast flashing red, 120 ms toggle interval | LittleFS boot fault; reboot with recovery button held |
-| Solid blue | Access-point interface active without a client connection |
-| Solid green | Wi-Fi client connected |
+| Brief blue pulse every second | Access point is available, but no station is connected |
+| Solid blue | Access point is active and at least one station is connected |
+| Solid green | Wi-Fi client connected with at least 50% signal quality |
+| Green with brief amber pulse every two seconds | Wi-Fi client connected, signal quality below 50% |
+| Green with brief red pulse every two seconds | Wi-Fi client connected, signal quality below 25% |
 | Off | Indicators muted or LEDs disabled |
+
+Legacy single-color hardware cannot show the WS2812 colors. It uses the same
+logical patterns where possible: AP without a station blinks, AP with a station
+is steady on, weak client signal briefly blanks the LED, and very weak client
+signal inverts the pattern.
 
 ### Art-Net/DMX Activity LED
 
