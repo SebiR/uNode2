@@ -13,6 +13,8 @@ explicitly in each release entry.
 
 ### Changed
 
+- Updated sACN network-data-loss handling to use the E1.31 2.5 second timeout
+  instead of the previous 5 second live-data timeout.
 - Added a `USE_LEGACY_HARDWARE` build define that selects the original
   hardware profile with classic PWM status LEDs, tied RS-485 RE/DE direction
   control, and no switchable termination.
@@ -44,6 +46,11 @@ explicitly in each release entry.
 - Made the Network tab's "Forget Saved Wi-Fi Credentials" action use
   WiFiManager's ESP8266 persistent credential erase path instead of relying on
   a plain disconnect call.
+
+### Tests
+
+- Added hardware-in-the-loop checks for sACN output failsafe behavior
+  covering Hold, All-to-Zero, All-to-Full, and Backup Scene.
 
 ## [0.21.0] - 2026-06-29
 

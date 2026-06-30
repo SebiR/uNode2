@@ -14,7 +14,7 @@
 static const uint16_t SACN_PORT = 5568;
 static const uint16_t SACN_MIN_PACKET_SIZE = 126;
 static const uint16_t SACN_MAX_PACKET_SIZE = 638;
-static const uint32_t SACN_OUTPUT_TIMEOUT_MS = 5000;
+static const uint32_t SACN_OUTPUT_TIMEOUT_MS = 2500;
 static const uint32_t SACN_BIND_RETRY_MS = 5000;
 static const uint32_t SACN_SOURCE_TIMEOUT_MS = 10000;
 static const uint8_t MAX_SACN_SOURCES = 4;

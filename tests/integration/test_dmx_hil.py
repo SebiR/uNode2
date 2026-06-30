@@ -207,6 +207,21 @@ def _wait_for_output_failsafe(unode_client: UNodeClient) -> dict:
     )
 
 
+def _wait_for_sacn_output_failsafe(unode_client: UNodeClient) -> dict:
+    start = time.monotonic()
+    status = wait_for_status(
+        unode_client,
+        lambda data: data["failsafeActive"] is True
+        and data.get("sacnFailsafeActive") is True,
+        timeout=4.0,
+        interval=0.1,
+    )
+    elapsed = time.monotonic() - start
+    step(f"sACN failsafe became active after {elapsed:.2f}s")
+    assert elapsed < 3.8
+    return status
+
+
 def _percent_deviation(value: float, nominal: float) -> float:
     return ((value - nominal) / nominal) * 100.0
 
@@ -473,6 +488,220 @@ def test_sacn_to_dmx_output_reaches_rp2040_analyzer(
 
     assert stats["frames"] > 0
     assert stats["lastSlots"] >= len(expected)
+
+
+def test_sacn_output_failsafe_zero_reaches_real_dmx_output(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        failsafe_mode=1,  # All to Zero
+        live_protocol=1,
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    nonzero = [210, 190, 170, 150, 130, 110]
+    zero = [0, 0, 0, 0, 0, 0]
+
+    step(f"Sending non-zero sACN before failsafe timeout: {nonzero}")
+    _send_sacn_repeated(
+        unode_ip,
+        universe,
+        nonzero,
+        sequence=151,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        nonzero,
+    )
+
+    step("Waiting for E1.31 network-data-loss timeout / All-to-Zero failsafe")
+    status = _wait_for_sacn_output_failsafe(unode_client)
+    step(f"uNode reports sACN failsafe active: mode={status['failsafeModeName']}")
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        zero,
+        timeout=2.0,
+    )
+    step(
+        "RP2040 analyzer confirmed sACN failsafe zero output: "
+        f"values={frame['values']}"
+    )
+
+
+def test_sacn_output_failsafe_hold_keeps_last_real_dmx_output(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        failsafe_mode=0,  # Hold
+        live_protocol=1,
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    held = [44, 77, 110, 143, 176, 209]
+    step(f"Sending sACN before Hold failsafe timeout: {held}")
+    _send_sacn_repeated(
+        unode_ip,
+        universe,
+        held,
+        sequence=161,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        held,
+    )
+
+    step("Waiting for E1.31 network-data-loss timeout / Hold failsafe")
+    status = _wait_for_sacn_output_failsafe(unode_client)
+    step(f"uNode reports sACN failsafe active: mode={status['failsafeModeName']}")
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        held,
+        timeout=2.0,
+    )
+    step(
+        "RP2040 analyzer confirmed sACN Hold keeps last DMX output: "
+        f"values={frame['values']}"
+    )
+
+
+def test_sacn_output_failsafe_full_reaches_real_dmx_output(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        failsafe_mode=2,  # All to Full
+        live_protocol=1,
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    nonfull = [15, 30, 45, 60, 75, 90]
+    full = [255, 255, 255, 255, 255, 255]
+
+    step(f"Sending non-full sACN before All-to-Full timeout: {nonfull}")
+    _send_sacn_repeated(
+        unode_ip,
+        universe,
+        nonfull,
+        sequence=171,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        nonfull,
+    )
+
+    step("Waiting for E1.31 network-data-loss timeout / All-to-Full failsafe")
+    status = _wait_for_sacn_output_failsafe(unode_client)
+    step(f"uNode reports sACN failsafe active: mode={status['failsafeModeName']}")
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        full,
+        timeout=2.0,
+    )
+    step(
+        "RP2040 analyzer confirmed sACN failsafe full output: "
+        f"values={frame['values']}"
+    )
+
+
+def test_sacn_output_failsafe_scene_reaches_real_dmx_output(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    universe = _configure_unode_output(
+        unode_client,
+        preserved_config,
+        failsafe_mode=3,  # Failsafe Scene
+        live_protocol=1,
+    )
+
+    step("Putting RP2040 DMX tool into RX analyzer mode")
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
+    scene = _full_frame_pattern()
+    live = [255 - value for value in scene]
+
+    step(
+        "Sending full 512-slot scene sACN before recording failsafe scene: "
+        f"first={scene[:4]}, last={scene[-4:]}"
+    )
+    _send_sacn_repeated(
+        unode_ip,
+        universe,
+        scene,
+        sequence=181,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        scene,
+        count=512,
+    )
+
+    step("Recording current DMX output as persistent failsafe scene via ArtAddress")
+    send_artnet_packet(
+        unode_ip,
+        make_artaddress(command=ARTNET_AC_FAIL_RECORD),
+    )
+    time.sleep(0.2)
+
+    step(
+        "Sending different full 512-slot live sACN before Failsafe-Scene "
+        f"timeout: first={live[:4]}, last={live[-4:]}"
+    )
+    _send_sacn_repeated(
+        unode_ip,
+        universe,
+        live,
+        sequence=191,
+    )
+    _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        live,
+        count=512,
+    )
+
+    step("Waiting for E1.31 network-data-loss timeout / Backup Scene failsafe")
+    status = _wait_for_sacn_output_failsafe(unode_client)
+    step(f"uNode reports sACN failsafe active: mode={status['failsafeModeName']}")
+
+    frame = _wait_for_rp2040_frame_values(
+        rp2040_tool,
+        scene,
+        count=512,
+        timeout=3.0,
+    )
+    step(
+        "RP2040 analyzer confirmed sACN failsafe scene output: "
+        f"first={frame['values'][:4]}, last={frame['values'][-4:]}"
+    )
 
 
 def test_artnet_to_dmx_htp_merge_uses_highest_values_from_two_physical_sources(
