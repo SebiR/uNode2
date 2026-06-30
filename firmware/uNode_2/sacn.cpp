@@ -540,13 +540,15 @@ static uint16_t buildSacnDataPacket() {
   put32(40, 0x00000002);
 
   const char* name =
-    config.longName.c_str();
+    config.sacnSourceName.length() > 0
+      ? config.sacnSourceName.c_str()
+      : config.longName.c_str();
   strncpy(
     (char*)packetBuffer + 44,
     name,
     63);
 
-  packetBuffer[108] = 100;
+  packetBuffer[108] = config.sacnPriority;
   put16(109, 0x0000);
   packetBuffer[111] = outgoingSequence++;
 

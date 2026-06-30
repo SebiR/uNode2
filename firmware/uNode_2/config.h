@@ -9,7 +9,7 @@
 
 #define FW_VERSION_MAJOR 0
 #define FW_VERSION_MINOR 23
-#define FW_VERSION_PATCH 2
+#define FW_VERSION_PATCH 3
 
 #define FW_STRINGIFY_IMPL(value) #value
 #define FW_STRINGIFY(value) FW_STRINGIFY_IMPL(value)
@@ -24,7 +24,7 @@
 #define FW_FLASH_LAYOUT "4M1M"
 #define FW_LITTLEFS_IMAGE_SIZE 0xFA000UL
 #define FW_WEB_ASSET_VERSION FW_VERSION
-#define CONFIG_SCHEMA_VERSION 4
+#define CONFIG_SCHEMA_VERSION 5
 
 // -----------------------------------------------------------------------------
 // Feature Switches
@@ -313,6 +313,8 @@ struct Config {
 
   MergeMode mergeMode;
   LiveProtocol liveProtocol;
+  String sacnSourceName;
+  uint8_t sacnPriority;
 
   TerminationMode terminationMode;
   BusGuardMode busGuardMode;

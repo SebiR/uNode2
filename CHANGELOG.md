@@ -13,6 +13,10 @@ explicitly in each release entry.
 
 ### Changed
 
+- Added persistent sACN Source Name and Priority settings to the Protocol page,
+  status API, WebSocket status, and outgoing sACN packets.
+- Added sACN counters to the Detailed Diagnostics page while keeping the
+  dashboard focused on high-level protocol activity.
 - sACN now counts valid packets dropped because sACN live data is disabled or
   the node is currently configured for DMX input.
 - Updated sACN network-data-loss handling to use the E1.31 2.5 second timeout
@@ -55,6 +59,8 @@ explicitly in each release entry.
   covering Hold, All-to-Zero, All-to-Full, and Backup Scene.
 - Added sACN hardening coverage for short frames, malformed packets,
   protocol/direction drops, and sequence wraparound.
+- Added regression coverage for configurable sACN Source Name and Priority,
+  including verification on outgoing DMX-to-sACN packets.
 
 ## [0.21.0] - 2026-06-29
 

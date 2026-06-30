@@ -32,6 +32,8 @@ static void setDefaults(Config& target) {
   target.failsafeMode = FAILSAFE_HOLD;
   target.mergeMode = MERGE_HTP;
   target.liveProtocol = LIVE_PROTOCOL_ARTNET;
+  target.sacnSourceName = "IllumiNocte uNode";
+  target.sacnPriority = 100;
   target.terminationMode = TERMINATION_AUTO;
   target.busGuardMode = BUS_GUARD_OFF;
   target.legacyArtPollReply = false;
@@ -207,6 +209,17 @@ static bool validateConfig(
     return false;
   }
 
+  if (candidate.sacnSourceName.length() == 0
+      || candidate.sacnSourceName.length() > 63) {
+    error = "sACN source name must contain 1-63 characters";
+    return false;
+  }
+
+  if (candidate.sacnPriority > 200) {
+    error = "sACN priority must be between 0 and 200";
+    return false;
+  }
+
   if (!candidate.dhcp) {
     if (!validateStaticNetwork(
           candidate,
@@ -289,6 +302,9 @@ static bool applyJson(
   candidate.longName =
     doc["longName"] | candidate.longName;
 
+  candidate.sacnSourceName =
+    doc["sacnSourceName"] | candidate.sacnSourceName;
+
   const int direction =
     doc["direction"] | static_cast<int>(candidate.direction);
 
@@ -316,6 +332,8 @@ static bool applyJson(
     doc["mergeMode"] | static_cast<int>(candidate.mergeMode);
   const int liveProtocol =
     doc["liveProtocol"] | static_cast<int>(candidate.liveProtocol);
+  const int sacnPriority =
+    doc["sacnPriority"] | candidate.sacnPriority;
   const int terminationMode =
     doc["terminationMode"] | static_cast<int>(candidate.terminationMode);
   const int busGuardMode =
@@ -354,6 +372,11 @@ static bool applyJson(
     return false;
   }
 
+  if (sacnPriority < 0 || sacnPriority > 200) {
+    error = "sACN priority must be between 0 and 200";
+    return false;
+  }
+
   if (terminationMode < TERMINATION_OFF
       || terminationMode > TERMINATION_AUTO) {
     error = "Termination mode must be Off, On, or Auto";
@@ -375,6 +398,8 @@ static bool applyJson(
     static_cast<MergeMode>(mergeMode);
   candidate.liveProtocol =
     static_cast<LiveProtocol>(liveProtocol);
+  candidate.sacnPriority =
+    sacnPriority;
   candidate.terminationMode =
     static_cast<TerminationMode>(terminationMode);
   candidate.busGuardMode =
@@ -411,6 +436,8 @@ static void configToJsonDocument(
   doc["failsafeMode"] = source.failsafeMode;
   doc["mergeMode"] = source.mergeMode;
   doc["liveProtocol"] = source.liveProtocol;
+  doc["sacnSourceName"] = source.sacnSourceName;
+  doc["sacnPriority"] = source.sacnPriority;
   doc["terminationMode"] = source.terminationMode;
   doc["busGuardMode"] = source.busGuardMode;
   doc["legacyArtPollReply"] = source.legacyArtPollReply;

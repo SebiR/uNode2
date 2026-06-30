@@ -1160,6 +1160,10 @@ static void handleStatus() {
 
   doc["liveProtocol"] =
     config.liveProtocol;
+  doc["sacnSourceName"] =
+    config.sacnSourceName;
+  doc["sacnPriority"] =
+    config.sacnPriority;
 
   doc["sacnUniverse"] =
     getSacnUniverse();

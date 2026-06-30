@@ -100,6 +100,34 @@ def test_sacn_live_protocol_accepts_data_packet(
     assert int(status["sacnUniverse"]) == universe
 
 
+def test_sacn_source_name_and_priority_are_configurable(
+    unode_client: UNodeClient,
+    preserved_config: dict,
+) -> None:
+    config = preserved_config.copy()
+    config["sacnSourceName"] = "pytest sACN source"
+    config["sacnPriority"] = 137
+
+    step("Saving temporary sACN source name and priority")
+    response = unode_client.save_config(config)
+    assert response.get("appliedLive") is True
+
+    saved = unode_client.get_config()
+    assert saved["sacnSourceName"] == "pytest sACN source"
+    assert int(saved["sacnPriority"]) == 137
+
+    status = wait_for_status(
+        unode_client,
+        lambda data: data.get("sacnSourceName") == "pytest sACN source"
+        and int(data.get("sacnPriority", -1)) == 137,
+    )
+
+    step(
+        "sACN config reflected in status: "
+        f"source='{status['sacnSourceName']}', priority={status['sacnPriority']}"
+    )
+
+
 def test_sacn_wrong_universe_increments_diagnostic_counter(
     unode_client: UNodeClient,
     unode_ip: str,

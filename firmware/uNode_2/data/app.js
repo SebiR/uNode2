@@ -950,6 +950,16 @@ async function loadConfig()
             cfg.liveProtocol ?? 0;
 
         document.getElementById(
+            'sacnSourceName'
+        ).value =
+            cfg.sacnSourceName ?? cfg.longName ?? 'uNode';
+
+        document.getElementById(
+            'sacnPriority'
+        ).value =
+            cfg.sacnPriority ?? 100;
+
+        document.getElementById(
             'legacyArtPollReply'
         ).checked =
             cfg.legacyArtPollReply ?? false;
@@ -1174,6 +1184,48 @@ function updateDetailedDiagnostics(data)
     setTextIfPresent(
         'diagArtSyncTimeouts',
         diagnostics.syncTimeouts ?? 0);
+
+    const sacnDiagnostics =
+        data.sacnDiagnostics;
+
+    setTextIfPresent(
+        'diagSacnUdpPackets',
+        data.sacnUdpPackets ?? 0);
+    setTextIfPresent(
+        'diagSacnPackets',
+        data.sacnPackets ?? 0);
+
+    if (!sacnDiagnostics)
+    {
+        return;
+    }
+
+    setTextIfPresent(
+        'diagSacnMalformedPackets',
+        sacnDiagnostics.malformedPackets ?? 0);
+    setTextIfPresent(
+        'diagSacnWrongUniversePackets',
+        sacnDiagnostics.wrongUniversePackets ?? 0);
+    setTextIfPresent(
+        'diagSacnLastWrongUniverse',
+        (sacnDiagnostics.wrongUniversePackets ?? 0) > 0
+            ? ('U' + (sacnDiagnostics.lastWrongUniverse ?? '?'))
+            : '---');
+    setTextIfPresent(
+        'diagSacnProtocolDrops',
+        sacnDiagnostics.protocolDrops ?? 0);
+    setTextIfPresent(
+        'diagSacnDirectionDrops',
+        sacnDiagnostics.directionDrops ?? 0);
+    setTextIfPresent(
+        'diagSacnSequenceDrops',
+        sacnDiagnostics.sequenceDrops ?? 0);
+    setTextIfPresent(
+        'diagSacnPriorityDrops',
+        sacnDiagnostics.priorityDrops ?? 0);
+    setTextIfPresent(
+        'diagSacnStreamTerminated',
+        sacnDiagnostics.streamTerminated ?? 0);
 }
 
 function updateStatusMessages(data)
@@ -1296,6 +1348,8 @@ const configFieldIds =
     'failsafeMode',
     'mergeMode',
     'liveProtocol',
+    'sacnSourceName',
+    'sacnPriority',
     'terminationMode',
     'busGuardMode',
     'legacyArtPollReply'
@@ -1513,6 +1567,17 @@ function readConfigForm()
             parseInt(
                 document.getElementById(
                     'liveProtocol'
+                ).value),
+
+        sacnSourceName:
+            document.getElementById(
+                'sacnSourceName'
+            ).value,
+
+        sacnPriority:
+            parseInt(
+                document.getElementById(
+                    'sacnPriority'
                 ).value),
 
         terminationMode:
@@ -1845,6 +1910,10 @@ async function revertConfigChanges()
         configBaseline.mergeMode;
     document.getElementById('liveProtocol').value =
         configBaseline.liveProtocol ?? 0;
+    document.getElementById('sacnSourceName').value =
+        configBaseline.sacnSourceName ?? configBaseline.longName ?? 'uNode';
+    document.getElementById('sacnPriority').value =
+        configBaseline.sacnPriority ?? 100;
     document.getElementById('terminationMode').value =
         configBaseline.terminationMode;
     document.getElementById('busGuardMode').value =
@@ -2616,11 +2685,18 @@ function updateDirectionMode()
             document.getElementById(
                 'liveProtocol')
                 .value) === 0;
+    const usesSacn =
+        !usesArtNet;
 
     document.getElementById(
         'artnetSubscriberSettings')
         .style.display =
             sendsArtNet && usesArtNet ? 'block' : 'none';
+
+    document.getElementById(
+        'sacnSettings')
+        .style.display =
+            usesSacn ? 'block' : 'none';
 
     document.getElementById(
         'failsafeSettings')

@@ -369,6 +369,42 @@
 
 				<div class="settingsSection">
 
+				<div
+					id="sacnSettings"
+					class="settingsSection subduedSection">
+
+				<h3>sACN / E1.31</h3>
+
+				<div class="formRows">
+
+				<label>
+					<span>Source Name</span>
+					<input
+						id="sacnSourceName"
+						type="text"
+						maxlength="63">
+				</label>
+
+				<label>
+					<span>Priority</span>
+					<input
+						id="sacnPriority"
+						type="number"
+						min="0"
+						max="200">
+				</label>
+
+				</div>
+
+				<p class="helpText">
+					Priority 100 is the E1.31 default. Higher priority sources
+					take precedence over lower priority sources.
+				</p>
+
+				</div>
+
+				<div class="settingsSection">
+
 				<h3>Port-Address</h3>
 
 				<div class="compactFields">
@@ -1207,6 +1243,42 @@
 
 					<div class="label">ArtSync Timeouts</div>
 					<div id="diagArtSyncTimeouts">0</div>
+				</div>
+            </div>
+
+            <div class="card">
+                <h2>sACN / E1.31</h2>
+
+				<div class="statusgrid">
+					<div class="label">UDP Packets</div>
+					<div id="diagSacnUdpPackets">0</div>
+
+					<div class="label">Accepted Data Packets</div>
+					<div id="diagSacnPackets">0</div>
+
+					<div class="label">Malformed Packets</div>
+					<div id="diagSacnMalformedPackets">0</div>
+
+					<div class="label">Wrong Universe</div>
+					<div id="diagSacnWrongUniversePackets">0</div>
+
+					<div class="label">Last Wrong Universe</div>
+					<div id="diagSacnLastWrongUniverse">---</div>
+
+					<div class="label">Protocol Drops</div>
+					<div id="diagSacnProtocolDrops">0</div>
+
+					<div class="label">Direction Drops</div>
+					<div id="diagSacnDirectionDrops">0</div>
+
+					<div class="label">Sequence Drops</div>
+					<div id="diagSacnSequenceDrops">0</div>
+
+					<div class="label">Priority Drops</div>
+					<div id="diagSacnPriorityDrops">0</div>
+
+					<div class="label">Stream Terminated</div>
+					<div id="diagSacnStreamTerminated">0</div>
 				</div>
             </div>
 

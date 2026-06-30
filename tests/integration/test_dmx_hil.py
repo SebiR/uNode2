@@ -1828,6 +1828,8 @@ def test_dmx_input_from_rp2040_is_sent_as_full_512_slot_sacn(
     config["net"] = 0
     config["subnetId"] = 0
     config["universe"] = 1
+    config["sacnSourceName"] = "uNode pytest source"
+    config["sacnPriority"] = 123
 
     step("Switching uNode to DMX -> sACN for full-frame input test")
     unode_client.save_config(config)
@@ -1881,7 +1883,8 @@ def test_dmx_input_from_rp2040_is_sent_as_full_512_slot_sacn(
             f"first={list(packet.values[:4])}, last={list(packet.values[-4:])}"
         )
 
-        assert packet.priority == 100
+        assert packet.priority == 123
+        assert packet.source_name == "uNode pytest source"
         assert len(packet.values) == 512
         assert list(packet.values) == values
     finally:
