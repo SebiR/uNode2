@@ -81,7 +81,8 @@ Or auto-detect a single connected RP2040 USB serial port:
 The RP2040 tests are skipped unless `UNODE_RP2040_PORT` or `-Rp2040Port` is
 provided.
 
-Run the host-only soak/stability test for a specific duration:
+Run the host-only network-output soak/stability tests for a specific duration.
+This runs Art-Net -> DMX and sACN -> DMX profiles:
 
 ```powershell
 .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Path tests/integration/test_soak.py -SoakSeconds 600
@@ -93,7 +94,8 @@ Optional soak tuning:
 .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Path tests/integration/test_soak.py -SoakSeconds 3600 -SoakInterval 1 -SoakGrace 8
 ```
 
-Run the RP2040 hardware-in-the-loop DMX input soak with timing/fault injection:
+Run the RP2040 hardware-in-the-loop DMX input soak with timing/fault injection.
+This runs DMX -> Art-Net and DMX -> sACN profiles:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Rp2040Port auto -Path tests/integration/test_dmx_soak_hil.py -DmxSoakSeconds 600
@@ -123,16 +125,16 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
 - The restart persistence integration test stores representative runtime and
   hardware settings, restarts the node through `/api/restart`, and verifies the
   restored configuration through `/api/config`, `/api/status`, and ArtPollReply.
-- The host-only soak test repeatedly checks HTTP reachability, ArtPollReply
-  reachability, reboot counters, reset diagnostics, heap health, ArtDmx,
-  ArtSync, malformed Art-Net parser probes, and live runtime configuration
-  changes. It is intentionally excluded from normal quick runs unless selected
-  by path.
+- The host-only soak tests repeatedly check HTTP reachability, ArtPollReply
+  reachability, reboot counters, reset diagnostics, heap health, ArtDmx/sACN
+  output input traffic, ArtSync, malformed Art-Net/sACN parser probes, and live
+  runtime configuration changes. They are intentionally excluded from normal
+  quick runs unless selected by path.
 - The DMX hardware-in-the-loop soak test uses the RP2040 as a physical DMX
   sender, varies Break/MAB/baud/slot timing, injects below-spec/random frames,
   optionally injects random line-noise bursts when the RP2040 firmware supports
   the `noise` JSON command, and verifies that uNode recovers to valid DMX input
-  and keeps forwarding ArtDmx without rebooting.
+  and keeps forwarding ArtDmx or sACN without rebooting.
 - The live-configuration integration test currently changes Art-Net direction,
   Net, Sub-Net, and Universe, verifies `/api/status`, verifies ArtPollReply, and
   then restores the previous configuration.

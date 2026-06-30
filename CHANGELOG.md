@@ -73,6 +73,10 @@ explicitly in each release entry.
 
 ### Tests
 
+- Expanded soak testing profiles: host-only soak now covers Art-Net -> DMX and
+  sACN -> DMX, while RP2040 HIL DMX-input soak now covers DMX -> Art-Net and
+  DMX -> sACN. The soak tests continue to watch Boot Count, reset diagnostics,
+  reachability, and heap health.
 - Added sACN priority fallback coverage for warm lower-priority sources after
   Stream_Terminated and source-loss timeout.
 - Added hardware-in-the-loop checks for sACN output failsafe behavior

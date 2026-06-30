@@ -6,6 +6,8 @@ import socket
 import time
 from dataclasses import dataclass, field
 
+import pytest
+
 from artnet_packets import (
     ARTNET_ID,
     ARTNET_PORT,
@@ -16,6 +18,7 @@ from artnet_packets import (
     make_artsync,
 )
 from helpers import configured_port_address, request_artpoll_reply, send_artnet_packet, step
+from sacn_packets import SACN_PORT, make_sacn_dmx
 from unode_client import UNodeClient
 
 
@@ -28,6 +31,7 @@ class SoakStats:
     poll_replies: int = 0
     artpoll_packets: int = 0
     artdmx_packets: int = 0
+    sacn_packets: int = 0
     artsync_packets: int = 0
     parser_probes: int = 0
     config_changes: int = 0
@@ -38,6 +42,12 @@ class SoakStats:
     min_free_heap: int = 0
     max_heap_fragmentation: int = 0
     last_status: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class HostSoakProfile:
+    name: str
+    live_protocol: int
 
 
 def _soak_duration_seconds() -> float:
@@ -84,6 +94,14 @@ def _send_udp(unode_ip: str, packet: bytes) -> None:
         sock.close()
 
 
+def _send_sacn_udp(unode_ip: str, packet: bytes) -> None:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.sendto(packet, (unode_ip, SACN_PORT))
+    finally:
+        sock.close()
+
+
 def _parser_probe_packets(universe: int) -> list[tuple[str, bytes]]:
     return [
         ("short packet", b"Art"),
@@ -104,10 +122,15 @@ def _parser_probe_packets(universe: int) -> list[tuple[str, bytes]]:
     ]
 
 
-def _mutated_runtime_config(original: dict, rng: random.Random, iteration: int) -> dict:
+def _runtime_soak_config(
+    original: dict,
+    rng: random.Random,
+    iteration: int,
+    profile: HostSoakProfile,
+) -> dict:
     config = original.copy()
-    config["liveProtocol"] = 0
-    config["direction"] = iteration % 2
+    config["liveProtocol"] = profile.live_protocol
+    config["direction"] = 0
     config["mergeMode"] = rng.choice([0, 1])
     config["failsafeMode"] = rng.choice([0, 1, 2, 3])
     config["legacyArtPollReply"] = bool(iteration % 3 == 0)
@@ -162,33 +185,48 @@ def _request_artpoll_reply_with_grace(
     ) from last_error
 
 
-def test_host_soak_artnet_and_runtime_stability(
+@pytest.mark.parametrize(
+    "profile",
+    [
+        HostSoakProfile("artnet-output", 0),
+        HostSoakProfile("sacn-output", 1),
+    ],
+    ids=lambda profile: profile.name,
+)
+def test_host_soak_network_output_and_runtime_stability(
     unode_client: UNodeClient,
     unode_ip: str,
+    profile: HostSoakProfile,
 ) -> None:
-    """Run a deliberately mixed host-only stability test against one uNode."""
+    """Run host-driven network -> DMX stability tests against one uNode."""
 
     duration = _soak_duration_seconds()
     interval = _soak_interval_seconds()
     grace = _reachability_grace_seconds()
     rng = random.Random(0xA27E7)
     original_config = unode_client.get_config()
-    artnet_config = original_config.copy()
-    artnet_config["liveProtocol"] = 0
-    universe = configured_port_address(artnet_config)
+    soak_config = original_config.copy()
+    soak_config["direction"] = 0
+    soak_config["liveProtocol"] = profile.live_protocol
+    universe = configured_port_address(soak_config)
+    sacn_universe = max(1, universe)
     deadline = time.monotonic() + duration
     stats = SoakStats()
 
     step(
-        "Starting host-only soak: "
+        "Starting host-only network-output soak: "
+        f"profile={profile.name} "
         f"duration={duration:.1f}s interval={interval:.2f}s "
-        f"grace={grace:.1f}s universe={universe}"
+        f"grace={grace:.1f}s artnetUniverse={universe} "
+        f"sacnUniverse={sacn_universe}"
     )
 
     try:
-        if int(original_config.get("liveProtocol", 0)) != 0:
-            step("Switching node to Art-Net live protocol for host-only soak")
-            unode_client.save_config(artnet_config)
+        step(
+            "Switching node to network -> DMX for host-only soak: "
+            f"profile={profile.name}"
+        )
+        unode_client.save_config(soak_config)
 
         initial_status = _read_status_with_timeout(unode_client)
         initial_boot_count = int(initial_status["bootCount"])
@@ -263,15 +301,27 @@ def test_host_soak_artnet_and_runtime_stability(
 
             payload_length = rng.choice([2, 4, 6, 24, 64, 128, 512])
             values = [rng.randrange(256) for _ in range(payload_length)]
-            send_artnet_packet(
-                unode_ip,
-                make_artdmx(
-                    universe,
-                    values,
-                    sequence=0,
-                ),
-            )
-            stats.artdmx_packets += 1
+
+            if profile.live_protocol == 0:
+                send_artnet_packet(
+                    unode_ip,
+                    make_artdmx(
+                        universe,
+                        values,
+                        sequence=0,
+                    ),
+                )
+                stats.artdmx_packets += 1
+            else:
+                _send_sacn_udp(
+                    unode_ip,
+                    make_sacn_dmx(
+                        universe=sacn_universe,
+                        values=values,
+                        sequence=(iteration % 255) or 1,
+                    ),
+                )
+                stats.sacn_packets += 1
 
             if iteration % 5 == 0:
                 send_artnet_packet(unode_ip, make_artpoll())
@@ -287,15 +337,26 @@ def test_host_soak_artnet_and_runtime_stability(
                 _send_udp(unode_ip, packet)
                 stats.parser_probes += 1
 
+                if profile.live_protocol == 1:
+                    _send_sacn_udp(unode_ip, b"not-sacn")
+                    stats.parser_probes += 1
+
             if iteration % 10 == 0:
-                config = _mutated_runtime_config(original_config, rng, iteration)
+                config = _runtime_soak_config(
+                    original_config,
+                    rng,
+                    iteration,
+                    profile,
+                )
                 step(
                     "Soak runtime config change: "
-                    f"direction={config['direction']} merge={config['mergeMode']} "
-                    f"failsafe={config['failsafeMode']} legacy={config['legacyArtPollReply']}"
+                    f"profile={profile.name} merge={config['mergeMode']} "
+                    f"failsafe={config['failsafeMode']} "
+                    f"legacy={config['legacyArtPollReply']}"
                 )
                 unode_client.save_config(config)
                 universe = configured_port_address(config)
+                sacn_universe = max(1, universe)
                 stats.config_changes += 1
 
             time.sleep(interval)
@@ -311,9 +372,11 @@ def test_host_soak_artnet_and_runtime_stability(
     stats.last_status = final_status
     step(
         "Soak summary: "
+        f"profile={profile.name}, "
         f"http={stats.http_checks}, artPolls={stats.artpoll_packets}, "
         f"pollReplies={stats.poll_replies}, "
-        f"artdmx={stats.artdmx_packets}, artsync={stats.artsync_packets}, "
+        f"artdmx={stats.artdmx_packets}, sacn={stats.sacn_packets}, "
+        f"artsync={stats.artsync_packets}, "
         f"parserProbes={stats.parser_probes}, configChanges={stats.config_changes}, "
         f"httpGaps={stats.transient_http_gaps}, pollGaps={stats.transient_poll_gaps}, "
         f"minFreeHeap={stats.min_free_heap}, "

@@ -6,6 +6,8 @@ import socket
 import time
 from dataclasses import dataclass
 
+import pytest
+
 from artnet_packets import (
     ARTNET_PORT,
     make_artpollreply_for_subscriber,
@@ -13,6 +15,7 @@ from artnet_packets import (
 )
 from helpers import configured_port_address, step, wait_for_status
 from rp2040_dmx_tool import Rp2040DmxTool
+from sacn_packets import SACN_PORT, parse_sacn_dmx, sacn_multicast_address
 from unode_client import UNodeClient
 
 
@@ -28,6 +31,12 @@ class DmxInputScenario:
     mbb_us: int = 0
     expect_forwarded_artdmx: bool = True
     noise: bool = False
+
+
+@dataclass(frozen=True)
+class DmxInputSoakProfile:
+    name: str
+    live_protocol: int
 
 
 def _dmx_soak_duration_seconds() -> float:
@@ -79,6 +88,48 @@ def _wait_for_artdmx_from_unode(
     )
 
 
+def _join_sacn_multicast(sock: socket.socket, *, local_ip: str, universe: int) -> None:
+    group_ip = sacn_multicast_address(universe)
+    membership = socket.inet_aton(group_ip) + socket.inet_aton(local_ip)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, membership)
+
+
+def _wait_for_sacn_from_unode(
+    sock: socket.socket,
+    *,
+    unode_ip: str,
+    universe: int,
+    expected: list[int],
+    timeout: float = 4.0,
+) -> None:
+    deadline = time.time() + timeout
+    last_packet = None
+
+    while time.time() < deadline:
+        sock.settimeout(max(0.05, deadline - time.time()))
+        try:
+            data, sender = sock.recvfrom(1024)
+        except socket.timeout:
+            break
+
+        if sender[0] != unode_ip:
+            continue
+
+        try:
+            packet = parse_sacn_dmx(data)
+        except ValueError:
+            continue
+
+        last_packet = packet
+        if packet.universe == universe and list(packet.values[: len(expected)]) == expected:
+            return
+
+    raise AssertionError(
+        "Timed out waiting for sACN from uNode during DMX soak "
+        f"universe={universe}, expected={expected[:8]}, last={last_packet}"
+    )
+
+
 def _drain_udp(sock: socket.socket) -> None:
     sock.settimeout(0.01)
     while True:
@@ -92,15 +143,19 @@ def _scenario_values(index: int, slots: int) -> list[int]:
     return [((index * 29) + (slot * 17) + 3) & 0xFF for slot in range(slots)]
 
 
-def _configure_unode_input(unode_client: UNodeClient, preserved_config: dict) -> tuple[dict, int]:
+def _configure_unode_input(
+    unode_client: UNodeClient,
+    preserved_config: dict,
+    profile: DmxInputSoakProfile,
+) -> tuple[dict, int]:
     config = preserved_config.copy()
-    config["direction"] = 1  # DMX -> Art-Net
-    config["liveProtocol"] = 0  # Art-Net output from DMX input
+    config["direction"] = 1  # DMX -> network
+    config["liveProtocol"] = profile.live_protocol
     config["net"] = 0
     config["subnetId"] = 0
     config["universe"] = 1
 
-    step("Switching uNode to DMX -> Art-Net for DMX HIL soak")
+    step(f"Switching uNode to DMX -> {profile.name} for DMX HIL soak")
     unode_client.save_config(config)
     universe = configured_port_address(config)
     wait_for_status(
@@ -142,13 +197,22 @@ def _advertise_subscriber(
         time.sleep(0.05)
 
 
+@pytest.mark.parametrize(
+    "profile",
+    [
+        DmxInputSoakProfile("Art-Net", 0),
+        DmxInputSoakProfile("sACN", 1),
+    ],
+    ids=lambda profile: profile.name.lower(),
+)
 def test_dmx_input_hil_soak_survives_timing_faults(
     unode_client: UNodeClient,
     unode_ip: str,
     preserved_config: dict,
     rp2040_tool: Rp2040DmxTool,
+    profile: DmxInputSoakProfile,
 ) -> None:
-    config, universe = _configure_unode_input(unode_client, preserved_config)
+    config, universe = _configure_unode_input(unode_client, preserved_config, profile)
     duration = _dmx_soak_duration_seconds()
     deadline = time.time() + duration
     receiver_ip = _local_ipv4_for_target(unode_ip)
@@ -206,13 +270,17 @@ def test_dmx_input_hil_soak_survives_timing_faults(
     fault_injections = 0
 
     try:
-        sock.bind(("", ARTNET_PORT))
-        _advertise_subscriber(
-            sock,
-            unode_ip=unode_ip,
-            config=config,
-            receiver_ip=receiver_ip,
-        )
+        if profile.live_protocol == 0:
+            sock.bind(("", ARTNET_PORT))
+            _advertise_subscriber(
+                sock,
+                unode_ip=unode_ip,
+                config=config,
+                receiver_ip=receiver_ip,
+            )
+        else:
+            sock.bind(("", SACN_PORT))
+            _join_sacn_multicast(sock, local_ip=receiver_ip, universe=universe)
 
         initial_status = unode_client.get_json("/api/status")
         initial_boot_count = int(initial_status["bootCount"])
@@ -225,7 +293,8 @@ def test_dmx_input_hil_soak_survives_timing_faults(
 
         step(
             "Starting DMX HIL soak: "
-            f"duration={duration:.1f}s receiver={receiver_ip} universe={universe}"
+            f"profile={profile.name} duration={duration:.1f}s "
+            f"receiver={receiver_ip} universe={universe}"
         )
 
         while time.time() < deadline:
@@ -254,12 +323,13 @@ def test_dmx_input_hil_soak_survives_timing_faults(
             )
 
             _drain_udp(sock)
-            _advertise_subscriber(
-                sock,
-                unode_ip=unode_ip,
-                config=config,
-                receiver_ip=receiver_ip,
-            )
+            if profile.live_protocol == 0:
+                _advertise_subscriber(
+                    sock,
+                    unode_ip=unode_ip,
+                    config=config,
+                    receiver_ip=receiver_ip,
+                )
             if scenario.noise:
                 if noise_supported:
                     rp2040_tool.noise(
@@ -283,13 +353,22 @@ def test_dmx_input_hil_soak_survives_timing_faults(
                 rp2040_tool.tx("start")
 
             if scenario.expect_forwarded_artdmx:
-                _wait_for_artdmx_from_unode(
-                    sock,
-                    unode_ip=unode_ip,
-                    universe=universe,
-                    expected=values,
-                    timeout=4.0,
-                )
+                if profile.live_protocol == 0:
+                    _wait_for_artdmx_from_unode(
+                        sock,
+                        unode_ip=unode_ip,
+                        universe=universe,
+                        expected=values,
+                        timeout=4.0,
+                    )
+                else:
+                    _wait_for_sacn_from_unode(
+                        sock,
+                        unode_ip=unode_ip,
+                        universe=universe,
+                        expected=values,
+                        timeout=4.0,
+                    )
                 forwarded_checks += 1
             else:
                 fault_injections += 1
@@ -297,12 +376,13 @@ def test_dmx_input_hil_soak_survives_timing_faults(
 
                 recovery_values = _scenario_values(iterations + 1000, 6)
                 _drain_udp(sock)
-                _advertise_subscriber(
-                    sock,
-                    unode_ip=unode_ip,
-                    config=config,
-                    receiver_ip=receiver_ip,
-                )
+                if profile.live_protocol == 0:
+                    _advertise_subscriber(
+                        sock,
+                        unode_ip=unode_ip,
+                        config=config,
+                        receiver_ip=receiver_ip,
+                    )
                 rp2040_tool.set_timing(
                     break_us=176,
                     mab_us=16,
@@ -311,13 +391,22 @@ def test_dmx_input_hil_soak_survives_timing_faults(
                 )
                 rp2040_tool.set_frame(recovery_values, slots=6)
                 rp2040_tool.tx("start")
-                _wait_for_artdmx_from_unode(
-                    sock,
-                    unode_ip=unode_ip,
-                    universe=universe,
-                    expected=recovery_values,
-                    timeout=4.0,
-                )
+                if profile.live_protocol == 0:
+                    _wait_for_artdmx_from_unode(
+                        sock,
+                        unode_ip=unode_ip,
+                        universe=universe,
+                        expected=recovery_values,
+                        timeout=4.0,
+                    )
+                else:
+                    _wait_for_sacn_from_unode(
+                        sock,
+                        unode_ip=unode_ip,
+                        universe=universe,
+                        expected=recovery_values,
+                        timeout=4.0,
+                    )
                 forwarded_checks += 1
 
             status = unode_client.get_json("/api/status", timeout=2.0)
@@ -332,7 +421,8 @@ def test_dmx_input_hil_soak_survives_timing_faults(
         final_stats = rp2040_tool.get_stats()
         step(
             "DMX HIL soak summary: "
-            f"iterations={iterations}, forwardedChecks={forwarded_checks}, "
+            f"profile={profile.name}, iterations={iterations}, "
+            f"forwardedChecks={forwarded_checks}, "
             f"faultInjections={fault_injections}, "
             f"rp2040Mode={final_stats.get('mode')}"
         )
