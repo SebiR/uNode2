@@ -46,6 +46,15 @@ void flashDMXInputLED();
 /** @brief Emits a short amber physical DMX output pulse. */
 void flashDMXOutputLED();
 
+/** @brief Shows a persistent alternating amber update-in-progress pattern. */
+void showUpdateInProgressLEDs();
+/** @brief Shows a persistent green update-success pattern until reboot. */
+void showUpdateSucceededLEDs();
+/** @brief Shows a short alternating red update-failed pattern. */
+void showUpdateFailedLEDs();
+/** @brief Shows a persistent blue/red recovery-mode warning pattern. */
+void showRecoveryModeLEDs();
+
 /** @brief Sets global LED brightness in percent in the active configuration. */
 void setLEDBrightness(uint8_t brightness);
 

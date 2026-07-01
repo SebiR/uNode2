@@ -119,6 +119,7 @@ void setup() {
 
     setStatusLedMode(
       LED_CONFIG_PORTAL);
+    showRecoveryModeLEDs();
 
     initRecoveryNetwork();
     initRecoveryWeb(filesystemMounted);

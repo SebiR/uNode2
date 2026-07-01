@@ -268,7 +268,7 @@ http://<hostname>.local
 - In AP + Client mode, the access point intentionally remains active.
 
 The WiFiManager configuration portal also uses `2.0.0.1` and is indicated by
-the orange status-LED pattern described below.
+the amber status-LED pattern described below.
 
 ### Saved Wi-Fi Credentials
 
@@ -409,7 +409,18 @@ Activity pulses normally last approximately 50 ms.
 | Off | No current activity |
 | Green | Art-Net management or transmission activity |
 | Cyan | Physical DMX input frame received |
-| Yellow | ArtDmx received and passed to physical DMX output |
+| Amber | ArtDmx or sACN received and passed to physical DMX output |
+
+### System Override Patterns
+
+These patterns temporarily override the regular status and activity display.
+
+| Pattern | Meaning |
+|---|---|
+| Alternating amber between both LEDs | Firmware or LittleFS update in progress |
+| Both LEDs solid green | Update accepted; restart follows |
+| Alternating red between both LEDs | Update failed or upload aborted; regular LED display resumes shortly |
+| Alternating blue/red between both LEDs | Recovery Mode active |
 
 ### Art-Net Indicator Overrides
 

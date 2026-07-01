@@ -852,6 +852,7 @@ static bool beginUpdateUpload(
     updateUploadError =
       "Upload size is missing or invalid";
     LOG_WARN(updateUploadError);
+    showUpdateFailedLEDs();
     return false;
   }
 
@@ -860,6 +861,7 @@ static bool beginUpdateUpload(
     updateUploadError =
       "Firmware image is too large for the OTA slot";
     LOG_WARN(updateUploadError);
+    showUpdateFailedLEDs();
     return false;
   }
 
@@ -868,6 +870,7 @@ static bool beginUpdateUpload(
     updateUploadError =
       "LittleFS image size does not match the configured 4M1M filesystem";
     LOG_WARN(updateUploadError);
+    showUpdateFailedLEDs();
     return false;
   }
 
@@ -883,9 +886,11 @@ static bool beginUpdateUpload(
       Update.getErrorString();
     LOG_ERROR_PRINT("Update.begin failed: ");
     LOG_PRINTLN(LOG_LEVEL_ERROR, updateUploadError);
+    showUpdateFailedLEDs();
     return false;
   }
 
+  showUpdateInProgressLEDs();
   return true;
 }
 
@@ -913,6 +918,7 @@ static void handleUpdateUpload(
       updateUploadError =
         "Upload exceeds declared size";
       LOG_WARN(updateUploadError);
+      showUpdateFailedLEDs();
       return;
     }
 
@@ -928,6 +934,7 @@ static void handleUpdateUpload(
         Update.getErrorString();
       LOG_ERROR_PRINT("Update.write failed: ");
       LOG_PRINTLN(LOG_LEVEL_ERROR, updateUploadError);
+      showUpdateFailedLEDs();
     }
   } else if (
     upload.status == UPLOAD_FILE_END) {
@@ -935,6 +942,7 @@ static void handleUpdateUpload(
         && updateWrittenSize != updateDeclaredSize) {
       updateUploadError =
         "Upload size mismatch";
+      showUpdateFailedLEDs();
     }
 
     if (updateUploadError.length() == 0) {
@@ -943,6 +951,7 @@ static void handleUpdateUpload(
           Update.getErrorString();
         LOG_ERROR_PRINT("Update.end failed: ");
         LOG_PRINTLN(LOG_LEVEL_ERROR, updateUploadError);
+        showUpdateFailedLEDs();
       } else {
         updateUploadSucceeded = true;
         LOG_INFO("Update upload completed");
@@ -959,7 +968,10 @@ static void handleUpdateUpload(
     updateUploadError =
       "Upload aborted";
     LOG_WARN(updateUploadError);
+    showUpdateFailedLEDs();
   }
+
+  updateLEDs();
 }
 
 /** @brief Sends the final response after an OTA upload transaction. */
@@ -985,8 +997,11 @@ static void handleUpdateComplete(
         ? updateUploadError
         : "Update failed");
 
+    showUpdateFailedLEDs();
     return;
   }
+
+  showUpdateSucceededLEDs();
 
   server.send(
     200,

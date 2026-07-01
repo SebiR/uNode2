@@ -15,6 +15,19 @@ static uint32_t artnetFlashUntil = 0;
 static StatusLedColor activityColor =
   StatusLedColor::OFF;
 
+enum SystemLedPattern
+{
+    SYSTEM_PATTERN_NONE = 0,
+    SYSTEM_PATTERN_UPDATE_PROGRESS,
+    SYSTEM_PATTERN_UPDATE_SUCCESS,
+    SYSTEM_PATTERN_UPDATE_FAILED,
+    SYSTEM_PATTERN_RECOVERY
+};
+
+static SystemLedPattern systemPattern =
+  SYSTEM_PATTERN_NONE;
+static uint32_t systemPatternUntil = 0;
+
 static LedIndicatorMode indicatorMode =
   INDICATORS_NORMAL;
 static uint32_t locateLastToggle = 0;
@@ -69,6 +82,37 @@ void flashDMXInputLED() {
 void flashDMXOutputLED() {
   flashActivityLED(
     StatusLedColor::ORANGE);
+}
+
+static void setSystemLedPattern(
+  SystemLedPattern pattern,
+  uint32_t durationMs = 0) {
+  systemPattern = pattern;
+  systemPatternUntil =
+    durationMs > 0
+      ? millis() + durationMs
+      : 0;
+}
+
+void showUpdateInProgressLEDs() {
+  setSystemLedPattern(
+    SYSTEM_PATTERN_UPDATE_PROGRESS);
+}
+
+void showUpdateSucceededLEDs() {
+  setSystemLedPattern(
+    SYSTEM_PATTERN_UPDATE_SUCCESS);
+}
+
+void showUpdateFailedLEDs() {
+  setSystemLedPattern(
+    SYSTEM_PATTERN_UPDATE_FAILED,
+    2500);
+}
+
+void showRecoveryModeLEDs() {
+  setSystemLedPattern(
+    SYSTEM_PATTERN_RECOVERY);
 }
 
 void setLocate(bool enabled) {
@@ -202,17 +246,91 @@ static StatusLedColor getStatusColor(
   }
 }
 
+/** @brief Renders one pair of logical LED colors and stores them for WebSocket mirroring. */
+static void renderLogicalColors(
+  StatusLedColor networkColor,
+  StatusLedColor activityLedColor) {
+  renderedNetworkColor = networkColor;
+  renderedActivityColor = activityLedColor;
+
+  renderStatusLeds(
+    networkColor,
+    activityLedColor,
+    config.ledBrightness);
+}
+
+/** @return True when a temporary or persistent system pattern was rendered. */
+static bool renderSystemPattern(
+  uint32_t now) {
+  if (systemPattern == SYSTEM_PATTERN_NONE) {
+    return false;
+  }
+
+  if (systemPatternUntil > 0
+      && (int32_t)(now - systemPatternUntil) >= 0) {
+    systemPattern =
+      SYSTEM_PATTERN_NONE;
+    systemPatternUntil = 0;
+    return false;
+  }
+
+  const bool phase =
+    (now % 400) < 200;
+
+  switch (systemPattern) {
+    case SYSTEM_PATTERN_UPDATE_PROGRESS:
+      renderLogicalColors(
+        phase
+          ? StatusLedColor::ORANGE
+          : StatusLedColor::OFF,
+        phase
+          ? StatusLedColor::OFF
+          : StatusLedColor::ORANGE);
+      return true;
+
+    case SYSTEM_PATTERN_UPDATE_SUCCESS:
+      renderLogicalColors(
+        StatusLedColor::GREEN,
+        StatusLedColor::GREEN);
+      return true;
+
+    case SYSTEM_PATTERN_UPDATE_FAILED:
+      renderLogicalColors(
+        phase
+          ? StatusLedColor::RED
+          : StatusLedColor::OFF,
+        phase
+          ? StatusLedColor::OFF
+          : StatusLedColor::RED);
+      return true;
+
+    case SYSTEM_PATTERN_RECOVERY:
+      renderLogicalColors(
+        phase
+          ? StatusLedColor::BLUE
+          : StatusLedColor::RED,
+        phase
+          ? StatusLedColor::RED
+          : StatusLedColor::BLUE);
+      return true;
+
+    case SYSTEM_PATTERN_NONE:
+    default:
+      return false;
+  }
+}
+
 void updateLEDs() {
   const uint32_t now = millis();
 
-  if (indicatorMode == INDICATORS_MUTE) {
-    renderedNetworkColor = StatusLedColor::OFF;
-    renderedActivityColor = StatusLedColor::OFF;
+  if (renderSystemPattern(now)) {
+    return;
+  }
 
-    renderStatusLeds(
+  if (indicatorMode == INDICATORS_MUTE) {
+    renderLogicalColors(
       StatusLedColor::OFF,
-      StatusLedColor::OFF,
-      config.ledBrightness);
+      StatusLedColor::OFF);
 
     return;
   }
@@ -228,13 +346,9 @@ void updateLEDs() {
         ? StatusLedColor::MAGENTA
         : StatusLedColor::OFF;
 
-    renderedNetworkColor = locateColor;
-    renderedActivityColor = locateColor;
-
-    renderStatusLeds(
+    renderLogicalColors(
       locateColor,
-      locateColor,
-      config.ledBrightness);
+      locateColor);
 
     return;
   }
@@ -247,11 +361,7 @@ void updateLEDs() {
       ? activityColor
       : StatusLedColor::OFF;
 
-  renderedNetworkColor = statusColor;
-  renderedActivityColor = artnetColor;
-
-  renderStatusLeds(
+  renderLogicalColors(
     statusColor,
-    artnetColor,
-    config.ledBrightness);
+    artnetColor);
 }

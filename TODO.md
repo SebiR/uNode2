@@ -164,7 +164,7 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Add a Network-tab and Recovery-page action to forget saved Wi-Fi station
       credentials without performing a full factory reset.
 - [x] Expose the current recovery boot mode in diagnostics.
-- [ ] Use a distinctive LED pattern for recovery boot.
+- [x] Use a distinctive LED pattern for recovery boot.
 - [ ] Review all LED blink codes as a coherent product language. Consider a
       short both-LEDs-red fault pulse for important runtime errors where
       supported, and define equivalent legacy single-color patterns.
