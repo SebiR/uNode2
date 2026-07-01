@@ -30,6 +30,7 @@ static uint32_t systemPatternUntil = 0;
 
 static LedIndicatorMode indicatorMode =
   INDICATORS_NORMAL;
+static bool muteUntilReboot = false;
 static uint32_t locateLastToggle = 0;
 static bool locateState = false;
 
@@ -137,6 +138,15 @@ bool isLocateActive() {
 
 LedIndicatorMode getLedIndicatorMode() {
   return indicatorMode;
+}
+
+void muteLEDsUntilReboot() {
+  muteUntilReboot = true;
+}
+
+bool areLEDsMuted() {
+  return muteUntilReboot
+         || indicatorMode == INDICATORS_MUTE;
 }
 
 void getRenderedLedColors(
@@ -327,7 +337,7 @@ void updateLEDs() {
     return;
   }
 
-  if (indicatorMode == INDICATORS_MUTE) {
+  if (areLEDsMuted()) {
     renderLogicalColors(
       StatusLedColor::OFF,
       StatusLedColor::OFF);

@@ -101,8 +101,13 @@
   },
   "tests/integration/test_rp2040_gpio_hil.py::test_rp2040_gpio_can_toggle_unode_local_button_locate": {
     "group": "Hardware HIL",
-    "title": "Local button Toggle Locate",
-    "description": "Uses a wired RP2040 AUX GPIO to press the uNode hardware button and verify Locate toggles."
+    "title": "Local button short press",
+    "description": "Uses a wired RP2040 AUX GPIO to short-press the uNode hardware button and verify Locate toggles."
+  },
+  "tests/integration/test_rp2040_gpio_hil.py::test_rp2040_gpio_long_press_mutes_unode_leds_until_reboot": {
+    "group": "Hardware HIL",
+    "title": "Local button long press",
+    "description": "Uses a wired RP2040 AUX GPIO to long-press the uNode hardware button and verify status LEDs mute until reboot."
   },
   "tests/integration/test_rp2040_gpio_hil.py::test_rp2040_gpio_can_reset_unode_and_observe_boot_count": {
     "group": "Hardware HIL",

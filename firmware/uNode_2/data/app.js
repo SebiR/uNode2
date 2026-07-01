@@ -986,9 +986,14 @@ async function loadConfig()
             cfg.busGuardMode ?? 0;
 
         document.getElementById(
-            'buttonAction'
+            'buttonShortAction'
         ).value =
-            cfg.buttonAction ?? 0;
+            cfg.buttonShortAction ?? cfg.buttonAction ?? 0;
+
+        document.getElementById(
+            'buttonLongAction'
+        ).value =
+            cfg.buttonLongAction ?? 0;
 
 		if (cfg.direction == 0)
 		{
@@ -1141,6 +1146,15 @@ function updateHardwareStatus(data)
             data.rs485ReceiverEnabled
                 ? 'Enabled'
                 : 'Disabled');
+    }
+
+    if (data.ledMuted !== undefined)
+    {
+        setTextIfPresent(
+            'ledMuteStatus',
+            data.ledMuted
+                ? 'Muted until reboot'
+                : 'Inactive');
     }
 }
 
@@ -1443,7 +1457,8 @@ const configFieldIds =
     'sacnPriority',
     'terminationMode',
     'busGuardMode',
-    'buttonAction',
+    'buttonShortAction',
+    'buttonLongAction',
     'legacyArtPollReply'
 ];
 
@@ -1684,10 +1699,16 @@ function readConfigForm()
                     'busGuardMode'
                 ).value),
 
-        buttonAction:
+        buttonShortAction:
             parseInt(
                 document.getElementById(
-                    'buttonAction'
+                    'buttonShortAction'
+                ).value),
+
+        buttonLongAction:
+            parseInt(
+                document.getElementById(
+                    'buttonLongAction'
                 ).value),
 
         legacyArtPollReply:
@@ -2016,6 +2037,10 @@ async function revertConfigChanges()
         configBaseline.terminationMode;
     document.getElementById('busGuardMode').value =
         configBaseline.busGuardMode;
+    document.getElementById('buttonShortAction').value =
+        configBaseline.buttonShortAction ?? configBaseline.buttonAction ?? 0;
+    document.getElementById('buttonLongAction').value =
+        configBaseline.buttonLongAction ?? 0;
     document.getElementById('legacyArtPollReply').checked =
         configBaseline.legacyArtPollReply;
 

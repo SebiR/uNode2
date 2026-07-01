@@ -19,10 +19,13 @@ static bool recoveryBootMode = false;
 static uint32_t nextHeapWarningCheckMillis = 0;
 static bool buttonLastRawPressed = false;
 static bool buttonDebouncedPressed = false;
-static bool buttonActionFired = false;
+static bool buttonLongActionFired = false;
 static uint32_t buttonLastTransitionMillis = 0;
+static uint32_t buttonPressedSinceMillis = 0;
 
 static const uint32_t BUTTON_DEBOUNCE_MS = 200;
+static const uint32_t BUTTON_SHORT_PRESS_MAX_MS = 500;
+static const uint32_t BUTTON_LONG_PRESS_MS = 2000;
 
 /** @brief Adds a throttled event when runtime heap gets critically tight. */
 static void monitorHeapHeadroom() {
@@ -78,6 +81,32 @@ static bool isRecoveryButtonHeldAtBoot() {
 #endif
 }
 
+/** @brief Executes one configured runtime button action. */
+static void executeButtonAction(
+  ButtonAction action,
+  const char* eventCode,
+  const char* eventMessage) {
+  switch (action) {
+    case BUTTON_ACTION_TOGGLE_LOCATE:
+      toggleArtNetLocate();
+      logEvent(
+        eventCode,
+        eventMessage);
+      break;
+
+    case BUTTON_ACTION_MUTE_LEDS_UNTIL_REBOOT:
+      muteLEDsUntilReboot();
+      logEvent(
+        eventCode,
+        eventMessage);
+      break;
+
+    case BUTTON_ACTION_DISABLED:
+    default:
+      break;
+  }
+}
+
 /** @brief Polls the local hardware button for normal-runtime actions. */
 static void updateLocalButton() {
 #if ENABLE_BOOT_RECOVERY_BUTTON
@@ -98,30 +127,40 @@ static void updateLocalButton() {
   if (rawPressed != buttonDebouncedPressed) {
     buttonDebouncedPressed = rawPressed;
 
-    if (!buttonDebouncedPressed) {
-      buttonActionFired = false;
+    if (buttonDebouncedPressed) {
+      buttonPressedSinceMillis = now;
+      buttonLongActionFired = false;
+    } else {
+      const uint32_t pressDuration =
+        buttonPressedSinceMillis > 0
+          ? now - buttonPressedSinceMillis
+          : 0;
+
+      if (!buttonLongActionFired
+          && pressDuration <= BUTTON_SHORT_PRESS_MAX_MS) {
+        executeButtonAction(
+          config.buttonShortAction,
+          "button_short",
+          "Hardware button short press action");
+      }
+
+      buttonPressedSinceMillis = 0;
+      buttonLongActionFired = false;
     }
   }
 
   if (!buttonDebouncedPressed
-      || buttonActionFired) {
+      || buttonLongActionFired
+      || buttonPressedSinceMillis == 0
+      || now - buttonPressedSinceMillis < BUTTON_LONG_PRESS_MS) {
     return;
   }
 
-  buttonActionFired = true;
-
-  switch (config.buttonAction) {
-    case BUTTON_ACTION_TOGGLE_LOCATE:
-      toggleArtNetLocate();
-      logEvent(
-        "button_locate",
-        "Hardware button toggled Locate");
-      break;
-
-    case BUTTON_ACTION_DISABLED:
-    default:
-      break;
-  }
+  buttonLongActionFired = true;
+  executeButtonAction(
+    config.buttonLongAction,
+    "button_long",
+    "Hardware button long press action");
 #endif
 }
 

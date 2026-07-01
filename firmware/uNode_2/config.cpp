@@ -36,7 +36,8 @@ static void setDefaults(Config& target) {
   target.sacnPriority = 100;
   target.terminationMode = TERMINATION_AUTO;
   target.busGuardMode = BUS_GUARD_OFF;
-  target.buttonAction = BUTTON_ACTION_DISABLED;
+  target.buttonShortAction = BUTTON_ACTION_DISABLED;
+  target.buttonLongAction = BUTTON_ACTION_DISABLED;
   target.legacyArtPollReply = false;
   target.adminPasswordHash = "";
 }
@@ -339,8 +340,12 @@ static bool applyJson(
     doc["terminationMode"] | static_cast<int>(candidate.terminationMode);
   const int busGuardMode =
     doc["busGuardMode"] | static_cast<int>(candidate.busGuardMode);
-  const int buttonAction =
-    doc["buttonAction"] | static_cast<int>(candidate.buttonAction);
+  const int legacyButtonAction =
+    doc["buttonAction"] | static_cast<int>(candidate.buttonShortAction);
+  const int buttonShortAction =
+    doc["buttonShortAction"] | legacyButtonAction;
+  const int buttonLongAction =
+    doc["buttonLongAction"] | static_cast<int>(candidate.buttonLongAction);
 
   if (net < 0 || net > 127) {
     error = "Art-Net net must be between 0 and 127";
@@ -392,9 +397,15 @@ static bool applyJson(
     return false;
   }
 
-  if (buttonAction < BUTTON_ACTION_DISABLED
-      || buttonAction > BUTTON_ACTION_TOGGLE_LOCATE) {
-    error = "Button action must be Disabled or Toggle Locate";
+  if (buttonShortAction < BUTTON_ACTION_DISABLED
+      || buttonShortAction > BUTTON_ACTION_TOGGLE_LOCATE) {
+    error = "Short button action must be Disabled or Toggle Locate";
+    return false;
+  }
+
+  if (buttonLongAction < BUTTON_ACTION_DISABLED
+      || buttonLongAction > BUTTON_ACTION_MUTE_LEDS_UNTIL_REBOOT) {
+    error = "Long button action must be Disabled, Toggle Locate, or Mute LEDs";
     return false;
   }
 
@@ -413,8 +424,10 @@ static bool applyJson(
     static_cast<TerminationMode>(terminationMode);
   candidate.busGuardMode =
     static_cast<BusGuardMode>(busGuardMode);
-  candidate.buttonAction =
-    static_cast<ButtonAction>(buttonAction);
+  candidate.buttonShortAction =
+    static_cast<ButtonAction>(buttonShortAction);
+  candidate.buttonLongAction =
+    static_cast<ButtonAction>(buttonLongAction);
 
   candidate.legacyArtPollReply =
     doc["legacyArtPollReply"] | candidate.legacyArtPollReply;
@@ -451,7 +464,9 @@ static void configToJsonDocument(
   doc["sacnPriority"] = source.sacnPriority;
   doc["terminationMode"] = source.terminationMode;
   doc["busGuardMode"] = source.busGuardMode;
-  doc["buttonAction"] = source.buttonAction;
+  doc["buttonAction"] = source.buttonShortAction;
+  doc["buttonShortAction"] = source.buttonShortAction;
+  doc["buttonLongAction"] = source.buttonLongAction;
   doc["legacyArtPollReply"] = source.legacyArtPollReply;
 
   if (includeSecrets

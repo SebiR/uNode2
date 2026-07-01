@@ -958,13 +958,24 @@
 				</p>
 
 				<div class="statusgrid">
-					<div class="label">Button Action</div>
+					<div class="label">Short Press (&lt;500 ms)</div>
 					<div>
-						<select id="buttonAction">
+						<select id="buttonShortAction">
 							<option value="0">Deactivated</option>
 							<option value="1">Toggle Locate</option>
 						</select>
 					</div>
+
+					<div class="label">Long Press (&gt;2 s)</div>
+					<div>
+						<select id="buttonLongAction">
+							<option value="0">Deactivated</option>
+							<option value="2">Mute LEDs until reboot</option>
+						</select>
+					</div>
+
+					<div class="label">LED Mute</div>
+					<div id="ledMuteStatus">Inactive</div>
 				</div>
             </div>
 

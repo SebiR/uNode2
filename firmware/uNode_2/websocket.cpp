@@ -283,7 +283,11 @@ void broadcastStatus() {
     config.busGuardMode;
 
   doc["buttonAction"] =
-    config.buttonAction;
+    config.buttonShortAction;
+  doc["buttonShortAction"] =
+    config.buttonShortAction;
+  doc["buttonLongAction"] =
+    config.buttonLongAction;
 
   doc["universe"] =
     getConfiguredUniverse();
@@ -350,6 +354,10 @@ void broadcastStatus() {
 
   doc["squawking"] =
     isSquawking();
+  doc["ledIndicatorMode"] =
+    getLedIndicatorMode();
+  doc["ledMuted"] =
+    areLEDsMuted();
 
   const int rssi =
     WiFi.status() == WL_CONNECTED

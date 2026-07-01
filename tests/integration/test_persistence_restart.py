@@ -49,6 +49,8 @@ def test_runtime_and_hardware_settings_persist_after_api_restart(
         config.get("terminationMode", 2),
         modulo=3,
     )
+    config["buttonShortAction"] = 1
+    config["buttonLongAction"] = 2
     config["legacyArtPollReply"] = not bool(config.get("legacyArtPollReply", False))
     config["ledBrightness"] = _different_brightness(config.get("ledBrightness", 50))
     # Keep boot-time auto-switching disabled during this restart-focused test so
@@ -64,6 +66,8 @@ def test_runtime_and_hardware_settings_persist_after_api_restart(
         f"name={config['shortName']}, portAddress={port_address}, "
         f"failsafe={config['failsafeMode']}, merge={config['mergeMode']}, "
         f"termination={config['terminationMode']}, "
+        f"buttonShort={config['buttonShortAction']}, "
+        f"buttonLong={config['buttonLongAction']}, "
         f"legacy={config['legacyArtPollReply']}"
     )
     response = unode_client.save_config(config)
@@ -95,6 +99,8 @@ def test_runtime_and_hardware_settings_persist_after_api_restart(
         "failsafeMode",
         "mergeMode",
         "terminationMode",
+        "buttonShortAction",
+        "buttonLongAction",
         "legacyArtPollReply",
         "ledBrightness",
         "busGuardMode",
@@ -109,6 +115,8 @@ def test_runtime_and_hardware_settings_persist_after_api_restart(
         and int(data["failsafeMode"]) == config["failsafeMode"]
         and int(data["mergeMode"]) == config["mergeMode"]
         and int(data["terminationMode"]) == config["terminationMode"]
+        and int(data["buttonShortAction"]) == config["buttonShortAction"]
+        and int(data["buttonLongAction"]) == config["buttonLongAction"]
         and int(data["busGuardMode"]) == config["busGuardMode"]
         and data["name"] == config["shortName"],
     )

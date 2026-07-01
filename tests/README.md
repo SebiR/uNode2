@@ -171,8 +171,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
   already present on the RS-485 bus.
 - The RP2040 AUX GPIO hardware-in-the-loop test verifies the tester's JSON GPIO
   commands. If `UNODE_BUTTON_GPIO_PIN` is set to the RP2040 GPIO wired to the
-  uNode active-low button input, an additional test presses the local button
-  and verifies that the configured Toggle Locate action changes `/api/status`.
+  uNode active-low button input, additional tests press the local button and
+  verify that short press toggles Locate and long press mutes status LEDs until
+  reboot.
   If `UNODE_RESET_GPIO_PIN` is set to the GPIO wired to the active-low reset
   input, another optional test pulses reset and verifies that the boot counter
   increases.

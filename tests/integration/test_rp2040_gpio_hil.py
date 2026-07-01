@@ -5,7 +5,7 @@ import os
 import pytest
 
 from artnet_packets import ARTNET_AC_LED_LOCATE, ARTNET_AC_LED_NORMAL, make_artaddress
-from helpers import send_artnet_packet, step, wait_for_status
+from helpers import send_artnet_packet, step, wait_for_node_restart, wait_for_status
 from rp2040_dmx_tool import Rp2040DmxTool
 from unode_client import UNodeClient
 
@@ -70,15 +70,16 @@ def test_rp2040_gpio_can_toggle_unode_local_button_locate(
         )
 
     config = preserved_config.copy()
-    config["buttonAction"] = 1  # Toggle Locate
+    config["buttonShortAction"] = 1  # Toggle Locate
+    config["buttonLongAction"] = 0  # Disabled
 
-    step(f"Configuring local button action and using RP2040 GPIO{pin} as button pull-down")
+    step(f"Configuring short button action and using RP2040 GPIO{pin} as button pull-down")
     response = unode_client.save_config(config)
     assert response.get("restartRequired") is False
 
     status = wait_for_status(
         unode_client,
-        lambda data: int(data.get("buttonAction", -1)) == 1,
+        lambda data: int(data.get("buttonShortAction", -1)) == 1,
     )
     initial_locate = bool(status.get("squawking", False))
 
@@ -118,6 +119,63 @@ def test_rp2040_gpio_can_toggle_unode_local_button_locate(
             lambda data: bool(data.get("squawking", False)) == initial_locate,
             timeout=3.0,
         )
+
+
+def test_rp2040_gpio_long_press_mutes_unode_leds_until_reboot(
+    unode_client: UNodeClient,
+    preserved_config: dict,
+    rp2040_tool: Rp2040DmxTool,
+) -> None:
+    pin = _configured_button_gpio_pin()
+    if pin is None:
+        pytest.skip(
+            "Set UNODE_BUTTON_GPIO_PIN to the RP2040 AUX GPIO wired to the "
+            "uNode active-low button input"
+        )
+
+    config = preserved_config.copy()
+    config["buttonShortAction"] = 0  # Disabled
+    config["buttonLongAction"] = 2  # Mute LEDs until reboot
+
+    step(f"Configuring long button action and using RP2040 GPIO{pin} as button pull-down")
+    response = unode_client.save_config(config)
+    assert response.get("restartRequired") is False
+
+    status = wait_for_status(
+        unode_client,
+        lambda data: int(data.get("buttonLongAction", -1)) == 2,
+    )
+    assert status.get("ledMuted") is False
+    initial_boot_count = int(status["bootCount"])
+
+    try:
+        rp2040_tool.gpio_release(pin)
+
+        step("Holding active-low button input for 2300 ms")
+        rp2040_tool.gpio_pulse(
+            pin,
+            value=0,
+            duration_ms=2300,
+            release=True,
+        )
+
+        muted = wait_for_status(
+            unode_client,
+            lambda data: data.get("ledMuted") is True,
+            timeout=3.0,
+        )
+        assert muted["ledMuted"] is True
+    finally:
+        rp2040_tool.gpio_release(pin)
+
+        step("Restarting node to clear LED mute-until-reboot latch")
+        restart_status, body = unode_client.post_json("/api/restart")
+        assert restart_status == 200, body.decode(errors="replace")
+        restarted = wait_for_node_restart(
+            unode_client,
+            previous_boot_count=initial_boot_count,
+        )
+        assert restarted.get("ledMuted") is False
 
 
 def test_rp2040_gpio_can_reset_unode_and_observe_boot_count(

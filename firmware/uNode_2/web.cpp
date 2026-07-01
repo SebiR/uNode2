@@ -1394,6 +1394,10 @@ static void handleStatus() {
 
   doc["squawking"] =
     isSquawking();
+  doc["ledIndicatorMode"] =
+    getLedIndicatorMode();
+  doc["ledMuted"] =
+    areLEDsMuted();
 
   IPAddress broadcast =
     getArtNetBroadcast();
@@ -1423,7 +1427,11 @@ static void handleStatus() {
     config.busGuardMode;
 
   doc["buttonAction"] =
-    config.buttonAction;
+    config.buttonShortAction;
+  doc["buttonShortAction"] =
+    config.buttonShortAction;
+  doc["buttonLongAction"] =
+    config.buttonLongAction;
 
   doc["terminationEnabled"] =
     isTerminationEnabled();
