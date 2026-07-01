@@ -19,6 +19,13 @@ from unode_client import UNodeClient
 
 _TEST_REPORTS: dict[str, dict[str, object]] = {}
 _SESSION_STARTED_AT = datetime.now(timezone.utc)
+_RP2040_INFO: dict[str, object] = {
+    "configuredPort": os.environ.get("UNODE_RP2040_PORT", ""),
+    "port": "",
+    "firmware": "",
+    "mode": "",
+    "auxGpioPins": [],
+}
 
 
 def integration_enabled() -> bool:
@@ -67,6 +74,30 @@ def _safe_filename_part(value: object) -> str:
     text = str(value or "").strip()
     text = re.sub(r"[^A-Za-z0-9._-]+", "-", text)
     return text.strip("-._")
+
+
+def _format_rp2040_info() -> str:
+    port = str(
+        _RP2040_INFO.get("port")
+        or _RP2040_INFO.get("configuredPort")
+        or ""
+    ).strip()
+    firmware = str(_RP2040_INFO.get("firmware") or "").strip()
+    mode = str(_RP2040_INFO.get("mode") or "").strip()
+    aux_gpio_pins = _RP2040_INFO.get("auxGpioPins")
+
+    parts: list[str] = []
+    if port:
+        parts.append(port)
+    if firmware:
+        parts.append(f"FW {firmware}")
+    if mode:
+        parts.append(f"mode {mode}")
+    if isinstance(aux_gpio_pins, list) and aux_gpio_pins:
+        pins = ", ".join(str(pin) for pin in aux_gpio_pins)
+        parts.append(f"GPIO {pins}")
+
+    return " | ".join(parts)
 
 
 def _test_report_path(config: pytest.Config, node_status: dict) -> Path:
@@ -125,7 +156,11 @@ def _write_json_report(
         "environment": {
             "nodeIp": os.environ.get("UNODE_IP", ""),
             "baseUrl": os.environ.get("UNODE_BASE_URL", ""),
-            "rp2040Port": os.environ.get("UNODE_RP2040_PORT", ""),
+            "rp2040Port": _RP2040_INFO.get("configuredPort", ""),
+            "rp2040ResolvedPort": _RP2040_INFO.get("port", ""),
+            "rp2040Firmware": _RP2040_INFO.get("firmware", ""),
+            "rp2040Mode": _RP2040_INFO.get("mode", ""),
+            "rp2040AuxGpioPins": _RP2040_INFO.get("auxGpioPins", []),
         },
         "node": {
             "name": node_status.get("name", ""),
@@ -198,7 +233,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus: int, config: pytest.Co
             f"Node       : {node_name} {chip_id} (FW {firmware})"
         )
         terminalreporter.write_line(f"IP         : {ip}")
-        rp2040 = os.environ.get("UNODE_RP2040_PORT")
+        rp2040 = _format_rp2040_info()
         if rp2040:
             terminalreporter.write_line(f"RP2040     : {rp2040}")
     else:
@@ -283,6 +318,14 @@ def rp2040_port() -> str:
 def rp2040_tool(rp2040_port: str) -> Iterator[Rp2040DmxTool]:
     step(f"Opening RP2040 DMX tool on {rp2040_port}")
     with Rp2040DmxTool(rp2040_port) as tool:
+        _RP2040_INFO["port"] = rp2040_port
+        ping = tool.ping()
+        _RP2040_INFO["firmware"] = str(ping.get("fw", ""))
+        _RP2040_INFO["mode"] = str(ping.get("mode", ""))
+        aux_gpio_pins = ping.get("auxGpioPins", [])
+        _RP2040_INFO["auxGpioPins"] = (
+            aux_gpio_pins if isinstance(aux_gpio_pins, list) else []
+        )
         yield tool
 
 

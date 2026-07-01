@@ -355,7 +355,7 @@ HTML_TEMPLATE = r"""<!doctype html>
         <div class="key">Started</div><div class="value">{{ started_local }}</div>
         <div class="key">Finished</div><div class="value">{{ finished_local }}</div>
         <div class="key">Duration</div><div class="value">{{ duration_text }}</div>
-        <div class="key">RP2040</div><div class="value">{{ environment.rp2040Port or "N/A" }}</div>
+        <div class="key">RP2040</div><div class="value">{{ format_rp2040(environment) }}</div>
         <div class="key">Base URL</div><div class="value">{{ environment.baseUrl or "N/A" }}</div>
       </div>
     </div>
@@ -508,6 +508,30 @@ def format_duration(seconds: float) -> str:
     return f"{remainder}s"
 
 
+def format_rp2040(environment: dict[str, Any]) -> str:
+    port = (
+        environment.get("rp2040ResolvedPort")
+        or environment.get("rp2040Port")
+        or ""
+    )
+    firmware = environment.get("rp2040Firmware") or ""
+    mode = environment.get("rp2040Mode") or ""
+    aux_gpio_pins = environment.get("rp2040AuxGpioPins")
+
+    parts: list[str] = []
+    if port:
+        parts.append(str(port))
+    if firmware:
+        parts.append(f"FW {firmware}")
+    if mode:
+        parts.append(f"mode {mode}")
+    if isinstance(aux_gpio_pins, list) and aux_gpio_pins:
+        pins = ", ".join(str(pin) for pin in aux_gpio_pins)
+        parts.append(f"GPIO {pins}")
+
+    return " | ".join(parts) if parts else "N/A"
+
+
 def format_number(value: object, decimals: int = 1) -> str:
     if value is None:
         return "—"
@@ -640,6 +664,7 @@ def render_html(report: dict[str, Any], report_path: Path) -> str:
         logo_data_uri=file_data_uri(LOGO_PATH),
         node=report.get("node", {}),
         environment=report.get("environment", {}),
+        format_rp2040=format_rp2040,
         summary=summary,
         grouped_tests=grouped_tests(report),
         started_local=format_datetime(report.get("startedAt", "")),

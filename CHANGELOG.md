@@ -13,10 +13,13 @@ explicitly in each release entry.
 
 ### Changed
 
-- Extended the RP2040 DMX tester to version `0.3.0` with safe auxiliary GPIO
+- Extended the RP2040 DMX tester to version `0.3.1` with safe auxiliary GPIO
   JSONL commands (`read`, `input`, `write`, `pulse`, `release`) on GPIO6/7/8
   by default, plus Python helpers and optional HIL coverage for the uNode local
   button.
+- Test reports and generated production certificates now include the resolved
+  RP2040 tester port, tester firmware version, current tester mode, and
+  advertised auxiliary GPIO pins when the RP2040 HIL fixture is used.
 - Added a Hardware-tab runtime action for the local button: Disabled or
   debounced short-press Toggle Locate. Holding the button during boot remains
   reserved for Recovery Mode.
