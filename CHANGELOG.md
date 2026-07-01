@@ -21,8 +21,10 @@ explicitly in each release entry.
   RP2040 tester port, tester firmware version, current tester mode, and
   advertised auxiliary GPIO pins when the RP2040 HIL fixture is used.
 - The local hardware button now has separate runtime actions for short and long
-  presses. Short press can toggle Locate, while long press can immediately mute
-  status LEDs until the next reboot.
+  presses. Short press can toggle Locate, while long press can immediately
+  toggle status LED mute.
+- The web header now shows a bulb-off indicator while status LEDs are muted,
+  and ArtAddress Normal/Locate can clear LED mute again.
 - Holding the local hardware button during boot remains reserved for Recovery
   Mode.
 - Added dedicated system LED override patterns for OTA/recovery states:

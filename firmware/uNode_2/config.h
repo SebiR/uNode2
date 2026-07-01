@@ -9,7 +9,7 @@
 
 #define FW_VERSION_MAJOR 0
 #define FW_VERSION_MINOR 23
-#define FW_VERSION_PATCH 13
+#define FW_VERSION_PATCH 14
 
 #define FW_STRINGIFY_IMPL(value) #value
 #define FW_STRINGIFY(value) FW_STRINGIFY_IMPL(value)
@@ -282,7 +282,7 @@ enum BusGuardMode {
 enum ButtonAction {
   BUTTON_ACTION_DISABLED = 0,
   BUTTON_ACTION_TOGGLE_LOCATE = 1,
-  BUTTON_ACTION_MUTE_LEDS_UNTIL_REBOOT = 2
+  BUTTON_ACTION_TOGGLE_LED_MUTE = 2
 };
 
 // -----------------------------------------------------------------------------

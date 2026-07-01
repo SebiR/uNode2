@@ -30,7 +30,7 @@ static uint32_t systemPatternUntil = 0;
 
 static LedIndicatorMode indicatorMode =
   INDICATORS_NORMAL;
-static bool muteUntilReboot = false;
+static bool localMute = false;
 static uint32_t locateLastToggle = 0;
 static bool locateState = false;
 
@@ -140,12 +140,16 @@ LedIndicatorMode getLedIndicatorMode() {
   return indicatorMode;
 }
 
-void muteLEDsUntilReboot() {
-  muteUntilReboot = true;
+void setLEDsMuted(bool muted) {
+  localMute = muted;
+}
+
+void toggleLEDsMuted() {
+  localMute = !localMute;
 }
 
 bool areLEDsMuted() {
-  return muteUntilReboot
+  return localMute
          || indicatorMode == INDICATORS_MUTE;
 }
 

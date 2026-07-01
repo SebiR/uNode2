@@ -114,7 +114,8 @@ body {
     height: 32px;
 }
 
-.lockState {
+.lockState,
+.brandState {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -126,7 +127,8 @@ body {
     opacity: 0.92;
 }
 
-.lockState svg {
+.lockState svg,
+.brandState svg {
     width: 14px;
     height: 14px;
     fill: none;
@@ -134,6 +136,16 @@ body {
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
+}
+
+.brandState[hidden] {
+    display: none;
+}
+
+.ledMuteState {
+    color: #ffd166;
+    border-color: rgba(255, 209, 102, 0.58);
+    background: rgba(255, 209, 102, 0.12);
 }
 
 .subtitle {

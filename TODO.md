@@ -152,8 +152,7 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Add a debounced, non-blocking button state machine without GPIO
       interrupts.
 - [x] Use a short press to toggle local Art-Net Locate indication.
-- [x] Use a long press to mute status LEDs immediately and keep them muted
-      until the next reboot.
+- [x] Use a long press to toggle status LED mute immediately.
 - [x] Sample and debounce the button before LittleFS and normal services start;
       a held button enters a physically authorized recovery boot mode.
 - [x] Keep Recovery AP and Factory Reset unavailable during normal operation.

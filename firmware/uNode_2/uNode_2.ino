@@ -94,8 +94,8 @@ static void executeButtonAction(
         eventMessage);
       break;
 
-    case BUTTON_ACTION_MUTE_LEDS_UNTIL_REBOOT:
-      muteLEDsUntilReboot();
+    case BUTTON_ACTION_TOGGLE_LED_MUTE:
+      toggleLEDsMuted();
       logEvent(
         eventCode,
         eventMessage);

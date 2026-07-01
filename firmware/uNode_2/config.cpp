@@ -404,8 +404,8 @@ static bool applyJson(
   }
 
   if (buttonLongAction < BUTTON_ACTION_DISABLED
-      || buttonLongAction > BUTTON_ACTION_MUTE_LEDS_UNTIL_REBOOT) {
-    error = "Long button action must be Disabled, Toggle Locate, or Mute LEDs";
+      || buttonLongAction > BUTTON_ACTION_TOGGLE_LED_MUTE) {
+    error = "Long button action must be Disabled, Toggle Locate, or Toggle LED Mute";
     return false;
   }
 

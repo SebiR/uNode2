@@ -1458,6 +1458,7 @@ static void onArtAddress(
 
   switch (info.command) {
     case ARTNET_AC_LED_NORMAL:
+      setLEDsMuted(false);
       artnet.setIndicatorState(
         ArtNetIndicatorState::NORMAL);
       setLedIndicatorMode(
@@ -1465,6 +1466,7 @@ static void onArtAddress(
       break;
 
     case ARTNET_AC_LED_MUTE:
+      setLEDsMuted(false);
       artnet.setIndicatorState(
         ArtNetIndicatorState::MUTE);
       setLedIndicatorMode(
@@ -1472,6 +1474,7 @@ static void onArtAddress(
       break;
 
     case ARTNET_AC_LED_LOCATE:
+      setLEDsMuted(false);
       artnet.setIndicatorState(
         ArtNetIndicatorState::LOCATE);
       setLedIndicatorMode(

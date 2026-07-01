@@ -66,8 +66,10 @@ bool isLocateActive();
 void setLedIndicatorMode(LedIndicatorMode mode);
 /** @return Current Art-Net indicator override. */
 LedIndicatorMode getLedIndicatorMode();
-/** @brief Mutes all status LEDs until the next reboot. */
-void muteLEDsUntilReboot();
+/** @brief Enables or disables local status LED mute. */
+void setLEDsMuted(bool muted);
+/** @brief Toggles local status LED mute. */
+void toggleLEDsMuted();
 /** @return True when LEDs are currently muted by any runtime override. */
 bool areLEDsMuted();
 

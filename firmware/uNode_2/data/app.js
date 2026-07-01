@@ -1150,10 +1150,25 @@ function updateHardwareStatus(data)
 
     if (data.ledMuted !== undefined)
     {
+        const ledMuteState =
+            document.getElementById(
+                'ledMuteState');
+
+        if (ledMuteState)
+        {
+            ledMuteState.hidden =
+                !data.ledMuted;
+
+            ledMuteState.title =
+                data.ledMuted
+                    ? 'Status LEDs muted'
+                    : 'Status LEDs active';
+        }
+
         setTextIfPresent(
             'ledMuteStatus',
             data.ledMuted
-                ? 'Muted until reboot'
+                ? 'Muted'
                 : 'Inactive');
     }
 }

@@ -5,7 +5,7 @@ import os
 import pytest
 
 from artnet_packets import ARTNET_AC_LED_LOCATE, ARTNET_AC_LED_NORMAL, make_artaddress
-from helpers import send_artnet_packet, step, wait_for_node_restart, wait_for_status
+from helpers import send_artnet_packet, step, wait_for_status
 from rp2040_dmx_tool import Rp2040DmxTool
 from unode_client import UNodeClient
 
@@ -121,8 +121,9 @@ def test_rp2040_gpio_can_toggle_unode_local_button_locate(
         )
 
 
-def test_rp2040_gpio_long_press_mutes_unode_leds_until_reboot(
+def test_rp2040_gpio_long_press_toggles_unode_led_mute(
     unode_client: UNodeClient,
+    unode_ip: str,
     preserved_config: dict,
     rp2040_tool: Rp2040DmxTool,
 ) -> None:
@@ -135,7 +136,7 @@ def test_rp2040_gpio_long_press_mutes_unode_leds_until_reboot(
 
     config = preserved_config.copy()
     config["buttonShortAction"] = 0  # Disabled
-    config["buttonLongAction"] = 2  # Mute LEDs until reboot
+    config["buttonLongAction"] = 2  # Toggle LED Mute
 
     step(f"Configuring long button action and using RP2040 GPIO{pin} as button pull-down")
     response = unode_client.save_config(config)
@@ -146,12 +147,11 @@ def test_rp2040_gpio_long_press_mutes_unode_leds_until_reboot(
         lambda data: int(data.get("buttonLongAction", -1)) == 2,
     )
     assert status.get("ledMuted") is False
-    initial_boot_count = int(status["bootCount"])
 
     try:
         rp2040_tool.gpio_release(pin)
 
-        step("Holding active-low button input for 2300 ms")
+        step("Holding active-low button input for 2300 ms to enable LED mute")
         rp2040_tool.gpio_pulse(
             pin,
             value=0,
@@ -165,17 +165,56 @@ def test_rp2040_gpio_long_press_mutes_unode_leds_until_reboot(
             timeout=3.0,
         )
         assert muted["ledMuted"] is True
+
+        step("Holding active-low button input again to disable LED mute")
+        rp2040_tool.gpio_pulse(
+            pin,
+            value=0,
+            duration_ms=2300,
+            release=True,
+        )
+
+        unmuted = wait_for_status(
+            unode_client,
+            lambda data: data.get("ledMuted") is False,
+            timeout=3.0,
+        )
+        assert unmuted["ledMuted"] is False
+
+        step("Muting once more and clearing LED mute via ArtAddress Normal")
+        rp2040_tool.gpio_pulse(
+            pin,
+            value=0,
+            duration_ms=2300,
+            release=True,
+        )
+        wait_for_status(
+            unode_client,
+            lambda data: data.get("ledMuted") is True,
+            timeout=3.0,
+        )
+        send_artnet_packet(
+            unode_ip,
+            make_artaddress(
+                command=ARTNET_AC_LED_NORMAL,
+                bind_index=1,
+            ),
+        )
+        artnet_unmuted = wait_for_status(
+            unode_client,
+            lambda data: data.get("ledMuted") is False,
+            timeout=3.0,
+        )
+        assert artnet_unmuted["ledMuted"] is False
     finally:
         rp2040_tool.gpio_release(pin)
-
-        step("Restarting node to clear LED mute-until-reboot latch")
-        restart_status, body = unode_client.post_json("/api/restart")
-        assert restart_status == 200, body.decode(errors="replace")
-        restarted = wait_for_node_restart(
-            unode_client,
-            previous_boot_count=initial_boot_count,
+        send_artnet_packet(
+            unode_ip,
+            make_artaddress(
+                command=ARTNET_AC_LED_NORMAL,
+                bind_index=1,
+            ),
         )
-        assert restarted.get("ledMuted") is False
 
 
 def test_rp2040_gpio_can_reset_unode_and_observe_boot_count(
