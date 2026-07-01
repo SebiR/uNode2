@@ -8,6 +8,10 @@ param(
     [int]$DmxSoakSeconds = 0,
     [int]$LatencySamples = 0,
     [double]$LatencyTimeout = 0,
+    [int]$DropoutSamples = 0,
+    [double]$DropoutTimeout = 0,
+    [double]$DropoutInterval = -1,
+    [int]$DropoutAllowedLosses = -1,
     [double]$SoakInterval = 0,
     [double]$SoakGrace = 0,
     [string]$Path = ""
@@ -102,6 +106,26 @@ if ($Integration)
         $env:UNODE_LATENCY_TIMEOUT = "$LatencyTimeout"
     }
 
+    if ($DropoutSamples -gt 0)
+    {
+        $env:UNODE_DROPOUT_SAMPLES = "$DropoutSamples"
+    }
+
+    if ($DropoutTimeout -gt 0)
+    {
+        $env:UNODE_DROPOUT_TIMEOUT = "$DropoutTimeout"
+    }
+
+    if ($DropoutInterval -ge 0)
+    {
+        $env:UNODE_DROPOUT_INTERVAL = "$DropoutInterval"
+    }
+
+    if ($DropoutAllowedLosses -ge 0)
+    {
+        $env:UNODE_DROPOUT_ALLOWED_LOSSES = "$DropoutAllowedLosses"
+    }
+
     if ($SoakInterval -gt 0)
     {
         $env:UNODE_SOAK_INTERVAL = "$SoakInterval"
@@ -138,6 +162,10 @@ if ($Integration)
     {
         Write-Host "Latency : $env:UNODE_LATENCY_SAMPLES samples"
     }
+    if ($env:UNODE_DROPOUT_SAMPLES)
+    {
+        Write-Host "Dropout : $env:UNODE_DROPOUT_SAMPLES samples"
+    }
 }
 else
 {
@@ -146,6 +174,10 @@ else
     Remove-Item Env:\UNODE_DMX_SOAK_SECONDS -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_LATENCY_SAMPLES -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_LATENCY_TIMEOUT -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_DROPOUT_SAMPLES -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_DROPOUT_TIMEOUT -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_DROPOUT_INTERVAL -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_DROPOUT_ALLOWED_LOSSES -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_SOAK_INTERVAL -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_SOAK_REACHABILITY_GRACE -ErrorAction SilentlyContinue
 

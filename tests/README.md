@@ -111,6 +111,20 @@ profiles require RP2040 DMX tool firmware with the JSON `wait` command:
 powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Rp2040Port auto -Path tests/integration/test_latency_hil.py -LatencySamples 50
 ```
 
+Run the RP2040 hardware-in-the-loop dropout profile. This sends unique,
+moderate-rate updates and verifies that every network update reaches the real
+DMX output, and every physical DMX change reaches the network output:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Rp2040Port auto -Path tests/integration/test_dropout_hil.py -DropoutSamples 100
+```
+
+Optional dropout tuning:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Rp2040Port auto -Path tests/integration/test_dropout_hil.py -DropoutSamples 200 -DropoutInterval 0.05 -DropoutTimeout 2.0 -DropoutAllowedLosses 0
+```
+
 Capture Serial1/GPIO2 debug output in a second terminal while soak tests run:
 
 ```powershell
@@ -184,6 +198,11 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
   network measurements also include the USB command used to trigger a single
   RP2040 DMX frame, which makes them most useful for comparing AP/client mode
   or Art-Net/sACN behaviour on the same bench setup.
+- The dropout hardware-in-the-loop profile checks lossless update delivery at
+  a moderate rate. It intentionally does not try to prove that every overly
+  fast network packet becomes a separate physical DMX frame; at rates above
+  the DMX output frame rate, the correct behaviour may be to output the most
+  recent state and skip intermediate values.
 - The DMX hardware-in-the-loop tests also verify ArtSync buffering/flush and
   ArtSync timeout flush on the real DMX output, plus all four output failsafe
   modes after Art-Net timeout: Hold, All-to-Zero, All-to-Full, and Failsafe
