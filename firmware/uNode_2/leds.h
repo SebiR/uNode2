@@ -43,7 +43,7 @@ void setNetworkSignalQuality(uint8_t qualityPercent);
 void flashArtNetLED();
 /** @brief Emits a short cyan physical DMX input pulse. */
 void flashDMXInputLED();
-/** @brief Emits a short yellow physical DMX output pulse. */
+/** @brief Emits a short amber physical DMX output pulse. */
 void flashDMXOutputLED();
 
 /** @brief Sets global LED brightness in percent in the active configuration. */

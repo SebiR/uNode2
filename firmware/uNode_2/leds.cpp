@@ -68,7 +68,7 @@ void flashDMXInputLED() {
 
 void flashDMXOutputLED() {
   flashActivityLED(
-    StatusLedColor::YELLOW);
+    StatusLedColor::ORANGE);
 }
 
 void setLocate(bool enabled) {
