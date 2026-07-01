@@ -1662,7 +1662,7 @@ static void handleBrightness() {
   uint8_t brightness =
     constrain(
       doc["brightness"] | 50,
-      0,
+      1,
       100);
 
   setLEDBrightness(
@@ -1805,6 +1805,56 @@ static void handleRecoveryAuthPassword() {
     200,
     "text/plain",
     "OK");
+}
+
+/** @brief Applies a temporary local LED mute state from JSON. */
+static void handleLedMute() {
+  if (!requireAuth()) {
+    return;
+  }
+
+  if (!requirePlainBodyLimit(
+        MAX_BRIGHTNESS_JSON_SIZE,
+        "LED mute")) {
+    return;
+  }
+
+  JsonDocument doc;
+
+  DeserializationError error =
+    deserializeJson(
+      doc,
+      server.arg("plain"));
+
+  if (error) {
+    server.send(
+      400,
+      "text/plain",
+      "Invalid JSON");
+
+    return;
+  }
+
+  if (doc["toggle"] | false) {
+    toggleLEDsMuted();
+  } else {
+    setLEDsMuted(
+      doc["muted"] | false);
+  }
+
+  JsonDocument response;
+  response["ledMuted"] =
+    areLEDsMuted();
+
+  String json;
+  serializeJson(
+    response,
+    json);
+
+  server.send(
+    200,
+    "application/json",
+    json);
 }
 
 /** @brief Receives one firmware binary through multipart upload. */
@@ -2290,6 +2340,11 @@ bool initWeb() {
     "/api/brightness",
     HTTP_POST,
     handleBrightness);
+
+  server.on(
+    "/api/led-mute",
+    HTTP_POST,
+    handleLedMute);
 
   server.on(
     "/api/config/upload",

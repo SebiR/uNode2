@@ -1056,12 +1056,12 @@ async function loadConfig()
 		document.getElementById(
 			'ledBrightness'
 		).value =
-			cfg.ledBrightness;
+			Math.max(1, cfg.ledBrightness ?? 50);
 
 		document.getElementById(
 			'ledBrightnessValue'
 		).textContent =
-			cfg.ledBrightness + " %";
+			Math.max(1, cfg.ledBrightness ?? 50) + " %";
 
         configBaseline =
             readConfigForm();
@@ -1069,7 +1069,7 @@ async function loadConfig()
         initializeConfigWatch();
         updateUnsavedChangesIndicator();
         await applyBrightnessPreview(
-            cfg.ledBrightness,
+            Math.max(1, cfg.ledBrightness ?? 50),
             false);
 
     }
@@ -1170,6 +1170,21 @@ function updateHardwareStatus(data)
             data.ledMuted
                 ? 'Muted'
                 : 'Inactive');
+
+        const ledMuteButton =
+            document.getElementById(
+                'ledMuteButton');
+
+        if (ledMuteButton)
+        {
+            ledMuteButton.textContent =
+                data.ledMuted
+                    ? 'Unmute LEDs'
+                    : 'Mute LEDs';
+
+            ledMuteButton.disabled =
+                isUiLocked();
+        }
     }
 }
 
@@ -1633,10 +1648,12 @@ function readConfigForm()
             ).value,
 
         ledBrightness:
-            parseInt(
-                document.getElementById(
-                    'ledBrightness'
-                ).value),
+            Math.max(
+                1,
+                parseInt(
+                    document.getElementById(
+                        'ledBrightness'
+                    ).value)),
 
         shortName:
             document.getElementById(
@@ -2025,9 +2042,9 @@ async function revertConfigChanges()
     document.getElementById('gateway').value =
         configBaseline.gateway;
     document.getElementById('ledBrightness').value =
-        configBaseline.ledBrightness;
+        Math.max(1, configBaseline.ledBrightness ?? 50);
     document.getElementById('ledBrightnessValue').textContent =
-        configBaseline.ledBrightness + ' %';
+        Math.max(1, configBaseline.ledBrightness ?? 50) + ' %';
     document.getElementById('shortName').value =
         configBaseline.shortName;
     document.getElementById('longName').value =
@@ -2074,7 +2091,7 @@ async function revertConfigChanges()
     updateUnsavedChangesIndicator();
 
     await applyBrightnessPreview(
-        configBaseline.ledBrightness,
+        Math.max(1, configBaseline.ledBrightness ?? 50),
         false);
 }
 
@@ -2407,10 +2424,12 @@ async function applyBrightnessPreview(
 async function updateBrightness()
 {
     const brightness =
-        parseInt(
-            document.getElementById(
-                'ledBrightness'
-            ).value);
+        Math.max(
+            1,
+            parseInt(
+                document.getElementById(
+                    'ledBrightness'
+                ).value));
 
     document.getElementById(
         'ledBrightnessValue'
@@ -2419,6 +2438,49 @@ async function updateBrightness()
 
     await applyBrightnessPreview(
         brightness);
+}
+
+async function toggleLedMute()
+{
+    try
+    {
+        const response =
+            await authenticatedFetch(
+                '/api/led-mute',
+                {
+                    method: 'POST',
+
+                    headers:
+                    {
+                        'Content-Type':
+                            'application/json'
+                    },
+
+                    body:
+                        JSON.stringify(
+                        {
+                            toggle:
+                                true
+                        })
+                });
+
+        if (!response.ok)
+        {
+            throw new Error(
+                'LED mute toggle failed: HTTP ' + response.status);
+        }
+
+        const data =
+            await response.json();
+
+        updateHardwareStatus(
+            data);
+    }
+    catch(error)
+    {
+        console.error(error);
+        beginConnectionRecovery();
+    }
 }
 
 async function downloadConfig()

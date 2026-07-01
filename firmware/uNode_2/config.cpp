@@ -292,11 +292,15 @@ static bool applyJson(
     doc["ledBrightness"] | candidate.ledBrightness;
 
   if (ledBrightness < 0 || ledBrightness > 100) {
-    error = "LED brightness must be between 0 and 100";
+    error = "LED brightness must be between 1 and 100";
     return false;
   }
 
-  candidate.ledBrightness = ledBrightness;
+  candidate.ledBrightness =
+    constrain(
+      ledBrightness,
+      1,
+      100);
 
   candidate.shortName =
     doc["shortName"] | candidate.shortName;

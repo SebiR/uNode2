@@ -951,13 +951,19 @@
 						<input
 							id="ledBrightness"
 							type="range"
-							min="0"
+							min="1"
 							max="100"
 							value="50">
 					</label>
 				</div>
 
                 <p id="ledBrightnessValue">50 %</p>
+                <button
+                    id="ledMuteButton"
+                    type="button"
+                    onclick="toggleLedMute()">
+                    Mute LEDs
+                </button>
 
 				<p class="helpText">
 					Locate is available globally in the page header and can also

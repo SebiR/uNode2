@@ -165,7 +165,7 @@ void setLEDBrightness(
   config.ledBrightness =
     constrain(
       brightness,
-      0,
+      1,
       100);
 }
 

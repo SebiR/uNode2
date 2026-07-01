@@ -73,6 +73,7 @@ def test_api_write_endpoints_require_auth_when_password_is_enabled(
             ("/api/config", {}),
             ("/api/artnet/poll", None),
             ("/api/dmx/release", None),
+            ("/api/led-mute", {"toggle": True}),
             ("/api/failsafe/record", None),
             ("/api/auth/password", {"password": "should-not-apply"}),
         ]

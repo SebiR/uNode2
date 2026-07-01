@@ -25,6 +25,8 @@ explicitly in each release entry.
   toggle status LED mute.
 - The web header now shows a bulb-off indicator while status LEDs are muted,
   and ArtAddress Normal/Locate can clear LED mute again.
+- LED brightness is now limited to 1..100% in the web UI and configuration;
+  complete LED blackout is handled by the separate temporary LED Mute control.
 - Holding the local hardware button during boot remains reserved for Recovery
   Mode.
 - Added dedicated system LED override patterns for OTA/recovery states:
