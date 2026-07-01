@@ -79,6 +79,7 @@ static void flushDmxRx();
 static void processJsonCommand(const String& line);
 static void sendJsonReady();
 static void sendJsonError(const char* error, const char* message);
+static void handleJsonWait(JsonDocument& doc);
 static void sendLineNoise(
   uint32_t durationMs,
   uint32_t minPulseUs,
@@ -895,6 +896,59 @@ static void sendFrameJson(
   Serial.println(F("]}"));
 }
 
+static bool frameMatchesValues(
+  const uint8_t* expected,
+  uint16_t firstChannel,
+  uint16_t channelCount) {
+  if (lastFrame.startCode != 0) {
+    return false;
+  }
+
+  if (lastFrame.slots < firstChannel + channelCount - 1) {
+    return false;
+  }
+
+  for (uint16_t i = 0; i < channelCount; i++) {
+    if (rxValues[firstChannel - 1 + i] != expected[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static void sendWaitJson(
+  bool matched,
+  uint32_t elapsedUs,
+  uint32_t framesSeen,
+  uint16_t firstChannel,
+  uint16_t channelCount) {
+  Serial.print(F("{\"ok\":true,\"type\":\"wait\",\"matched\":"));
+  Serial.print(matched ? F("true") : F("false"));
+  Serial.print(F(",\"elapsedUs\":"));
+  Serial.print(elapsedUs);
+  Serial.print(F(",\"framesSeen\":"));
+  Serial.print(framesSeen);
+  Serial.print(F(",\"startCode\":"));
+  Serial.print(lastFrame.startCode);
+  Serial.print(F(",\"slots\":"));
+  Serial.print(lastFrame.slots);
+  Serial.print(F(",\"start\":"));
+  Serial.print(firstChannel);
+  Serial.print(F(",\"count\":"));
+  Serial.print(channelCount);
+  Serial.print(F(",\"values\":["));
+
+  for (uint16_t i = 0; i < channelCount; i++) {
+    if (i > 0) {
+      Serial.print(',');
+    }
+    Serial.print(frameValueAt(firstChannel + i));
+  }
+
+  Serial.println(F("]}"));
+}
+
 static bool setPatternByName(
   const char* name) {
   if (!name) {
@@ -967,6 +1021,93 @@ static void handleJsonGet(
   } else {
     sendJsonError("invalid_target", "Get target must be stats, frame, or channels");
   }
+}
+
+static void handleJsonWait(
+  JsonDocument& doc) {
+  const char* target = doc["target"] | "";
+  String targetText = target;
+  targetText.toLowerCase();
+
+  if (targetText != "frame" && targetText != "channels") {
+    sendJsonError("invalid_target", "Wait target must be frame or channels");
+    return;
+  }
+
+  JsonArray values = doc["values"].as<JsonArray>();
+  if (values.isNull()) {
+    sendJsonError("invalid_values", "values must be an array");
+    return;
+  }
+
+  const uint16_t firstChannel =
+    clampU32(doc["start"] | 1, 1, DMX_MAX_SLOTS);
+  const uint16_t channelCount =
+    clampU32(
+      doc["count"] | values.size(),
+      1,
+      DMX_MAX_SLOTS - firstChannel + 1);
+  uint8_t expected[DMX_MAX_SLOTS];
+  memset(expected, 0, sizeof(expected));
+
+  uint16_t index = 0;
+  for (JsonVariant value : values) {
+    if (index >= channelCount) {
+      break;
+    }
+    expected[index++] =
+      static_cast<uint8_t>(clampU32(value.as<uint32_t>(), 0, 255));
+  }
+
+  if (index < channelCount) {
+    sendJsonError("invalid_values", "values shorter than requested count");
+    return;
+  }
+
+  const uint32_t timeoutMs =
+    clampU32(doc["timeoutMs"] | 1500, 1, 60000);
+
+  if (mode != MODE_RX) {
+    enterRxMode(false);
+  }
+
+  const uint32_t startUs = micros();
+  const uint32_t deadlineMs = millis() + timeoutMs;
+  uint32_t lastCheckedFrame = stats.frames;
+  uint32_t framesSeen = 0;
+
+  while ((int32_t)(millis() - deadlineMs) < 0) {
+    pollDmxRxEdges();
+    pollDmxRxBytes();
+    updateRxFps();
+
+    if (stats.frames != lastCheckedFrame) {
+      framesSeen += stats.frames - lastCheckedFrame;
+      lastCheckedFrame = stats.frames;
+
+      if (frameMatchesValues(
+            expected,
+            firstChannel,
+            channelCount)) {
+        sendWaitJson(
+          true,
+          micros() - startUs,
+          framesSeen,
+          firstChannel,
+          channelCount);
+        return;
+      }
+    }
+
+    yield();
+  }
+
+  sendWaitJson(
+    false,
+    micros() - startUs,
+    framesSeen,
+    firstChannel,
+    channelCount);
 }
 
 static void handleJsonSet(
@@ -1125,6 +1266,8 @@ static void processJsonCommand(
     handleJsonMode(doc);
   } else if (commandText == "get") {
     handleJsonGet(doc);
+  } else if (commandText == "wait") {
+    handleJsonWait(doc);
   } else if (commandText == "set") {
     handleJsonSet(doc);
   } else if (commandText == "tx") {
@@ -1149,6 +1292,7 @@ static void processJsonCommand(
     commands.add("{\"cmd\":\"mode\",\"value\":\"rx|tx|idle\"}");
     commands.add("{\"cmd\":\"get\",\"target\":\"stats\"}");
     commands.add("{\"cmd\":\"get\",\"target\":\"frame\",\"start\":1,\"count\":16}");
+    commands.add("{\"cmd\":\"wait\",\"target\":\"frame\",\"start\":1,\"values\":[1,2,3],\"timeoutMs\":1500}");
     commands.add("{\"cmd\":\"set\",\"target\":\"frame\",\"slots\":6,\"values\":[0,1,2]}");
     commands.add("{\"cmd\":\"set\",\"target\":\"channels\",\"values\":{\"1\":255}}");
     commands.add("{\"cmd\":\"set\",\"target\":\"timing\",\"breakUs\":176,\"mabUs\":16}");

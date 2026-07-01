@@ -66,7 +66,14 @@ def _print_latency_report(
     lost: int,
 ) -> None:
     summary = _summarize_ms(samples)
-    network_mode = status.get("wifiModeText") or status.get("wifiMode") or "unknown"
+    if status.get("wifiConnected") is True and status.get("softAPActive") is True:
+        network_mode = "AP + Client"
+    elif status.get("wifiConnected") is True:
+        network_mode = "Client"
+    elif status.get("softAPActive") is True:
+        network_mode = "AP"
+    else:
+        network_mode = "unknown"
     ip = status.get("ip", "unknown")
 
     step("")
@@ -164,20 +171,6 @@ def _send_network_frame(
         sock.sendto(packet, (unode_ip, SACN_PORT))
     finally:
         sock.close()
-
-
-def _wait_for_rp2040_values(
-    rp2040_tool: Rp2040DmxTool,
-    expected: list[int],
-    *,
-    timeout: float,
-) -> bool:
-    deadline = time.perf_counter() + timeout
-    while time.perf_counter() < deadline:
-        frame = rp2040_tool.get_frame(start=1, count=len(expected))
-        if frame.get("values") == expected:
-            return True
-    return False
 
 
 def _open_artnet_receiver(unode_ip: str, universe: int) -> socket.socket:
@@ -292,13 +285,14 @@ def test_network_to_dmx_latency_profile(
     rp2040_tool.mode("rx")
     rp2040_tool.clear_stats()
     time.sleep(0.2)
+    timeout_ms = round(timeout * 1000)
 
     latencies: list[float] = []
     lost = 0
     for sample_index in range(samples):
         values = _pattern(sample_index)
         sequence = ((sample_index + 1) % 255) or 1
-        start = time.perf_counter()
+        rp2040_tool.begin_wait_frame(values, timeout_ms=timeout_ms)
         _send_network_frame(
             unode_ip=unode_ip,
             protocol=protocol,
@@ -306,12 +300,16 @@ def test_network_to_dmx_latency_profile(
             values=values,
             sequence=sequence,
         )
+        wait_result = rp2040_tool.finish_wait_frame(timeout_ms=timeout_ms)
 
-        if _wait_for_rp2040_values(rp2040_tool, values, timeout=timeout):
-            latencies.append((time.perf_counter() - start) * 1000.0)
+        if wait_result.get("matched") is True:
+            latencies.append(float(wait_result["elapsedUs"]) / 1000.0)
         else:
             lost += 1
-            step(f"{protocol.name} -> DMX latency sample {sample_index + 1} timed out")
+            step(
+                f"{protocol.name} -> DMX latency sample {sample_index + 1} "
+                f"timed out after seeing {wait_result.get('framesSeen')} frames"
+            )
 
         time.sleep(0.05)
 

@@ -52,6 +52,14 @@ class Rp2040DmxTool:
         self.serial.flush()
         return self._read_json_response(timeout=timeout)
 
+    def send_command_no_wait(self, payload: dict[str, Any]) -> None:
+        line = json.dumps(payload, separators=(",", ":")).encode("utf-8") + b"\n"
+        self.serial.write(line)
+        self.serial.flush()
+
+    def read_response(self, *, timeout: float = 2.0) -> dict[str, Any]:
+        return self._read_json_response(timeout=timeout)
+
     def _read_json_response(self, *, timeout: float) -> dict[str, Any]:
         deadline = time.time() + timeout
         last_line = b""
@@ -117,6 +125,46 @@ class Rp2040DmxTool:
                 "values": values,
             }
         )
+
+    def wait_frame(
+        self,
+        values: list[int],
+        *,
+        start: int = 1,
+        timeout_ms: int = 1500,
+    ) -> dict[str, Any]:
+        return self.command(
+            {
+                "cmd": "wait",
+                "target": "frame",
+                "start": start,
+                "count": len(values),
+                "values": values,
+                "timeoutMs": timeout_ms,
+            },
+            timeout=max(2.0, timeout_ms / 1000.0 + 1.0),
+        )
+
+    def begin_wait_frame(
+        self,
+        values: list[int],
+        *,
+        start: int = 1,
+        timeout_ms: int = 1500,
+    ) -> None:
+        self.send_command_no_wait(
+            {
+                "cmd": "wait",
+                "target": "frame",
+                "start": start,
+                "count": len(values),
+                "values": values,
+                "timeoutMs": timeout_ms,
+            }
+        )
+
+    def finish_wait_frame(self, *, timeout_ms: int = 1500) -> dict[str, Any]:
+        return self.read_response(timeout=max(2.0, timeout_ms / 1000.0 + 1.0))
 
     def set_timing(
         self,

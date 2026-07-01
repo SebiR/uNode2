@@ -104,7 +104,8 @@ powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2
 Run the RP2040 hardware-in-the-loop latency profile. This measures practical
 end-to-end latency for Art-Net -> DMX, sACN -> DMX, DMX -> Art-Net, and
 DMX -> sACN on the currently active Wi-Fi setup, so run it once in AP mode and
-once in client mode if you want to compare both:
+once in client mode if you want to compare both. The network-to-DMX latency
+profiles require RP2040 DMX tool firmware with the JSON `wait` command:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Rp2040Port auto -Path tests/integration/test_latency_hil.py -LatencySamples 50

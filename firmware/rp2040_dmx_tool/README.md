@@ -41,7 +41,7 @@ is one JSON object terminated by `\n`.
 The firmware prints a ready event after boot:
 
 ```json
-{"ok":true,"event":"ready","tool":"rp2040_dmx_tool","fw":"0.1.0","protocol":"jsonl"}
+{"ok":true,"event":"ready","tool":"rp2040_dmx_tool","fw":"0.2.0","protocol":"jsonl"}
 ```
 
 After boot the DMX UART is idle and the DMX TX/RX pins are high impedance.
@@ -57,6 +57,7 @@ Useful commands:
 {"cmd":"mode","value":"idle"}
 {"cmd":"get","target":"stats"}
 {"cmd":"get","target":"frame","start":1,"count":16}
+{"cmd":"wait","target":"frame","start":1,"values":[10,20,30,40],"timeoutMs":1500}
 {"cmd":"set","target":"slots","value":512}
 {"cmd":"set","target":"channel","channel":1,"value":255}
 {"cmd":"set","target":"channels","values":{"1":255,"2":128,"3":0}}
@@ -73,11 +74,20 @@ Useful commands:
 Example responses:
 
 ```json
-{"ok":true,"type":"pong","fw":"0.1.0","mode":"RX analyzer"}
+{"ok":true,"type":"pong","fw":"0.2.0","mode":"RX analyzer"}
 ```
 
 ```json
 {"ok":true,"type":"frame","mode":"RX analyzer","seq":123,"startCode":0,"slots":6,"start":1,"count":6,"values":[0,93,112,173,148,93]}
+```
+
+The `wait` command switches to RX analyzer mode if needed, waits locally on
+the RP2040 until a newly received DMX frame matches the requested channel
+values, and returns the elapsed time measured by the RP2040. This is used by
+the latency HIL tests to avoid USB polling jitter:
+
+```json
+{"ok":true,"type":"wait","matched":true,"elapsedUs":42150,"framesSeen":2,"startCode":0,"slots":512,"start":1,"count":4,"values":[10,20,30,40]}
 ```
 
 Errors are also JSON:
