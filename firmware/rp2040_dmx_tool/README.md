@@ -43,7 +43,7 @@ is one JSON object terminated by `\n`.
 The firmware prints a ready event after boot:
 
 ```json
-{"ok":true,"event":"ready","tool":"rp2040_dmx_tool","fw":"0.3.0","protocol":"jsonl"}
+{"ok":true,"event":"ready","tool":"rp2040_dmx_tool","fw":"0.3.1","protocol":"jsonl"}
 ```
 
 After boot the DMX UART is idle and the DMX TX/RX pins are high impedance.
@@ -81,8 +81,12 @@ Useful commands:
 Example responses:
 
 ```json
-{"ok":true,"type":"pong","fw":"0.3.0","mode":"RX analyzer","auxGpioPins":[6,7,8]}
+{"ok":true,"type":"pong","fw":"0.3.1","mode":"RX analyzer","auxGpioPins":[6,7,8]}
 ```
+
+`gpio read` reports the current pin level without changing the pin mode. Use
+`gpio input` or `gpio release` when the pin should become high impedance before
+reading an externally driven signal.
 
 ```json
 {"ok":true,"type":"frame","mode":"RX analyzer","seq":123,"startCode":0,"slots":6,"start":1,"count":6,"values":[0,93,112,173,148,93]}

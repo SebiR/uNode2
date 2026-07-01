@@ -1297,8 +1297,6 @@ static void handleJsonGpio(
   action.toLowerCase();
 
   if (action == "read") {
-    pinMode(pin, INPUT);
-
     JsonDocument reply;
     reply["ok"] = true;
     reply["target"] = "gpio";

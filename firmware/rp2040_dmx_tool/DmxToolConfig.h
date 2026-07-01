@@ -56,6 +56,6 @@ static constexpr uint16_t DEFAULT_DISPLAY_FIRST_CHANNEL = 1;
 static constexpr uint16_t DEFAULT_DISPLAY_CHANNELS = 64;
 static constexpr size_t DMX_UART_RX_BUFFER_SIZE = 2048;
 static constexpr size_t MAX_COMMAND_LINE_LENGTH = 8192;
-static constexpr const char* TOOL_VERSION = "0.3.0";
+static constexpr const char* TOOL_VERSION = "0.3.1";
 
 #endif
