@@ -61,6 +61,22 @@ node IDs. Use `-ReportJson path\to\report.json` to choose a specific output
 path. Human-readable labels are stored in `tests/report_mapping.en.json`; a
 localized mapping can be added later without renaming the actual tests.
 
+Generate an HTML/PDF production-test certificate from the newest JSON report:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\certificate.ps1
+```
+
+Or choose a specific report:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\certificate.ps1 -Report artifacts\test_reports\unode-DCAC4E-test-report-20260701-150230Z.json
+```
+
+Generated certificates are written to `artifacts/certificates/`. PDF rendering
+uses a local Chrome/Edge installation when available; the HTML file is always
+generated.
+
 If the web interface is password-protected, also set:
 
 ```powershell
