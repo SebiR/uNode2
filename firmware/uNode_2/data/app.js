@@ -985,6 +985,11 @@ async function loadConfig()
         ).value =
             cfg.busGuardMode ?? 0;
 
+        document.getElementById(
+            'buttonAction'
+        ).value =
+            cfg.buttonAction ?? 0;
+
 		if (cfg.direction == 0)
 		{
 			document.getElementById(
@@ -1438,6 +1443,7 @@ const configFieldIds =
     'sacnPriority',
     'terminationMode',
     'busGuardMode',
+    'buttonAction',
     'legacyArtPollReply'
 ];
 
@@ -1676,6 +1682,12 @@ function readConfigForm()
             parseInt(
                 document.getElementById(
                     'busGuardMode'
+                ).value),
+
+        buttonAction:
+            parseInt(
+                document.getElementById(
+                    'buttonAction'
                 ).value),
 
         legacyArtPollReply:

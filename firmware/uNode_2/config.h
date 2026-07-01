@@ -9,7 +9,7 @@
 
 #define FW_VERSION_MAJOR 0
 #define FW_VERSION_MINOR 23
-#define FW_VERSION_PATCH 11
+#define FW_VERSION_PATCH 12
 
 #define FW_STRINGIFY_IMPL(value) #value
 #define FW_STRINGIFY(value) FW_STRINGIFY_IMPL(value)
@@ -24,7 +24,7 @@
 #define FW_FLASH_LAYOUT "4M1M"
 #define FW_LITTLEFS_IMAGE_SIZE 0xFA000UL
 #define FW_WEB_ASSET_VERSION FW_VERSION
-#define CONFIG_SCHEMA_VERSION 5
+#define CONFIG_SCHEMA_VERSION 6
 
 #define HEAP_WARNING_FREE_BYTES 12000UL
 #define HEAP_WARNING_MAX_BLOCK_BYTES 6000UL
@@ -279,6 +279,11 @@ enum BusGuardMode {
   BUS_GUARD_AUTO_INPUT_ON_BOOT = 1
 };
 
+enum ButtonAction {
+  BUTTON_ACTION_DISABLED = 0,
+  BUTTON_ACTION_TOGGLE_LOCATE = 1
+};
+
 // -----------------------------------------------------------------------------
 // Configuration Structure
 // -----------------------------------------------------------------------------
@@ -322,6 +327,7 @@ struct Config {
 
   TerminationMode terminationMode;
   BusGuardMode busGuardMode;
+  ButtonAction buttonAction;
 
   bool legacyArtPollReply;
 

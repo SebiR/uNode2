@@ -17,6 +17,12 @@
 
 static bool recoveryBootMode = false;
 static uint32_t nextHeapWarningCheckMillis = 0;
+static bool buttonLastRawPressed = false;
+static bool buttonDebouncedPressed = false;
+static bool buttonActionFired = false;
+static uint32_t buttonLastTransitionMillis = 0;
+
+static const uint32_t BUTTON_DEBOUNCE_MS = 200;
 
 /** @brief Adds a throttled event when runtime heap gets critically tight. */
 static void monitorHeapHeadroom() {
@@ -69,6 +75,53 @@ static bool isRecoveryButtonHeldAtBoot() {
   return digitalRead(PIN_RECOVERY_BUTTON) == LOW;
 #else
   return false;
+#endif
+}
+
+/** @brief Polls the local hardware button for normal-runtime actions. */
+static void updateLocalButton() {
+#if ENABLE_BOOT_RECOVERY_BUTTON
+  const uint32_t now =
+    millis();
+  const bool rawPressed =
+    digitalRead(PIN_RECOVERY_BUTTON) == LOW;
+
+  if (rawPressed != buttonLastRawPressed) {
+    buttonLastRawPressed = rawPressed;
+    buttonLastTransitionMillis = now;
+  }
+
+  if (now - buttonLastTransitionMillis < BUTTON_DEBOUNCE_MS) {
+    return;
+  }
+
+  if (rawPressed != buttonDebouncedPressed) {
+    buttonDebouncedPressed = rawPressed;
+
+    if (!buttonDebouncedPressed) {
+      buttonActionFired = false;
+    }
+  }
+
+  if (!buttonDebouncedPressed
+      || buttonActionFired) {
+    return;
+  }
+
+  buttonActionFired = true;
+
+  switch (config.buttonAction) {
+    case BUTTON_ACTION_TOGGLE_LOCATE:
+      toggleArtNetLocate();
+      logEvent(
+        "button_locate",
+        "Hardware button toggled Locate");
+      break;
+
+    case BUTTON_ACTION_DISABLED:
+    default:
+      break;
+  }
 #endif
 }
 
@@ -175,6 +228,8 @@ void loop() {
 
   updateArtNet();
   updateSacn();
+
+  updateLocalButton();
 
   updateLEDs();
 

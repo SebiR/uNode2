@@ -13,6 +13,9 @@ explicitly in each release entry.
 
 ### Changed
 
+- Added a Hardware-tab runtime action for the local button: Disabled or
+  debounced short-press Toggle Locate. Holding the button during boot remains
+  reserved for Recovery Mode.
 - Added dedicated system LED override patterns for OTA/recovery states:
   alternating amber while firmware or LittleFS upload is running, solid green
   after an accepted update, short alternating red after update failure, and

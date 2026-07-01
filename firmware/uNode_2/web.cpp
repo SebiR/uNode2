@@ -1422,6 +1422,9 @@ static void handleStatus() {
   doc["busGuardMode"] =
     config.busGuardMode;
 
+  doc["buttonAction"] =
+    config.buttonAction;
+
   doc["terminationEnabled"] =
     isTerminationEnabled();
 

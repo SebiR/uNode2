@@ -461,6 +461,11 @@ The same tab reports whether split `/RE`/`DE` control and switchable
 termination are available in the current build, plus the effective driver,
 receiver, and termination states.
 
+The local hardware button is active-low on GPIO14. Holding it during power-on
+or reset always enters Recovery Mode. During normal operation, the Hardware tab
+can either leave the button deactivated or use a debounced short press to toggle
+the local Art-Net Locate indication.
+
 The Hardware tab also provides optional Bus Guarding:
 
 | Mode | Behaviour |

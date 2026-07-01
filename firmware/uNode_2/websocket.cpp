@@ -282,6 +282,9 @@ void broadcastStatus() {
   doc["busGuardMode"] =
     config.busGuardMode;
 
+  doc["buttonAction"] =
+    config.buttonAction;
+
   doc["universe"] =
     getConfiguredUniverse();
 

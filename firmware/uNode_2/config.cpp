@@ -36,6 +36,7 @@ static void setDefaults(Config& target) {
   target.sacnPriority = 100;
   target.terminationMode = TERMINATION_AUTO;
   target.busGuardMode = BUS_GUARD_OFF;
+  target.buttonAction = BUTTON_ACTION_DISABLED;
   target.legacyArtPollReply = false;
   target.adminPasswordHash = "";
 }
@@ -338,6 +339,8 @@ static bool applyJson(
     doc["terminationMode"] | static_cast<int>(candidate.terminationMode);
   const int busGuardMode =
     doc["busGuardMode"] | static_cast<int>(candidate.busGuardMode);
+  const int buttonAction =
+    doc["buttonAction"] | static_cast<int>(candidate.buttonAction);
 
   if (net < 0 || net > 127) {
     error = "Art-Net net must be between 0 and 127";
@@ -389,6 +392,12 @@ static bool applyJson(
     return false;
   }
 
+  if (buttonAction < BUTTON_ACTION_DISABLED
+      || buttonAction > BUTTON_ACTION_TOGGLE_LOCATE) {
+    error = "Button action must be Disabled or Toggle Locate";
+    return false;
+  }
+
   candidate.net = net;
   candidate.subnetId = subnetId;
   candidate.universe = universe;
@@ -404,6 +413,8 @@ static bool applyJson(
     static_cast<TerminationMode>(terminationMode);
   candidate.busGuardMode =
     static_cast<BusGuardMode>(busGuardMode);
+  candidate.buttonAction =
+    static_cast<ButtonAction>(buttonAction);
 
   candidate.legacyArtPollReply =
     doc["legacyArtPollReply"] | candidate.legacyArtPollReply;
@@ -440,6 +451,7 @@ static void configToJsonDocument(
   doc["sacnPriority"] = source.sacnPriority;
   doc["terminationMode"] = source.terminationMode;
   doc["busGuardMode"] = source.busGuardMode;
+  doc["buttonAction"] = source.buttonAction;
   doc["legacyArtPollReply"] = source.legacyArtPollReply;
 
   if (includeSecrets
