@@ -38,6 +38,13 @@ def _latency_timeout_seconds() -> float:
     return max(0.25, float(os.environ.get("UNODE_LATENCY_TIMEOUT", "1.5")))
 
 
+def _artnet_subscriber_refresh_seconds() -> float:
+    return max(
+        0.25,
+        float(os.environ.get("UNODE_ARTNET_SUBSCRIBER_REFRESH", "1.0")),
+    )
+
+
 def _pattern(sample: int, *, length: int = 16) -> list[int]:
     base = ((sample + 1) * 17) & 0xFF
     return [((base + index * 29) & 0xFF) for index in range(length)]
@@ -197,6 +204,24 @@ def _open_artnet_receiver(unode_ip: str, universe: int) -> socket.socket:
     return sock
 
 
+def make_artnet_subscriber_reply(unode_ip: str, universe: int) -> bytes:
+    return make_artpollreply_for_subscriber(
+        ip=local_ipv4_for_target(unode_ip),
+        net=0,
+        subnet=0,
+        universe=universe,
+    )
+
+
+def refresh_artnet_subscriber(
+    sock: socket.socket,
+    *,
+    unode_ip: str,
+    subscriber_reply: bytes,
+) -> None:
+    sock.sendto(subscriber_reply, (unode_ip, ARTNET_PORT))
+
+
 def _open_sacn_receiver(unode_ip: str, universe: int) -> socket.socket:
     receiver_ip = local_ipv4_for_target(unode_ip)
     group_ip = sacn_multicast_address(universe)
@@ -339,8 +364,12 @@ def test_dmx_to_network_latency_profile(
 
     if protocol.value == ARTNET.value:
         sock = _open_artnet_receiver(unode_ip, universe)
+        artnet_subscriber_reply = make_artnet_subscriber_reply(unode_ip, universe)
+        next_artnet_refresh = time.perf_counter() + _artnet_subscriber_refresh_seconds()
     else:
         sock = _open_sacn_receiver(unode_ip, universe)
+        artnet_subscriber_reply = b""
+        next_artnet_refresh = 0.0
 
     try:
         step(
@@ -358,6 +387,16 @@ def test_dmx_to_network_latency_profile(
             values = _pattern(sample_index)
             rp2040_tool.set_frame(values, slots=len(values))
             _drain_udp(sock)
+
+            if protocol.value == ARTNET.value and time.perf_counter() >= next_artnet_refresh:
+                refresh_artnet_subscriber(
+                    sock,
+                    unode_ip=unode_ip,
+                    subscriber_reply=artnet_subscriber_reply,
+                )
+                next_artnet_refresh = (
+                    time.perf_counter() + _artnet_subscriber_refresh_seconds()
+                )
 
             start = time.perf_counter()
             rp2040_tool.tx("send")

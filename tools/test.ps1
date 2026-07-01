@@ -12,6 +12,7 @@ param(
     [double]$DropoutTimeout = 0,
     [double]$DropoutInterval = -1,
     [int]$DropoutAllowedLosses = -1,
+    [double]$ArtNetSubscriberRefresh = 0,
     [double]$SoakInterval = 0,
     [double]$SoakGrace = 0,
     [string]$Path = ""
@@ -126,6 +127,11 @@ if ($Integration)
         $env:UNODE_DROPOUT_ALLOWED_LOSSES = "$DropoutAllowedLosses"
     }
 
+    if ($ArtNetSubscriberRefresh -gt 0)
+    {
+        $env:UNODE_ARTNET_SUBSCRIBER_REFRESH = "$ArtNetSubscriberRefresh"
+    }
+
     if ($SoakInterval -gt 0)
     {
         $env:UNODE_SOAK_INTERVAL = "$SoakInterval"
@@ -178,6 +184,7 @@ else
     Remove-Item Env:\UNODE_DROPOUT_TIMEOUT -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_DROPOUT_INTERVAL -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_DROPOUT_ALLOWED_LOSSES -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_ARTNET_SUBSCRIBER_REFRESH -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_SOAK_INTERVAL -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_SOAK_REACHABILITY_GRACE -ErrorAction SilentlyContinue
 

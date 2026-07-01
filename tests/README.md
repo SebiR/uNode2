@@ -197,7 +197,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
   host UDP send, Wi-Fi, uNode processing, and DMX output scheduling. DMX-to-
   network measurements also include the USB command used to trigger a single
   RP2040 DMX frame, which makes them most useful for comparing AP/client mode
-  or Art-Net/sACN behaviour on the same bench setup.
+  or Art-Net/sACN behaviour on the same bench setup. Longer DMX-to-Art-Net
+  profiles refresh the Python test subscriber periodically so uNode does not
+  expire it from the Art-Net subscriber list during the test.
 - The dropout hardware-in-the-loop profile checks lossless update delivery at
   a moderate rate. It intentionally does not try to prove that every overly
   fast network packet becomes a separate physical DMX frame; at rates above

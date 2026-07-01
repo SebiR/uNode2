@@ -19,6 +19,8 @@ from test_latency_hil import (
     _pattern,
     _send_network_frame,
     _wait_for_network_values,
+    make_artnet_subscriber_reply,
+    refresh_artnet_subscriber,
 )
 from unode_client import UNodeClient
 
@@ -39,6 +41,30 @@ def _allowed_losses() -> int:
     return max(0, int(os.environ.get("UNODE_DROPOUT_ALLOWED_LOSSES", "0")))
 
 
+def _warmup_timeout_seconds() -> float:
+    return max(0.25, float(os.environ.get("UNODE_DROPOUT_WARMUP_TIMEOUT", "3.0")))
+
+
+def _warmup_settle_seconds() -> float:
+    return max(0.0, float(os.environ.get("UNODE_DROPOUT_WARMUP_SETTLE", "0.2")))
+
+
+def _warmup_attempts() -> int:
+    return max(1, int(os.environ.get("UNODE_DROPOUT_WARMUP_ATTEMPTS", "5")))
+
+
+def _artnet_subscriber_refresh_seconds() -> float:
+    return max(
+        0.25,
+        float(
+            os.environ.get(
+                "UNODE_DROPOUT_ARTNET_REFRESH",
+                os.environ.get("UNODE_ARTNET_SUBSCRIBER_REFRESH", "1.0"),
+            )
+        ),
+    )
+
+
 def _print_delivery_report(
     *,
     title: str,
@@ -57,6 +83,88 @@ def _print_delivery_report(
         preview = ", ".join(str(index) for index in lost_indices[:12])
         suffix = "..." if len(lost_indices) > 12 else ""
         step(f"Lost indices : {preview}{suffix}")
+
+
+def _send_and_expect_network_update(
+    *,
+    rp2040_tool: Rp2040DmxTool,
+    sock,
+    unode_ip: str,
+    protocol: LiveProtocol,
+    universe: int,
+    values: list[int],
+    timeout: float,
+) -> bool:
+    rp2040_tool.set_frame(values, slots=len(values))
+    _drain_udp(sock)
+    rp2040_tool.tx("send")
+    return _wait_for_network_values(
+        sock,
+        unode_ip=unode_ip,
+        protocol=protocol,
+        universe=universe,
+        expected=values,
+        timeout=timeout,
+    )
+
+
+def _warm_up_network_output(
+    *,
+    rp2040_tool: Rp2040DmxTool,
+    sock,
+    unode_ip: str,
+    protocol: LiveProtocol,
+    universe: int,
+    artnet_subscriber_reply: bytes,
+) -> None:
+    step(
+        f"Warming up DMX -> {protocol.name} path before counted updates"
+    )
+
+    warmup_patterns = [
+        _pattern(-2),
+        _pattern(-1),
+    ]
+    matched = 0
+    attempts = 0
+    needed = len(warmup_patterns)
+
+    while matched < needed and attempts < _warmup_attempts():
+        if protocol.value == ARTNET.value:
+            refresh_artnet_subscriber(
+                sock,
+                unode_ip=unode_ip,
+                subscriber_reply=artnet_subscriber_reply,
+            )
+            time.sleep(0.05)
+
+        values = warmup_patterns[matched]
+        attempts += 1
+
+        if _send_and_expect_network_update(
+            rp2040_tool=rp2040_tool,
+            sock=sock,
+            unode_ip=unode_ip,
+            protocol=protocol,
+            universe=universe,
+            values=values,
+            timeout=_warmup_timeout_seconds(),
+        ):
+            matched += 1
+            continue
+
+        step(
+            f"Warm-up DMX -> {protocol.name} attempt {attempts} did not "
+            "produce the expected packet; retrying"
+        )
+
+    assert matched == needed, (
+        f"Warm-up DMX -> {protocol.name} did not stabilize after "
+        f"{attempts} attempts"
+    )
+
+    if _warmup_settle_seconds() > 0:
+        time.sleep(_warmup_settle_seconds())
 
 
 @pytest.mark.parametrize("protocol", [ARTNET, SACN], ids=lambda p: p.name)
@@ -139,8 +247,12 @@ def test_each_physical_dmx_change_reaches_network_output(
 
     if protocol.value == ARTNET.value:
         sock = _open_artnet_receiver(unode_ip, universe)
+        artnet_subscriber_reply = make_artnet_subscriber_reply(unode_ip, universe)
+        next_artnet_refresh = time.perf_counter()
     else:
         sock = _open_sacn_receiver(unode_ip, universe)
+        artnet_subscriber_reply = b""
+        next_artnet_refresh = 0.0
 
     try:
         step(
@@ -151,22 +263,49 @@ def test_each_physical_dmx_change_reaches_network_output(
         rp2040_tool.mode("tx")
         rp2040_tool.set_timing(break_us=176, mab_us=16, fps=40)
 
+        if protocol.value == ARTNET.value:
+            refresh_artnet_subscriber(
+                sock,
+                unode_ip=unode_ip,
+                subscriber_reply=artnet_subscriber_reply,
+            )
+            next_artnet_refresh = (
+                time.perf_counter() + _artnet_subscriber_refresh_seconds()
+            )
+
+        _warm_up_network_output(
+            rp2040_tool=rp2040_tool,
+            sock=sock,
+            unode_ip=unode_ip,
+            protocol=protocol,
+            universe=universe,
+            artnet_subscriber_reply=artnet_subscriber_reply,
+        )
+
         seen = 0
         lost_indices: list[int] = []
         started = time.perf_counter()
 
         for sample_index in range(samples):
             values = _pattern(sample_index)
-            rp2040_tool.set_frame(values, slots=len(values))
-            _drain_udp(sock)
 
-            rp2040_tool.tx("send")
-            if _wait_for_network_values(
-                sock,
+            if protocol.value == ARTNET.value and time.perf_counter() >= next_artnet_refresh:
+                refresh_artnet_subscriber(
+                    sock,
+                    unode_ip=unode_ip,
+                    subscriber_reply=artnet_subscriber_reply,
+                )
+                next_artnet_refresh = (
+                    time.perf_counter() + _artnet_subscriber_refresh_seconds()
+                )
+
+            if _send_and_expect_network_update(
+                rp2040_tool=rp2040_tool,
+                sock=sock,
                 unode_ip=unode_ip,
                 protocol=protocol,
                 universe=universe,
-                expected=values,
+                values=values,
                 timeout=timeout,
             ):
                 seen += 1
