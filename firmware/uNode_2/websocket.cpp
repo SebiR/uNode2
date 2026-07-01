@@ -32,7 +32,7 @@ static const char* ledColorToCss(
       return "#ff0000";
 
     case StatusLedColor::ORANGE:
-      return "#ff5000";
+      return "#ff8000";
 
     case StatusLedColor::GREEN:
       return "#00ff00";
