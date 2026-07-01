@@ -4,7 +4,8 @@ import os
 
 import pytest
 
-from helpers import step, wait_for_status
+from artnet_packets import ARTNET_AC_LED_LOCATE, ARTNET_AC_LED_NORMAL, make_artaddress
+from helpers import send_artnet_packet, step, wait_for_status
 from rp2040_dmx_tool import Rp2040DmxTool
 from unode_client import UNodeClient
 
@@ -57,6 +58,7 @@ def test_rp2040_aux_gpio_json_commands(
 
 def test_rp2040_gpio_can_toggle_unode_local_button_locate(
     unode_client: UNodeClient,
+    unode_ip: str,
     preserved_config: dict,
     rp2040_tool: Rp2040DmxTool,
 ) -> None:
@@ -99,6 +101,23 @@ def test_rp2040_gpio_can_toggle_unode_local_button_locate(
         assert bool(toggled["squawking"]) != initial_locate
     finally:
         rp2040_tool.gpio_release(pin)
+        step("Restoring Locate state after local button test")
+        send_artnet_packet(
+            unode_ip,
+            make_artaddress(
+                command=(
+                    ARTNET_AC_LED_LOCATE
+                    if initial_locate
+                    else ARTNET_AC_LED_NORMAL
+                ),
+                bind_index=1,
+            ),
+        )
+        wait_for_status(
+            unode_client,
+            lambda data: bool(data.get("squawking", False)) == initial_locate,
+            timeout=3.0,
+        )
 
 
 def test_rp2040_gpio_can_reset_unode_and_observe_boot_count(
