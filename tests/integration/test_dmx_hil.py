@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 import socket
+from typing import Any
 
 import pytest
 
@@ -264,6 +265,31 @@ def _report_timing_metric(
         f"{target}allowed {_format_window(minimum, maximum, unit)}"
         f"{deviation}"
     )
+
+
+def _timing_metric_payload(
+    stats: dict,
+    *,
+    unit: str,
+    nominal: float | None = None,
+    minimum: float | None = None,
+    maximum: float | None = None,
+) -> dict[str, Any]:
+    return {
+        "unit": unit,
+        "min": stats.get("min"),
+        "avg": stats.get("avg"),
+        "max": stats.get("max"),
+        "n": stats.get("n"),
+        "nominal": nominal,
+        "minimum": minimum,
+        "maximum": maximum,
+        "avgDeviationPercent": (
+            _percent_deviation(float(stats["avg"]), nominal)
+            if nominal is not None
+            else None
+        ),
+    }
 
 
 def _collect_full_frame_timing_stats(
@@ -1210,6 +1236,7 @@ def test_artnet_to_dmx_output_timing_matches_dmx512_limits(
     unode_ip: str,
     preserved_config: dict,
     rp2040_tool: Rp2040DmxTool,
+    record_property,
 ) -> None:
     universe = _configure_unode_output(unode_client, preserved_config)
 
@@ -1286,6 +1313,51 @@ def test_artnet_to_dmx_output_timing_matches_dmx512_limits(
         f"allowed {baud_min:.0f}..{baud_max:.0f} Bd "
         f"({DMX_BAUD_TOLERANCE_PERCENT:.1f}% test tolerance); "
         f"deviation={_percent_deviation(baud, DMX_NOMINAL_BAUD):+.2f}%"
+    )
+
+    record_property(
+        "metric.dmxTiming",
+        {
+            "frames": stats["frames"],
+            "break": _timing_metric_payload(
+                stats["breakUs"],
+                unit="us",
+                minimum=DMX_SPEC_BREAK_MIN_US,
+            ),
+            "markAfterBreak": _timing_metric_payload(
+                stats["mabUs"],
+                unit="us",
+                minimum=DMX_SPEC_MAB_MIN_US,
+            ),
+            "data": _timing_metric_payload(
+                stats["dataUs"],
+                unit="us",
+                nominal=DMX_FULL_FRAME_DATA_US,
+            ),
+            "framePeriod": _timing_metric_payload(
+                stats["frameUs"],
+                unit="us",
+                minimum=DMX_FULL_FRAME_MIN_PACKET_US,
+            ),
+            "slots": _timing_metric_payload(
+                stats["slots"],
+                unit="slots",
+                nominal=DMX_FULL_FRAME_SLOTS,
+                minimum=DMX_FULL_FRAME_SLOTS,
+                maximum=DMX_FULL_FRAME_SLOTS,
+            ),
+            "baud": {
+                "unit": "Bd",
+                "actual": baud,
+                "nominal": DMX_NOMINAL_BAUD,
+                "minimum": baud_min,
+                "maximum": baud_max,
+                "deviationPercent": _percent_deviation(
+                    baud,
+                    DMX_NOMINAL_BAUD,
+                ),
+            },
+        },
     )
 
     assert stats["frames"] >= 10

@@ -272,6 +272,29 @@ HTML_TEMPLATE = r"""<!doctype html>
       font-size: 10px;
     }
 
+    .measurements {
+      margin-top: 6px;
+      border: 1px solid #e6ebf2;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fbfcfe;
+    }
+
+    .measurements table {
+      background: transparent;
+    }
+
+    .measurements th,
+    .measurements td {
+      padding: 4px 6px;
+      font-size: 9px;
+    }
+
+    .measurements .measurement-name {
+      font-weight: 700;
+      color: #26374f;
+    }
+
     .duration {
       white-space: nowrap;
       color: var(--muted);
@@ -371,6 +394,32 @@ HTML_TEMPLATE = r"""<!doctype html>
             <td>
               <strong>{{ test.title }}</strong>
               {% if test.description %}<div class="desc">{{ test.description }}</div>{% endif %}
+              {% if test.measurements %}
+              <div class="measurements">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Measurement</th>
+                      <th>Min</th>
+                      <th>Avg / Actual</th>
+                      <th>Max</th>
+                      <th>Allowed / Nominal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for measurement in test.measurements %}
+                    <tr>
+                      <td class="measurement-name">{{ measurement.name }}</td>
+                      <td>{{ measurement.min }}</td>
+                      <td>{{ measurement.avg }}</td>
+                      <td>{{ measurement.max }}</td>
+                      <td>{{ measurement.target }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% endif %}
             </td>
             <td class="duration">{{ "%.2f"|format(test.durationSeconds) }} s</td>
           </tr>
@@ -459,6 +508,87 @@ def format_duration(seconds: float) -> str:
     return f"{remainder}s"
 
 
+def format_number(value: object, decimals: int = 1) -> str:
+    if value is None:
+        return "—"
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    return f"{number:.{decimals}f}"
+
+
+def format_with_unit(value: object, unit: str, decimals: int = 1) -> str:
+    formatted = format_number(value, decimals)
+    return formatted if formatted == "—" or not unit else f"{formatted} {unit}"
+
+
+def format_target(metric: dict[str, Any]) -> str:
+    unit = metric.get("unit", "")
+    minimum = metric.get("minimum")
+    maximum = metric.get("maximum")
+    nominal = metric.get("nominal")
+    parts: list[str] = []
+
+    if minimum is not None and maximum is not None:
+        parts.append(
+            f"{format_with_unit(minimum, unit, 0)}.."
+            f"{format_with_unit(maximum, unit, 0)}"
+        )
+    elif minimum is not None:
+        parts.append(f">= {format_with_unit(minimum, unit, 0)}")
+    elif maximum is not None:
+        parts.append(f"<= {format_with_unit(maximum, unit, 0)}")
+
+    if nominal is not None:
+        parts.append(f"nom. {format_with_unit(nominal, unit, 0)}")
+
+    return "; ".join(parts) if parts else "—"
+
+
+def timing_measurement(name: str, metric: dict[str, Any]) -> dict[str, str]:
+    unit = metric.get("unit", "")
+    return {
+        "name": name,
+        "min": format_with_unit(metric.get("min"), unit),
+        "avg": format_with_unit(metric.get("avg"), unit),
+        "max": format_with_unit(metric.get("max"), unit),
+        "target": format_target(metric),
+    }
+
+
+def test_measurements(test: dict[str, Any]) -> list[dict[str, str]]:
+    metrics = test.get("metrics") or {}
+    timing = metrics.get("dmxTiming")
+    if not isinstance(timing, dict):
+        return []
+
+    measurements = [
+        timing_measurement("Break", timing.get("break", {})),
+        timing_measurement("MAB", timing.get("markAfterBreak", {})),
+        timing_measurement("Data", timing.get("data", {})),
+        timing_measurement("Frame period", timing.get("framePeriod", {})),
+        timing_measurement("Slots", timing.get("slots", {})),
+    ]
+
+    baud = timing.get("baud", {})
+    if isinstance(baud, dict):
+        measurements.append(
+            {
+                "name": "Baud",
+                "min": format_with_unit(baud.get("minimum"), baud.get("unit", ""), 0),
+                "avg": format_with_unit(baud.get("actual"), baud.get("unit", ""), 0),
+                "max": format_with_unit(baud.get("maximum"), baud.get("unit", ""), 0),
+                "target": (
+                    f"nom. {format_with_unit(baud.get('nominal'), baud.get('unit', ''), 0)}; "
+                    f"dev. {format_number(baud.get('deviationPercent'), 2)}%"
+                ),
+            }
+        )
+
+    return measurements
+
+
 def format_datetime(value: str) -> str:
     if not value:
         return "N/A"
@@ -472,6 +602,8 @@ def format_datetime(value: str) -> str:
 def grouped_tests(report: dict[str, Any]) -> list[tuple[str, list[dict[str, Any]]]]:
     groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for test in report.get("tests", []):
+        test = dict(test)
+        test["measurements"] = test_measurements(test)
         groups[test.get("group") or "Other"].append(test)
     return sorted(groups.items(), key=lambda item: item[0].lower())
 

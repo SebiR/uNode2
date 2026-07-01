@@ -111,6 +111,7 @@ def _write_json_report(
                 "description": mapped["description"],
                 "status": result["status"],
                 "durationSeconds": round(float(result["duration"]), 6),
+                "metrics": result.get("metrics", {}),
             }
         )
 
@@ -167,9 +168,15 @@ def pytest_runtest_logreport(report: pytest.TestReport) -> None:
     else:
         return
 
+    metrics = {}
+    for name, value in getattr(report, "user_properties", []):
+        if name.startswith("metric."):
+            metrics[name.removeprefix("metric.")] = value
+
     _TEST_REPORTS[report.nodeid] = {
         "status": status,
         "duration": report.duration,
+        "metrics": metrics,
     }
 
 
