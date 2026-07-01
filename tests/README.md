@@ -101,6 +101,15 @@ This runs DMX -> Art-Net and DMX -> sACN profiles:
 powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Rp2040Port auto -Path tests/integration/test_dmx_soak_hil.py -DmxSoakSeconds 600
 ```
 
+Run the RP2040 hardware-in-the-loop latency profile. This measures practical
+end-to-end latency for Art-Net -> DMX, sACN -> DMX, DMX -> Art-Net, and
+DMX -> sACN on the currently active Wi-Fi setup, so run it once in AP mode and
+once in client mode if you want to compare both:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Rp2040Port auto -Path tests/integration/test_latency_hil.py -LatencySamples 50
+```
+
 Capture Serial1/GPIO2 debug output in a second terminal while soak tests run:
 
 ```powershell
@@ -168,6 +177,12 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
   stale sources must expire, third sources must be rejected, ArtAddress
   `AcCancelMerge` must lock output to the next source, and `/api/status` must
   report the active Physical sources.
+- The latency hardware-in-the-loop profile is a practical comparison test, not
+  a microsecond-accurate lab measurement. Network-to-DMX measurements include
+  host UDP send, Wi-Fi, uNode processing, and DMX output scheduling. DMX-to-
+  network measurements also include the USB command used to trigger a single
+  RP2040 DMX frame, which makes them most useful for comparing AP/client mode
+  or Art-Net/sACN behaviour on the same bench setup.
 - The DMX hardware-in-the-loop tests also verify ArtSync buffering/flush and
   ArtSync timeout flush on the real DMX output, plus all four output failsafe
   modes after Art-Net timeout: Hold, All-to-Zero, All-to-Full, and Failsafe
