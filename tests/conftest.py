@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -62,17 +63,29 @@ def _mapped_test_info(
     }
 
 
-def _test_report_path(config: pytest.Config) -> Path:
+def _safe_filename_part(value: object) -> str:
+    text = str(value or "").strip()
+    text = re.sub(r"[^A-Za-z0-9._-]+", "-", text)
+    return text.strip("-._")
+
+
+def _test_report_path(config: pytest.Config, node_status: dict) -> Path:
     configured = os.environ.get("UNODE_TEST_REPORT_JSON", "")
     if configured:
         return Path(configured)
 
     timestamp = _SESSION_STARTED_AT.strftime("%Y%m%d-%H%M%SZ")
+    chip_id = _safe_filename_part(node_status.get("chipId", ""))
+    filename = (
+        f"unode-{chip_id}-test-report-{timestamp}.json"
+        if chip_id
+        else f"unode-test-report-{timestamp}.json"
+    )
     return (
         _project_root(config)
         / "artifacts"
         / "test_reports"
-        / f"unode-test-report-{timestamp}.json"
+        / filename
     )
 
 
@@ -132,7 +145,7 @@ def _write_json_report(
         "tests": tests,
     }
 
-    output_path = _test_report_path(config)
+    output_path = _test_report_path(config, node_status)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         json.dumps(report, indent=2, ensure_ascii=False) + "\n",
