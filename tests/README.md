@@ -54,6 +54,13 @@ terminal shows each major hardware interaction while the tests run. At the end
 it prints a compact test certificate and removes `.pytest_cache` /
 `__pycache__` directories.
 
+Each test run also writes a structured JSON report to
+`artifacts/test_reports/`. The report contains node identity, firmware version,
+summary counts, mapped production-test group/title labels, and raw pytest
+node IDs. Use `-ReportJson path\to\report.json` to choose a specific output
+path. Human-readable labels are stored in `tests/report_mapping.en.json`; a
+localized mapping can be added later without renaming the actual tests.
+
 If the web interface is password-protected, also set:
 
 ```powershell

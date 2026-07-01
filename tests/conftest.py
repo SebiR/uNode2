@@ -7,6 +7,7 @@ import urllib.error
 import urllib.request
 from collections.abc import Iterator
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 from serial.tools import list_ports
@@ -16,6 +17,7 @@ from rp2040_dmx_tool import Rp2040DmxTool
 from unode_client import UNodeClient
 
 _TEST_REPORTS: dict[str, dict[str, object]] = {}
+_SESSION_STARTED_AT = datetime.now(timezone.utc)
 
 
 def integration_enabled() -> bool:
@@ -31,6 +33,112 @@ def _read_node_status() -> dict:
             return json.loads(response.read().decode("utf-8"))
     except (OSError, TimeoutError, urllib.error.HTTPError, json.JSONDecodeError):
         return {}
+
+
+def _project_root(config: pytest.Config) -> Path:
+    root = getattr(config, "rootpath", None)
+    if root is not None:
+        return Path(root)
+    return Path(str(config.rootdir))
+
+
+def _load_report_mapping(config: pytest.Config) -> dict[str, dict[str, str]]:
+    mapping_path = _project_root(config) / "tests" / "report_mapping.en.json"
+    try:
+        return json.loads(mapping_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _mapped_test_info(
+    mapping: dict[str, dict[str, str]],
+    nodeid: str,
+) -> dict[str, str]:
+    info = mapping.get(nodeid, {})
+    return {
+        "group": info.get("group", "Other"),
+        "title": info.get("title", nodeid.split("::")[-1]),
+        "description": info.get("description", ""),
+    }
+
+
+def _test_report_path(config: pytest.Config) -> Path:
+    configured = os.environ.get("UNODE_TEST_REPORT_JSON", "")
+    if configured:
+        return Path(configured)
+
+    timestamp = _SESSION_STARTED_AT.strftime("%Y%m%d-%H%M%SZ")
+    return (
+        _project_root(config)
+        / "artifacts"
+        / "test_reports"
+        / f"unode-test-report-{timestamp}.json"
+    )
+
+
+def _write_json_report(
+    config: pytest.Config,
+    *,
+    counts: dict[str, int],
+    started_at: datetime,
+    finished_at: datetime,
+    node_status: dict,
+) -> Path:
+    mapping = _load_report_mapping(config)
+    tests = []
+
+    for nodeid in sorted(_TEST_REPORTS):
+        result = _TEST_REPORTS[nodeid]
+        mapped = _mapped_test_info(mapping, nodeid)
+        tests.append(
+            {
+                "nodeid": nodeid,
+                "group": mapped["group"],
+                "title": mapped["title"],
+                "description": mapped["description"],
+                "status": result["status"],
+                "durationSeconds": round(float(result["duration"]), 6),
+            }
+        )
+
+    report = {
+        "schemaVersion": 1,
+        "project": "uNode 2",
+        "startedAt": started_at.isoformat(timespec="seconds"),
+        "finishedAt": finished_at.isoformat(timespec="seconds"),
+        "durationSeconds": round((finished_at - started_at).total_seconds(), 3),
+        "integration": integration_enabled(),
+        "environment": {
+            "nodeIp": os.environ.get("UNODE_IP", ""),
+            "baseUrl": os.environ.get("UNODE_BASE_URL", ""),
+            "rp2040Port": os.environ.get("UNODE_RP2040_PORT", ""),
+        },
+        "node": {
+            "name": node_status.get("name", ""),
+            "chipId": node_status.get("chipId", ""),
+            "firmware": node_status.get("firmware", ""),
+            "ip": node_status.get("ip", os.environ.get("UNODE_IP", "")),
+            "mac": node_status.get("mac", ""),
+            "resetReason": node_status.get("resetReason", ""),
+            "bootCount": node_status.get("bootCount", None),
+        },
+        "summary": {
+            "passed": counts.get("PASSED", 0),
+            "failed": counts.get("FAILED", 0),
+            "skipped": counts.get("SKIPPED", 0),
+            "total": sum(counts.values()),
+            "result": "PASS" if counts.get("FAILED", 0) == 0 else "FAIL",
+        },
+        "tests": tests,
+    }
+
+    output_path = _test_report_path(config)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(report, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return output_path
 
 
 def pytest_runtest_logreport(report: pytest.TestReport) -> None:
@@ -53,17 +161,19 @@ def pytest_runtest_logreport(report: pytest.TestReport) -> None:
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus: int, config: pytest.Config) -> None:
-    del exitstatus, config
+    del exitstatus
 
     now = datetime.now().astimezone()
+    finished_at = datetime.now(timezone.utc)
     terminalreporter.write_sep("=", "uNode Test Certificate")
 
+    node_status = {}
     if integration_enabled():
-        status = _read_node_status()
-        chip_id = status.get("chipId", "unknown")
-        firmware = status.get("firmware", "unknown")
-        node_name = status.get("name", "unknown")
-        ip = status.get("ip", os.environ.get("UNODE_IP", "unknown"))
+        node_status = _read_node_status()
+        chip_id = node_status.get("chipId", "unknown")
+        firmware = node_status.get("firmware", "unknown")
+        node_name = node_status.get("name", "unknown")
+        ip = node_status.get("ip", os.environ.get("UNODE_IP", "unknown"))
         terminalreporter.write_line(
             f"Node       : {node_name} {chip_id} (FW {firmware})"
         )
@@ -78,14 +188,17 @@ def pytest_terminal_summary(terminalreporter, exitstatus: int, config: pytest.Co
     terminalreporter.write_line(f"UTC        : {datetime.now(timezone.utc).isoformat(timespec='seconds')}")
     terminalreporter.write_line("")
 
+    mapping = _load_report_mapping(config)
     counts = {"PASSED": 0, "FAILED": 0, "SKIPPED": 0}
     for nodeid in sorted(_TEST_REPORTS):
         result = _TEST_REPORTS[nodeid]
         status_text = str(result["status"])
         counts[status_text] = counts.get(status_text, 0) + 1
         duration = float(result["duration"])
+        mapped = _mapped_test_info(mapping, nodeid)
         terminalreporter.write_line(
-            f"[{status_text:<7}] {nodeid} ({duration:.2f}s)"
+            f"[{status_text:<7}] {mapped['group']} / {mapped['title']} "
+            f"({duration:.2f}s)"
         )
 
     terminalreporter.write_line("")
@@ -95,6 +208,16 @@ def pytest_terminal_summary(terminalreporter, exitstatus: int, config: pytest.Co
         f"{counts.get('FAILED', 0)} failed, "
         f"{counts.get('SKIPPED', 0)} skipped"
     )
+
+    if not getattr(config.option, "collectonly", False):
+        report_path = _write_json_report(
+            config,
+            counts=counts,
+            started_at=_SESSION_STARTED_AT,
+            finished_at=finished_at,
+            node_status=node_status,
+        )
+        terminalreporter.write_line(f"JSON Report: {report_path}")
 
 
 @pytest.fixture(scope="session")

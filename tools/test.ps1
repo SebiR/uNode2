@@ -15,6 +15,7 @@ param(
     [double]$ArtNetSubscriberRefresh = 0,
     [double]$SoakInterval = 0,
     [double]$SoakGrace = 0,
+    [string]$ReportJson = "",
     [string]$Path = ""
 )
 
@@ -76,6 +77,15 @@ if ($Integration)
     if ($Password.Length -gt 0)
     {
         $env:UNODE_PASSWORD = $Password
+    }
+
+    if ($ReportJson.Length -gt 0)
+    {
+        $env:UNODE_TEST_REPORT_JSON = $ReportJson
+    }
+    else
+    {
+        Remove-Item Env:\UNODE_TEST_REPORT_JSON -ErrorAction SilentlyContinue
     }
 
     if ($Rp2040Port.Length -gt 0)
@@ -172,6 +182,10 @@ if ($Integration)
     {
         Write-Host "Dropout : $env:UNODE_DROPOUT_SAMPLES samples"
     }
+    if ($env:UNODE_TEST_REPORT_JSON)
+    {
+        Write-Host "Report  : $env:UNODE_TEST_REPORT_JSON"
+    }
 }
 else
 {
@@ -187,6 +201,7 @@ else
     Remove-Item Env:\UNODE_ARTNET_SUBSCRIBER_REFRESH -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_SOAK_INTERVAL -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_SOAK_REACHABILITY_GRACE -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_TEST_REPORT_JSON -ErrorAction SilentlyContinue
 
     if ($Path.Length -eq 0)
     {
