@@ -533,7 +533,8 @@ clear, or node reboot.
 
 Leaving the password field empty and applying the setting disables write
 protection. If the password is forgotten, recovery mode provides a password
-reset field that can set a new password or clear it.
+reset action that clears the password. Set a new password from the normal
+System tab after rebooting from Recovery Mode.
 
 ## Configuration Storage
 

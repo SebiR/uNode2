@@ -17,6 +17,8 @@ explicitly in each release entry.
   alternating amber while firmware or LittleFS upload is running, solid green
   after an accepted update, short alternating red after update failure, and
   alternating blue/red in Recovery Mode.
+- Recovery Mode can now only clear the web password. New passwords are set from
+  the normal System page after rebooting.
 - Physical DMX output activity now uses amber instead of yellow for better
   separation from green Art-Net activity on WS2812 status LEDs.
 - The network status LED now indicates weak Wi-Fi signal quality in client mode:

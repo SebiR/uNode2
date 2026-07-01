@@ -179,9 +179,8 @@ static const char RECOVERY_HTML[] PROGMEM = R"rawliteral(
 
     <section class="card">
       <h2>Web Password</h2>
-      <p class="muted">Leave empty and apply to disable web write protection.</p>
-      <input id="adminPassword" type="password" placeholder="New password or empty">
-      <button class="warn" onclick="setWebPassword()">Apply Password Setting</button>
+      <p class="muted">Recovery can only clear the web password. Set a new password from the normal System page after reboot.</p>
+      <button class="warn" onclick="clearWebPassword()">Clear Web Password</button>
     </section>
 
     <section class="card">
@@ -290,23 +289,23 @@ static const char RECOVERY_HTML[] PROGMEM = R"rawliteral(
       waitForRestart();
     }
 
-    async function setWebPassword() {
-      const password = document.getElementById('adminPassword').value;
-      const response = await fetch('/api/recovery/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      });
-
-      if (!response.ok) {
-        setMessage('Password update failed: ' + await response.text());
+    async function clearWebPassword() {
+      if (!confirm('Clear the web password and disable write protection?')) {
         return;
       }
 
-      document.getElementById('adminPassword').value = '';
-      setMessage(password.length > 0
-        ? 'Web password updated.'
-        : 'Web password disabled.');
+      const response = await fetch('/api/recovery/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: '' })
+      });
+
+      if (!response.ok) {
+        setMessage('Password reset failed: ' + await response.text());
+        return;
+      }
+
+      setMessage('Web password cleared. Configure a new password from the normal System page.');
     }
 
     refreshStatus();
@@ -1735,7 +1734,7 @@ static void handleRecoveryStatus() {
     json);
 }
 
-/** @brief Sets or clears the web password from recovery mode. */
+/** @brief Clears the web password from recovery mode. */
 static void handleRecoveryAuthPassword() {
   if (!recoveryFilesystemMounted) {
     server.send(
@@ -1765,14 +1764,20 @@ static void handleRecoveryAuthPassword() {
   const String password =
     doc["password"] | "";
 
+  if (password.length() > 0) {
+    server.send(
+      400,
+      "text/plain",
+      "Recovery mode can only clear the web password. Set a new password from the normal System page.");
+    return;
+  }
+
   loadConfig();
 
   String error;
   const ConfigResult result =
     updateAdminPasswordHash(
-      password.length() > 0
-        ? hashAdminPassword(password)
-        : "",
+      "",
       error);
 
   if (result != ConfigResult::OK) {
