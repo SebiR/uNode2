@@ -13,6 +13,8 @@ Default pins are intended for Raspberry Pi Pico / Arduino-Pico `Serial1`:
 - `GPIO0`: DMX TX to RS-485 driver input.
 - `GPIO1`: DMX RX from RS-485 receiver output.
 - optional `DMX_DIR_PIN`: RS-485 DE/!RE direction control, disabled by default.
+- `GPIO6`, `GPIO7`, `GPIO8`: auxiliary test GPIOs for jig control such as
+  pulling the uNode button input low or toggling an external reset circuit.
 
 Adjust the pin definitions in `DmxToolConfig.h` if your transceiver uses
 different wiring. The pin macros are guarded with `#ifndef`, so they can also
@@ -41,12 +43,12 @@ is one JSON object terminated by `\n`.
 The firmware prints a ready event after boot:
 
 ```json
-{"ok":true,"event":"ready","tool":"rp2040_dmx_tool","fw":"0.2.0","protocol":"jsonl"}
+{"ok":true,"event":"ready","tool":"rp2040_dmx_tool","fw":"0.3.0","protocol":"jsonl"}
 ```
 
 After boot the DMX UART is idle and the DMX TX/RX pins are high impedance.
-This keeps directly connected UARTs free for firmware upload. Enable RX or TX
-explicitly with `mode` or `tx` commands.
+The auxiliary GPIOs are also released as inputs. This keeps directly connected
+UARTs and test points passive until a command explicitly drives them.
 
 Useful commands:
 
@@ -68,13 +70,18 @@ Useful commands:
 {"cmd":"tx","action":"stop"}
 {"cmd":"tx","action":"send"}
 {"cmd":"noise","durationMs":100,"minPulseUs":2,"maxPulseUs":200}
+{"cmd":"gpio","action":"read","pin":6}
+{"cmd":"gpio","action":"input","pin":6,"pullup":true}
+{"cmd":"gpio","action":"write","pin":6,"value":0}
+{"cmd":"gpio","action":"pulse","pin":6,"value":0,"durationMs":300,"release":true}
+{"cmd":"gpio","action":"release","pin":6}
 {"cmd":"clear","target":"stats"}
 ```
 
 Example responses:
 
 ```json
-{"ok":true,"type":"pong","fw":"0.2.0","mode":"RX analyzer"}
+{"ok":true,"type":"pong","fw":"0.3.0","mode":"RX analyzer","auxGpioPins":[6,7,8]}
 ```
 
 ```json

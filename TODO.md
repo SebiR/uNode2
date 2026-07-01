@@ -265,6 +265,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Add RP2040 DMX analyzer/test-fixture firmware in a dedicated project
       folder, for example `firmware/rp2040_dmx_tool`.
 - [x] Add a Python serial client for the RP2040 DMX tool JSONL protocol.
+- [x] Add auxiliary RP2040 GPIO control for production-test jig actions such as
+      pressing the uNode button input or driving external reset circuitry.
 - [x] Add hardware-in-the-loop tests that verify uNode Art-Net-to-DMX output
       with the RP2040 analyzer.
 - [x] Add hardware-in-the-loop coverage for sparse DMX channel mapping, ArtSync

@@ -29,6 +29,18 @@
 #define DMX_DIR_RX_LEVEL LOW
 #endif
 
+#ifndef AUX_GPIO0_PIN
+#define AUX_GPIO0_PIN 6
+#endif
+
+#ifndef AUX_GPIO1_PIN
+#define AUX_GPIO1_PIN 7
+#endif
+
+#ifndef AUX_GPIO2_PIN
+#define AUX_GPIO2_PIN 8
+#endif
+
 static constexpr uint16_t DMX_MAX_SLOTS = 512;
 static constexpr uint16_t DMX_MAX_PACKET_BYTES = DMX_MAX_SLOTS + 1;
 static constexpr uint32_t DEFAULT_DMX_BAUD = 250000;
@@ -44,6 +56,6 @@ static constexpr uint16_t DEFAULT_DISPLAY_FIRST_CHANNEL = 1;
 static constexpr uint16_t DEFAULT_DISPLAY_CHANNELS = 64;
 static constexpr size_t DMX_UART_RX_BUFFER_SIZE = 2048;
 static constexpr size_t MAX_COMMAND_LINE_LENGTH = 8192;
-static constexpr const char* TOOL_VERSION = "0.2.0";
+static constexpr const char* TOOL_VERSION = "0.3.0";
 
 #endif

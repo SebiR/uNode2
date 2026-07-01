@@ -94,6 +94,52 @@ class Rp2040DmxTool:
     def help(self) -> dict[str, Any]:
         return self.command({"cmd": "help"})
 
+    def gpio_read(self, pin: int) -> dict[str, Any]:
+        return self.command({"cmd": "gpio", "action": "read", "pin": pin})
+
+    def gpio_input(self, pin: int, *, pullup: bool = False) -> dict[str, Any]:
+        return self.command(
+            {
+                "cmd": "gpio",
+                "action": "input",
+                "pin": pin,
+                "pullup": pullup,
+            }
+        )
+
+    def gpio_write(self, pin: int, value: int | bool) -> dict[str, Any]:
+        return self.command(
+            {
+                "cmd": "gpio",
+                "action": "write",
+                "pin": pin,
+                "value": 1 if bool(value) else 0,
+            }
+        )
+
+    def gpio_pulse(
+        self,
+        pin: int,
+        *,
+        value: int | bool,
+        duration_ms: int = 250,
+        release: bool = True,
+    ) -> dict[str, Any]:
+        return self.command(
+            {
+                "cmd": "gpio",
+                "action": "pulse",
+                "pin": pin,
+                "value": 1 if bool(value) else 0,
+                "durationMs": duration_ms,
+                "release": release,
+            },
+            timeout=max(2.0, duration_ms / 1000.0 + 1.0),
+        )
+
+    def gpio_release(self, pin: int) -> dict[str, Any]:
+        return self.command({"cmd": "gpio", "action": "release", "pin": pin})
+
     def mode(self, value: str) -> dict[str, Any]:
         return self.command({"cmd": "mode", "value": value})
 

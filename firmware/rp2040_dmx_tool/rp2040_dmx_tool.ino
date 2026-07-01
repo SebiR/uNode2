@@ -68,6 +68,14 @@ static volatile bool edgeWaitingForMab = false;
 
 static String commandLine;
 
+static const int8_t AUX_GPIO_PINS[] = {
+  AUX_GPIO0_PIN,
+  AUX_GPIO1_PIN,
+  AUX_GPIO2_PIN
+};
+static const uint8_t AUX_GPIO_COUNT =
+  sizeof(AUX_GPIO_PINS) / sizeof(AUX_GPIO_PINS[0]);
+
 static void printHelp();
 static void enterRxMode(bool printLegacy = true);
 static void enterTxMode(bool printLegacy = true);
@@ -109,6 +117,17 @@ static void releaseDmxPins() {
   pinMode(DMX_RX_PIN, INPUT);
 }
 
+/** @brief Releases all auxiliary GPIOs into high-impedance input mode. */
+static void releaseAuxGpioPins() {
+  for (uint8_t index = 0; index < AUX_GPIO_COUNT; index++) {
+    if (AUX_GPIO_PINS[index] >= 0) {
+      pinMode(
+        AUX_GPIO_PINS[index],
+        INPUT);
+    }
+  }
+}
+
 static const char* modeName() {
   switch (mode) {
     case MODE_RX: return "RX analyzer";
@@ -117,6 +136,28 @@ static const char* modeName() {
   }
 
   return "?";
+}
+
+/** @return True when one of the configurable auxiliary GPIOs matches pin. */
+static bool isAuxGpioPinAllowed(
+  int pin) {
+  for (uint8_t index = 0; index < AUX_GPIO_COUNT; index++) {
+    if (AUX_GPIO_PINS[index] == pin) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/** @brief Adds the configured auxiliary GPIO pin list to a JSON array. */
+static void addAuxGpioPins(
+  JsonArray target) {
+  for (uint8_t index = 0; index < AUX_GPIO_COUNT; index++) {
+    if (AUX_GPIO_PINS[index] >= 0) {
+      target.add(AUX_GPIO_PINS[index]);
+    }
+  }
 }
 
 static const char* patternName() {
@@ -1240,6 +1281,115 @@ static void handleJsonNoise(
   sendJsonOk("noise");
 }
 
+static void handleJsonGpio(
+  JsonDocument& doc) {
+  const int pin =
+    doc["pin"] | -1;
+
+  if (!isAuxGpioPinAllowed(pin)) {
+    sendJsonError("invalid_pin", "GPIO pin is not in the configured AUX GPIO list");
+    return;
+  }
+
+  const char* actionText =
+    doc["action"] | "";
+  String action = actionText;
+  action.toLowerCase();
+
+  if (action == "read") {
+    pinMode(pin, INPUT);
+
+    JsonDocument reply;
+    reply["ok"] = true;
+    reply["target"] = "gpio";
+    reply["action"] = "read";
+    reply["pin"] = pin;
+    reply["value"] = digitalRead(pin);
+    writeJsonLine(reply);
+    return;
+  }
+
+  if (action == "input") {
+    pinMode(
+      pin,
+      (doc["pullup"] | false)
+        ? INPUT_PULLUP
+        : INPUT);
+
+    JsonDocument reply;
+    reply["ok"] = true;
+    reply["target"] = "gpio";
+    reply["action"] = "input";
+    reply["pin"] = pin;
+    reply["value"] = digitalRead(pin);
+    writeJsonLine(reply);
+    return;
+  }
+
+  if (action == "release") {
+    pinMode(pin, INPUT);
+    sendJsonOk("gpio");
+    return;
+  }
+
+  if (action == "write") {
+    const bool value =
+      (doc["value"] | 0) != 0;
+    pinMode(pin, OUTPUT);
+    digitalWrite(
+      pin,
+      value ? HIGH : LOW);
+
+    JsonDocument reply;
+    reply["ok"] = true;
+    reply["target"] = "gpio";
+    reply["action"] = "write";
+    reply["pin"] = pin;
+    reply["value"] = value ? 1 : 0;
+    writeJsonLine(reply);
+    return;
+  }
+
+  if (action == "pulse") {
+    const bool activeValue =
+      (doc["value"] | 0) != 0;
+    const uint32_t durationMs =
+      clampU32(
+        doc["durationMs"] | 250,
+        1,
+        30000);
+    const bool releaseAfter =
+      doc["release"] | true;
+
+    pinMode(pin, OUTPUT);
+    digitalWrite(
+      pin,
+      activeValue ? HIGH : LOW);
+    delay(durationMs);
+
+    if (releaseAfter) {
+      pinMode(pin, INPUT);
+    } else {
+      digitalWrite(
+        pin,
+        activeValue ? LOW : HIGH);
+    }
+
+    JsonDocument reply;
+    reply["ok"] = true;
+    reply["target"] = "gpio";
+    reply["action"] = "pulse";
+    reply["pin"] = pin;
+    reply["value"] = activeValue ? 1 : 0;
+    reply["durationMs"] = durationMs;
+    reply["released"] = releaseAfter;
+    writeJsonLine(reply);
+    return;
+  }
+
+  sendJsonError("invalid_action", "GPIO action must be read, input, write, pulse, or release");
+}
+
 static void processJsonCommand(
   const String& line) {
   JsonDocument doc;
@@ -1261,6 +1411,8 @@ static void processJsonCommand(
     reply["type"] = "pong";
     reply["fw"] = TOOL_VERSION;
     reply["mode"] = modeName();
+    JsonArray gpioPins = reply["auxGpioPins"].to<JsonArray>();
+    addAuxGpioPins(gpioPins);
     writeJsonLine(reply);
   } else if (commandText == "mode") {
     handleJsonMode(doc);
@@ -1274,6 +1426,8 @@ static void processJsonCommand(
     handleJsonTx(doc);
   } else if (commandText == "noise") {
     handleJsonNoise(doc);
+  } else if (commandText == "gpio") {
+    handleJsonGpio(doc);
   } else if (commandText == "clear") {
     const char* target = doc["target"] | "";
     if (String(target) == "stats") {
@@ -1298,6 +1452,9 @@ static void processJsonCommand(
     commands.add("{\"cmd\":\"set\",\"target\":\"timing\",\"breakUs\":176,\"mabUs\":16}");
     commands.add("{\"cmd\":\"tx\",\"action\":\"start|stop|send\"}");
     commands.add("{\"cmd\":\"noise\",\"durationMs\":100,\"minPulseUs\":2,\"maxPulseUs\":200}");
+    commands.add("{\"cmd\":\"gpio\",\"action\":\"read|input|write|pulse|release\",\"pin\":6,\"value\":0,\"durationMs\":250}");
+    JsonArray gpioPins = reply["auxGpioPins"].to<JsonArray>();
+    addAuxGpioPins(gpioPins);
     writeJsonLine(reply);
   } else {
     sendJsonError("unknown_command", "Unknown JSON command");
@@ -1521,6 +1678,20 @@ static void printHelp() {
   Serial.println(F("  fps <hz>            Continuous sender rate"));
   Serial.println(F("  send                Send exactly one frame"));
   Serial.println();
+  Serial.println(F("Aux GPIO JSONL"));
+  Serial.print(F("  Allowed pins:"));
+  for (uint8_t index = 0; index < AUX_GPIO_COUNT; index++) {
+    if (AUX_GPIO_PINS[index] >= 0) {
+      Serial.print(' ');
+      Serial.print(AUX_GPIO_PINS[index]);
+    }
+  }
+  Serial.println();
+  Serial.println(F("  {\"cmd\":\"gpio\",\"action\":\"read\",\"pin\":6}"));
+  Serial.println(F("  {\"cmd\":\"gpio\",\"action\":\"write\",\"pin\":6,\"value\":0}"));
+  Serial.println(F("  {\"cmd\":\"gpio\",\"action\":\"pulse\",\"pin\":6,\"value\":0,\"durationMs\":250}"));
+  Serial.println(F("  {\"cmd\":\"gpio\",\"action\":\"release\",\"pin\":6}"));
+  Serial.println();
   Serial.println(F("DMX512-A baseline: 250 kBd 8N2, transmitter Break >=92 us,"));
   Serial.println(F("MAB >=12 us. Receivers should recognize Break >=88 us and MAB >=8 us."));
   Serial.println(F("Short packets are valid; up to 512 data slots may follow start code 0x00."));
@@ -1538,6 +1709,7 @@ void setup() {
 
   stats.reset();
 
+  releaseAuxGpioPins();
   enterIdleMode(false);
   sendJsonReady();
 }

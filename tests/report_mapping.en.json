@@ -94,6 +94,21 @@
     "title": "Boot Bus Guarding",
     "description": "Detects physical DMX during boot and switches to DMX input when Bus Guarding is enabled."
   },
+  "tests/integration/test_rp2040_gpio_hil.py::test_rp2040_aux_gpio_json_commands": {
+    "group": "Hardware HIL",
+    "title": "RP2040 AUX GPIO control",
+    "description": "Verifies JSONL read, write, pulse and release commands for tester auxiliary GPIOs."
+  },
+  "tests/integration/test_rp2040_gpio_hil.py::test_rp2040_gpio_can_toggle_unode_local_button_locate": {
+    "group": "Hardware HIL",
+    "title": "Local button Toggle Locate",
+    "description": "Uses a wired RP2040 AUX GPIO to press the uNode hardware button and verify Locate toggles."
+  },
+  "tests/integration/test_rp2040_gpio_hil.py::test_rp2040_gpio_can_reset_unode_and_observe_boot_count": {
+    "group": "Hardware HIL",
+    "title": "External reset control",
+    "description": "Uses a wired RP2040 AUX GPIO to pulse the uNode reset input and verify the boot counter increases."
+  },
   "tests/integration/test_dropout_hil.py::test_each_network_update_reaches_physical_dmx_output[Art-Net]": {
     "group": "Dropout HIL",
     "title": "Art-Net to DMX delivery",

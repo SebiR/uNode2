@@ -13,6 +13,10 @@ explicitly in each release entry.
 
 ### Changed
 
+- Extended the RP2040 DMX tester to version `0.3.0` with safe auxiliary GPIO
+  JSONL commands (`read`, `input`, `write`, `pulse`, `release`) on GPIO6/7/8
+  by default, plus Python helpers and optional HIL coverage for the uNode local
+  button.
 - Added a Hardware-tab runtime action for the local button: Disabled or
   debounced short-press Toggle Locate. Holding the button during boot remains
   reserved for Recovery Mode.
