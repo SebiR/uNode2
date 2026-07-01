@@ -39,14 +39,29 @@ def wait_for_status(
 
     deadline = time.time() + timeout
     last_status = {}
+    last_error: Exception | None = None
 
     while time.time() < deadline:
-        last_status = client.get_json("/api/status")
-        if predicate(last_status):
-            return last_status
+        remaining = deadline - time.time()
+        request_timeout = max(0.2, min(1.0, remaining))
+        try:
+            last_status = client.get_json(
+                "/api/status",
+                timeout=request_timeout,
+            )
+            last_error = None
+            if predicate(last_status):
+                return last_status
+        except Exception as error:  # noqa: BLE001 - status polling tolerates transient Wi-Fi/API hiccups.
+            last_error = error
+
         time.sleep(interval)
 
-    raise AssertionError(f"Timed out waiting for status condition; last={last_status}")
+    detail = f"last={last_status}"
+    if last_error is not None:
+        detail += f"; last_error={last_error!r}"
+
+    raise AssertionError(f"Timed out waiting for status condition; {detail}")
 
 
 def wait_for_node_restart(
