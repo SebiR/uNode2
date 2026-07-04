@@ -9,7 +9,7 @@
 
 #define FW_VERSION_MAJOR 0
 #define FW_VERSION_MINOR 23
-#define FW_VERSION_PATCH 15
+#define FW_VERSION_PATCH 16
 
 #define FW_STRINGIFY_IMPL(value) #value
 #define FW_STRINGIFY(value) FW_STRINGIFY_IMPL(value)
@@ -42,13 +42,13 @@
 #endif
 
 #ifndef ENABLE_DEBUG
-#define ENABLE_DEBUG 1
+#define ENABLE_DEBUG 0
 #endif
 
 // Serial logging is disabled by default. When enabled, logs use UART1 TX
 // (Serial1 on GPIO2) so UART0 remains available for DMX.
 #ifndef ENABLE_SERIAL_LOG
-#define ENABLE_SERIAL_LOG ENABLE_DEBUG
+#define ENABLE_SERIAL_LOG 0
 #endif
 
 #ifndef LOG_SERIAL_PORT
