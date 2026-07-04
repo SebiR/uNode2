@@ -158,8 +158,9 @@ body {
 }
 
 .logo {
-    height: 38px;
+    height: 42px;
     width: auto;
+    max-width: min(36vw, 190px);
     object-fit: contain;
 }
 

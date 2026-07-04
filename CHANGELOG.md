@@ -15,6 +15,8 @@ explicitly in each release entry.
 
 - Serial debug logging is now disabled by default for normal and release builds
   to reduce RAM pressure and avoid unnecessary UART1 output in production.
+- Updated the web interface header logo asset and constrained its top-bar
+  sizing for the wider IllumiNocte wordmark.
 - Extended the RP2040 DMX tester to version `0.3.1` with safe auxiliary GPIO
   JSONL commands (`read`, `input`, `write`, `pulse`, `release`) on GPIO6/7/8
   by default, plus Python helpers and optional HIL coverage for the uNode local
