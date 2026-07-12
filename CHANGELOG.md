@@ -13,6 +13,12 @@ explicitly in each release entry.
 
 ### Changed
 
+- Added the modified `LXESP8266DMX` implementation to the repository as local
+  fork version `2.2.1-unode.1`. Release builds now consume the tracked copy,
+  including UART0 TX, short-frame RX timeout handling, atomic frame APIs, and
+  bounds/initialization hardening, instead of depending on an external Arduino
+  sketchbook installation. The unique `uNodeESP8266DMX.h` entry point prevents
+  Arduino from silently resolving the original global library instead.
 - Added reusable `uNodeArtNet` reference examples for Wi-Fi ArtDmx receive,
   Ethernet ArtDmx receive, unicast ArtDmx transmit, and ArtPoll discovery. Each
   example now includes a purpose/data-flow/setup overview and explanatory

@@ -9,6 +9,8 @@ firmware/uNode_2/      ESP8266 Arduino sketch and LittleFS web assets
 firmware/rp2040_dmx_tool/
                        RP2040 DMX analyzer / test sender firmware
 libraries/uNodeArtNet/ Portable Arduino Art-Net protocol library
+libraries/LXESP8266DMX/
+                       Local ESP8266 UART DMX library fork used by uNode
 tests/                 Python host-side and integration tests
 tools/                 Build, release, and test helper scripts
 artifacts/             Generated release files
@@ -18,10 +20,12 @@ misc/                  Loose project assets and experiments
 
 The ESP8266 firmware remains Arduino-IDE compatible: open
 `firmware/uNode_2/uNode_2.ino` as the sketch. The sketch folder name and the
-`.ino` file name intentionally match. The reusable Art-Net implementation is
-kept in `libraries/uNodeArtNet`; install or link that folder into the Arduino
+`.ino` file name intentionally match. The reusable Art-Net implementation and
+the maintained ESP8266 DMX fork are kept below `libraries/`. Install or link
+`libraries/uNodeArtNet` and `libraries/LXESP8266DMX` into the Arduino
 sketchbook's `libraries` directory when compiling directly from Arduino IDE.
-The repository build script supplies the local library path automatically.
+The repository build script supplies the complete local library path
+automatically and therefore does not depend on global copies.
 
 The RP2040 DMX tool is intended as the hardware test fixture for future
 DMX-level integration tests.

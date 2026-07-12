@@ -1,4 +1,4 @@
-#include <LXESP8266UARTDMX.h>
+#include <uNodeESP8266DMX.h>
 
 #include "dmx.h"
 #include "artnet.h"

@@ -237,6 +237,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       24-slot transmitter minimum.
 - [x] Separate the DMX transmitter minimum from the receiver minimum instead
       of using `DMX_MIN_SLOTS` for both directions.
+- [x] Keep the modified `LXESP8266DMX` implementation as a versioned local fork
+      in the project and make release builds consume that repository copy.
 - [x] Complete short physical DMX frames on RX idle timeout instead of relying
       only on 513 received bytes or a following break interrupt.
 - [x] Verify by code path and compile that the receive callback and
