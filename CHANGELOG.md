@@ -13,6 +13,11 @@ explicitly in each release entry.
 
 ### Changed
 
+- Updated DMX-to-network dropout and latency HIL tests to use a continuous
+  40 FPS DMX stream while changing slot values. This matches real DMX behavior
+  and ensures each frame is closed by the following Break instead of testing
+  isolated frames one update behind. Empty latency runs now report a clear
+  no-samples failure instead of raising an `IndexError` in statistics output.
 - Extended the RP2040 DMX tester to version `0.3.2`. Its onboard GPIO16
   WS2812 now indicates boot, idle/high-impedance state, RX/TX mode, DMX frame
   activity, and command errors without updating during active RX frames.

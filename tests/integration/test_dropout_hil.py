@@ -97,7 +97,6 @@ def _send_and_expect_network_update(
 ) -> bool:
     rp2040_tool.set_frame(values, slots=len(values))
     _drain_udp(sock)
-    rp2040_tool.tx("send")
     return _wait_for_network_values(
         sock,
         unode_ip=unode_ip,
@@ -262,6 +261,7 @@ def test_each_physical_dmx_change_reaches_network_output(
         )
         rp2040_tool.mode("tx")
         rp2040_tool.set_timing(break_us=176, mab_us=16, fps=40)
+        rp2040_tool.tx("start")
 
         if protocol.value == ARTNET.value:
             refresh_artnet_subscriber(

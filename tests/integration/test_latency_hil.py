@@ -72,7 +72,6 @@ def _print_latency_report(
     samples: list[float],
     lost: int,
 ) -> None:
-    summary = _summarize_ms(samples)
     if status.get("wifiConnected") is True and status.get("softAPActive") is True:
         network_mode = "AP + Client"
     elif status.get("wifiConnected") is True:
@@ -88,6 +87,12 @@ def _print_latency_report(
     step(f"Network mode : {network_mode}")
     step(f"Node IP      : {ip}")
     step(f"Samples      : {len(samples)} ok, {lost} lost")
+
+    if not samples:
+        step("Latency     : no successful samples")
+        return
+
+    summary = _summarize_ms(samples)
     step(
         "Latency     : "
         f"min {summary['min']:.1f} ms | "
@@ -373,19 +378,36 @@ def test_dmx_to_network_latency_profile(
 
     try:
         step(
-            "Putting RP2040 into single-frame TX mode. "
-            "DMX -> network latency includes the USB trigger command, so use "
-            "this as a practical AP/client comparison rather than a pure "
-            "microcontroller-only timing number."
+            "Starting continuous RP2040 DMX output. DMX -> network latency "
+            "includes the USB frame-update command and the wait for the next "
+            "DMX frame, so use this as a practical AP/client comparison rather "
+            "than a pure microcontroller-only timing number."
         )
         rp2040_tool.mode("tx")
         rp2040_tool.set_timing(break_us=176, mab_us=16, fps=40)
+
+        if protocol.value == ARTNET.value:
+            refresh_artnet_subscriber(
+                sock,
+                unode_ip=unode_ip,
+                subscriber_reply=artnet_subscriber_reply,
+            )
+            next_artnet_refresh = (
+                time.perf_counter() + _artnet_subscriber_refresh_seconds()
+            )
+
+        # Real DMX is a continuous stream. Keeping TX active also lets the
+        # receiver close each frame on the following Break instead of making
+        # every isolated test frame appear one update late.
+        rp2040_tool.set_frame(_pattern(-1), slots=len(_pattern(-1)))
+        rp2040_tool.tx("start")
+        time.sleep(0.1)
+        _drain_udp(sock)
 
         latencies: list[float] = []
         lost = 0
         for sample_index in range(samples):
             values = _pattern(sample_index)
-            rp2040_tool.set_frame(values, slots=len(values))
             _drain_udp(sock)
 
             if protocol.value == ARTNET.value and time.perf_counter() >= next_artnet_refresh:
@@ -399,7 +421,7 @@ def test_dmx_to_network_latency_profile(
                 )
 
             start = time.perf_counter()
-            rp2040_tool.tx("send")
+            rp2040_tool.set_frame(values, slots=len(values))
             if _wait_for_network_values(
                 sock,
                 unode_ip=unode_ip,
