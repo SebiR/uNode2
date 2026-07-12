@@ -8,14 +8,17 @@
 #include "leds.h"
 #include "sacn.h"
 
-#include "ArtnetnodeWifi.h"
+#include <ArtNetNode.h>
 
+#include <ESP8266WiFi.h>
 #include <LittleFS.h>
+#include <WiFiUdp.h>
 
 #undef LOG_MODULE
 #define LOG_MODULE "ARTNET"
 
-ArtnetnodeWifi artnet;
+static WiFiUDP artnetUdp;
+ArtNetNode artnet(artnetUdp);
 
 static uint32_t artDmxCounter = 0;
 
@@ -33,6 +36,29 @@ static const uint32_t ARTNET_BIND_RETRY_MS = 5000;
 static const uint32_t ARTNET_OUTPUT_TIMEOUT_MS = 5000;
 static const uint32_t WRONG_UNIVERSE_WARNING_MS = 5000;
 static const uint32_t ARTSYNC_TIMEOUT_MS = 4000;
+
+/** @return Active network identity passed to the transport-agnostic library. */
+static ArtNetNetworkConfig getArtNetNetworkConfig() {
+  ArtNetNetworkConfig network = {};
+
+  if (WiFi.status() == WL_CONNECTED) {
+    network.ip = WiFi.localIP();
+    network.subnet = WiFi.subnetMask();
+    network.gateway = WiFi.gatewayIP();
+    WiFi.macAddress(network.mac);
+    network.dhcp =
+      config.wifiMode != WIFI_MODE_AP
+      && config.dhcp;
+  } else {
+    network.ip = WiFi.softAPIP();
+    network.subnet = IPAddress(255, 255, 255, 0);
+    network.gateway = network.ip;
+    WiFi.softAPmacAddress(network.mac);
+    network.dhcp = false;
+  }
+
+  return network;
+}
 static const uint32_t ART_IP_PROG_RESTART_DELAY_MS = 1500;
 static const char* FAILSAFE_SCENE_PATH = "/failsafe.bin";
 
@@ -1546,7 +1572,7 @@ bool initArtNet() {
   LOG_SECTION("Art-Net Init");
 
   artnetSocketReady =
-    artnet.begin(config.hostname) == 0;
+    artnet.begin(getArtNetNetworkConfig()) == 0;
 
   if (!artnetSocketReady) {
     nextArtNetBindRetryMillis =
@@ -1635,7 +1661,7 @@ void updateArtNet() {
   if (!artnetSocketReady) {
     if ((int32_t)(now - nextArtNetBindRetryMillis) >= 0) {
       artnetSocketReady =
-        artnet.begin(config.hostname) == 0;
+        artnet.begin(getArtNetNetworkConfig()) == 0;
       nextArtNetBindRetryMillis =
         now + ARTNET_BIND_RETRY_MS;
 
@@ -1742,7 +1768,7 @@ void handleArtNetNetworkChange() {
   lastSubscriberPollMillis = 0;
 
   artnetSocketReady =
-    artnet.begin(config.hostname) == 0;
+    artnet.begin(getArtNetNetworkConfig()) == 0;
   artnet.isDHCP(
     config.wifiMode != WIFI_MODE_AP
     && config.dhcp

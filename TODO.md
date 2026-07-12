@@ -192,6 +192,10 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       protocol additions.
 - [ ] Reduce repeated `String` and dynamic JSON allocation in status and
       WebSocket updates.
+- [x] Extract the Art-Net protocol core into a standalone Arduino library that
+      accepts the common `UDP` interface and application-supplied network
+      identity, allowing Wi-Fi and Ethernet transports without protocol-code
+      changes.
 - [x] Add free heap, largest free block, minimum free heap, reset reason, and
       boot count to diagnostics.
 - [x] Add low-heap and largest-free-block runtime warnings to the volatile

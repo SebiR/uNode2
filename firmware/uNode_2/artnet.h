@@ -2,10 +2,10 @@
 
 #include <Arduino.h>
 
-#include "ArtnetnodeWifi.h"
+#include <ArtNetNode.h>
 #include "config.h"
 
-extern ArtnetnodeWifi artnet;
+extern ArtNetNode artnet;
 
 struct ArtNetSubscriberInfo {
   IPAddress ip;

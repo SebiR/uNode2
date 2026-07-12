@@ -2,7 +2,7 @@
 #define POLLREPLY_H
 
 #include <Arduino.h>
-#include <WiFiUdp.h>
+#include <IPAddress.h>
 #include <stddef.h>
 
 #include "OpCodes.h"

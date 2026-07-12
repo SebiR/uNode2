@@ -13,6 +13,14 @@ explicitly in each release entry.
 
 ### Changed
 
+- Extracted the Art-Net parser, packet generation, ArtPollReply state, and
+  management packet handling into the reusable `uNodeArtNet` Arduino library.
+  The library now accepts the standard Arduino `UDP` interface plus an
+  application-supplied network identity, removing all direct ESP8266/Wi-Fi
+  dependencies and allowing Wi-Fi or Ethernet transports on other boards. The
+  obsolete four-port internal DMX/UART buffers were removed; physical DMX is
+  now exclusively an application concern and the uNode regains about 2 KiB of
+  static RAM.
 - Serial debug logging is now disabled by default for normal and release builds
   to reduce RAM pressure and avoid unnecessary UART1 output in production.
 - Updated the web interface header logo asset and constrained its top-bar

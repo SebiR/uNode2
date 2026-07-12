@@ -49,10 +49,6 @@ static_assert(
 #define ARTNET_SHORT_NAME_MAX_LENGTH 17
 #define ARTNET_LONG_NAME_MAX_LENGTH 63
 
-// DMX settings
-#define DMX_MAX_OUTPUTS 4
-#define DMX_MS_BETWEEN_TICKS 25
-
 // RDM
 #define DMX_RDM_STARTCODE 0xCC
 

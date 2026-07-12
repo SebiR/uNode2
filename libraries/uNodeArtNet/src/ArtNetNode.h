@@ -1,5 +1,5 @@
-#ifndef ARTNETNODEWIFI_H
-#define ARTNETNODEWIFI_H
+#ifndef ARTNETNODE_H
+#define ARTNETNODE_H
 /*
 
 Copyright (c) Charles Yarnold charlesyarnold@gmail.com 2015
@@ -22,20 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <Arduino.h>
-#if defined(ARDUINO_ARCH_ESP32) || defined(ESP32)
-#include <WiFi.h>
-#elif defined(ARDUINO_ARCH_ESP8266)
-#include <ESP8266WiFi.h>
-#elif defined(ARDUINO_ARCH_SAMD)
-#if defined(ARDUINO_SAMD_MKR1000)
-#include <WiFi101.h>
-#else
-#include <WiFiNINA.h>
-#endif
-#else
-#error "Architecture not supported!"
-#endif
-#include <WiFiUdp.h>
+#include <Udp.h>
 #include "OpCodes.h"
 #include "NodeReportCodes.h"
 #include "StyleCodes.h"
@@ -95,13 +82,22 @@ struct ArtNetParserDiagnostics {
   uint32_t unsupportedOpcodes;
 };
 
-class ArtnetnodeWifi {
-public:
-  /** @brief Initializes protocol state and internal DMX buffers. */
-  ArtnetnodeWifi();
+/** @brief Network identity supplied by the application hosting Art-Net. */
+struct ArtNetNetworkConfig {
+  IPAddress ip;
+  IPAddress subnet;
+  IPAddress gateway;
+  uint8_t mac[6];
+  bool dhcp;
+};
 
-  /** @brief Binds the Art-Net UDP socket and refreshes interface identity. */
-  uint8_t begin(String hostname = "");
+class ArtNetNode {
+public:
+  /** @brief Initializes protocol state using an arbitrary Arduino UDP transport. */
+  explicit ArtNetNode(UDP& udp);
+
+  /** @brief Binds the Art-Net UDP socket and applies the active interface identity. */
+  uint8_t begin(const ArtNetNetworkConfig& network);
   /** @brief Processes one pending Art-Net datagram and deferred replies. */
   uint16_t read();
 
@@ -124,8 +120,6 @@ public:
   void setFirmwareVersion(uint8_t high, uint8_t low);
 
   // Transmit
-  /** @return UDP result for ArtDmx sent to the configured host name. */
-  int write(void);
   /** @return UDP result for ArtDmx sent to one IP address. */
   int write(IPAddress ip);
   /** @return Number of IP targets that accepted the same ArtDmx frame. */
@@ -186,17 +180,6 @@ public:
   void setIndicatorState(ArtNetIndicatorState state);
   /** @return Current ArtPollReply indicator state. */
   ArtNetIndicatorState getIndicatorState() const;
-  /** @brief Enables legacy internal DMX processing. */
-  void enableDMX();
-  /** @brief Disables legacy internal DMX processing. */
-  void disableDMX();
-  /** @brief Enables one configured legacy DMX output. */
-  void enableDMXOutput(uint8_t outputID);
-  /** @brief Disables one configured legacy DMX output. */
-  void disableDMXOutput(uint8_t outputID);
-
-  /** @brief Associates a legacy DMX output with a UART and Port-Address. */
-  uint8_t setDMXOutput(uint8_t outputID, uint8_t uartNum, uint16_t attachedUniverse);
 
   // Return a pointer to the start of the DMX data
   /** @return Pointer to the current incoming ArtDmx payload buffer. */
@@ -281,10 +264,10 @@ public:
   static const char artnetId[];
 
 private:
-  WiFiUDP Udp;
+  UDP& Udp;
   PollReply PollReplyPacket;
-  String host;
   IPAddress senderIp;
+  ArtNetNetworkConfig networkConfig;
 
   // Packet handlers
   /** @brief Validates and dispatches an ArtDmx or ArtNzs payload. */
@@ -324,8 +307,6 @@ private:
   uint8_t incomingPhysical;
   uint16_t outgoingUniverse;
   uint16_t dmxDataLength;
-  IPAddress localIP;
-
   // Packet functions
   /** @return Even ArtDmx payload length, or zero when configuration is invalid. */
   uint16_t makePacket(void);
@@ -339,16 +320,7 @@ private:
   static const uint8_t MAX_PENDING_POLL_REPLIES = 4;
   PendingPollReply pendingPollReplies[MAX_PENDING_POLL_REPLIES];
 
-  // DMX settings
-  bool DMXOutputStatus;
-  uint16_t DMXOutputs[DMX_MAX_OUTPUTS][3];
-  uint8_t DMXBuffer[DMX_MAX_OUTPUTS][DMX_MAX_BUFFER];
-
   uint16_t startingUniverse;
-
-  // DMX tick
-  /** @return Legacy output frame pointer, or nullptr for an invalid output. */
-  uint8_t* getDmxFrame(uint8_t outputID);
 
   uint32_t artPollCounter = 0;
   uint32_t lastPollMillis = 0;

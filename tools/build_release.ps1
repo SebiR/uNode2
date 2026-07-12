@@ -12,6 +12,9 @@ $projectRoot =
 $sketchDir =
     Join-Path $projectRoot "firmware\uNode_2"
 
+$librariesDir =
+    Join-Path $projectRoot "libraries"
+
 $dataDir =
     Join-Path $sketchDir "data"
 
@@ -106,6 +109,8 @@ function Build-FirmwareArtifact {
         "compile",
         "--fqbn",
         $Fqbn,
+        "--libraries",
+        $librariesDir,
         "--build-path",
         $buildPath
     )
