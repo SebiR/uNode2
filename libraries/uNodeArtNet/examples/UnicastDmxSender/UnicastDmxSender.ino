@@ -1,3 +1,24 @@
+/*
+ * uNodeArtNet - UnicastDmxSender
+ *
+ * Connects an ESP8266 or ESP32 to Wi-Fi and sends a 16-slot ArtDmx frame every
+ * 25 ms (40 FPS) to one fixed destination. A single full-value slot moves
+ * through the frame, producing a simple channel chase.
+ *
+ * Data flow:
+ *   generated chase -> ArtNetNode -> WiFiUDP -> TARGET_IP -> Art-Net receiver
+ *
+ * Before uploading:
+ *   1. Set WIFI_SSID and WIFI_PASSWORD.
+ *   2. Change TARGET_IP to the receiving node's address.
+ *   3. Match PORT_ADDRESS at sender and receiver. Wire-level Port-Address 0 is
+ *      often displayed as Universe 1 by controller software.
+ *
+ * This is intentionally a unicast example. Discovery-based subscriber lists,
+ * merging, source timeouts, and physical DMX input are application features
+ * demonstrated by the full uNode firmware rather than this minimal sketch.
+ */
+
 #include <Arduino.h>
 
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -19,6 +40,7 @@ static const uint16_t PORT_ADDRESS = 0;
 static const uint16_t SLOT_COUNT = 16;
 static const uint32_t FRAME_INTERVAL_MS = 25;
 
+// The protocol class accepts any object implementing Arduino's UDP interface.
 WiFiUDP udp;
 ArtNetNode artnet(udp);
 uint32_t nextFrameMs = 0;
@@ -43,13 +65,14 @@ void setup() {
     delay(250);
   }
 
+  // Advertise the sender as a node with one physical-style DMX input port.
   artnet.setShortName("WiFi Sender");
   artnet.setLongName("uNodeArtNet Unicast DMX Sender Example");
   artnet.setDirection(false);  // This node behaves like a physical DMX input.
   artnet.setStartingUniverse(PORT_ADDRESS);
-  artnet.setUniverse(PORT_ADDRESS);
-  artnet.setPhysical(0);
-  artnet.setLength(SLOT_COUNT);
+  artnet.setUniverse(PORT_ADDRESS); // Destination Port-Address in ArtDmx.
+  artnet.setPhysical(0);            // First/only physical input port.
+  artnet.setLength(SLOT_COUNT);     // ArtDmx payload length; must be even.
 
   if (artnet.begin(currentNetworkConfig()) != 0) {
     Serial.println("Unable to bind Art-Net UDP port");
@@ -66,10 +89,13 @@ void loop() {
 
   nextFrameMs = now + FRAME_INTERVAL_MS;
 
+  // setByte() uses a zero-based payload index: index 0 represents DMX slot 1.
   for (uint16_t slot = 0; slot < SLOT_COUNT; slot++) {
     artnet.setByte(slot, slot == chasePosition ? 255 : 0);
   }
 
+  // Keep the advertised input-data flag current and transmit one complete
+  // ArtDmx datagram. write() returns zero if UDP transmission failed.
   artnet.setPortInputActive(true);
   artnet.write(TARGET_IP);
   chasePosition = (chasePosition + 1) % SLOT_COUNT;

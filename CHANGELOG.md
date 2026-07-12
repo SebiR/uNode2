@@ -14,7 +14,9 @@ explicitly in each release entry.
 ### Changed
 
 - Added reusable `uNodeArtNet` reference examples for Wi-Fi ArtDmx receive,
-  Ethernet ArtDmx receive, unicast ArtDmx transmit, and ArtPoll discovery.
+  Ethernet ArtDmx receive, unicast ArtDmx transmit, and ArtPoll discovery. Each
+  example now includes a purpose/data-flow/setup overview and explanatory
+  comments around transport ownership, addressing, callbacks, and polling.
 - Updated DMX-to-network dropout and latency HIL tests to use a continuous
   40 FPS DMX stream while changing slot values. This matches real DMX behavior
   and ensures each frame is closed by the following Break instead of testing
