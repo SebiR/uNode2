@@ -15,6 +15,7 @@ Default pins are intended for Raspberry Pi Pico / Arduino-Pico `Serial1`:
 - optional `DMX_DIR_PIN`: RS-485 DE/!RE direction control, disabled by default.
 - `GPIO6`, `GPIO7`, `GPIO8`: auxiliary test GPIOs for jig control such as
   pulling the uNode button input low or toggling an external reset circuit.
+- `GPIO16`: onboard WS2812 status LED on the Waveshare RP2040-Zero.
 
 Adjust the pin definitions in `DmxToolConfig.h` if your transceiver uses
 different wiring. The pin macros are guarded with `#ifndef`, so they can also
@@ -34,6 +35,21 @@ For a common tied `DE` + `!RE` transceiver input, use the defaults
 
 - Arduino-Pico core for RP2040 boards.
 - ArduinoJson.
+- Adafruit NeoPixel. Its RP2040 backend uses PIO for status LED output.
+
+## Status LED
+
+The onboard WS2812 provides a compact view of tester activity:
+
+- white briefly after boot: LED self-test and initialization
+- slowly pulsing blue: idle; DMX and auxiliary pins are released
+- dim cyan with green activity pulses: RX analyzer mode and received frames
+- dim amber: TX mode is selected but continuous output is stopped
+- amber activity pulses: continuous DMX transmission
+- red briefly: invalid JSON command or command parameter
+
+LED updates are deferred while an incoming DMX frame is being measured. Set
+`STATUS_LED_PIN=-1` at compile time to disable the status pixel.
 
 ## Serial Protocol
 
@@ -43,7 +59,7 @@ is one JSON object terminated by `\n`.
 The firmware prints a ready event after boot:
 
 ```json
-{"ok":true,"event":"ready","tool":"rp2040_dmx_tool","fw":"0.3.1","protocol":"jsonl"}
+{"ok":true,"event":"ready","tool":"rp2040_dmx_tool","fw":"0.3.2","protocol":"jsonl"}
 ```
 
 After boot the DMX UART is idle and the DMX TX/RX pins are high impedance.
@@ -81,7 +97,7 @@ Useful commands:
 Example responses:
 
 ```json
-{"ok":true,"type":"pong","fw":"0.3.1","mode":"RX analyzer","auxGpioPins":[6,7,8]}
+{"ok":true,"type":"pong","fw":"0.3.2","mode":"RX analyzer","auxGpioPins":[6,7,8]}
 ```
 
 `gpio read` reports the current pin level without changing the pin mode. Use

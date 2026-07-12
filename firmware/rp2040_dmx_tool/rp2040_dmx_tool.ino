@@ -3,6 +3,7 @@
 
 #include "DmxToolConfig.h"
 #include "DmxToolTypes.h"
+#include "ToolStatusLed.h"
 
 // -----------------------------------------------------------------------------
 // RP2040 DMX Analyzer / Test Sender
@@ -19,6 +20,7 @@
 
 static ToolMode mode = MODE_IDLE;
 static TestPattern pattern = PATTERN_STATIC;
+static ToolStatusLed statusLed;
 
 static uint8_t rxPacket[DMX_MAX_PACKET_BYTES];
 static uint8_t rxValues[DMX_MAX_SLOTS];
@@ -359,6 +361,7 @@ static void finishAnalyzerFrame() {
 
   stats.frames++;
   stats.fpsWindowFrames++;
+  statusLed.notifyRxFrame();
 
   if (lastFrame.slots < DMX_MAX_SLOTS) {
     stats.shortFrames++;
@@ -487,6 +490,7 @@ static void sendDmxFrame() {
   }
 
   txFrames++;
+  statusLed.notifyTxFrame();
 }
 
 static void sendLineNoise(
@@ -813,6 +817,7 @@ static void sendJsonOk(
 static void sendJsonError(
   const char* error,
   const char* message) {
+  statusLed.notifyError();
   JsonDocument doc;
   doc["ok"] = false;
   doc["error"] = error;
@@ -1707,6 +1712,7 @@ void setup() {
 
   stats.reset();
 
+  statusLed.begin();
   releaseAuxGpioPins();
   enterIdleMode(false);
   sendJsonReady();
@@ -1723,4 +1729,8 @@ void loop() {
 
   pollTx();
   maybeDrawDisplay();
+  statusLed.update(
+    mode,
+    txEnabled,
+    mode != MODE_RX || !rxReceiving);
 }

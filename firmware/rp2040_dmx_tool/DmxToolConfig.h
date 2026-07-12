@@ -41,6 +41,16 @@
 #define AUX_GPIO2_PIN 8
 #endif
 
+// Onboard WS2812 status LED on the Waveshare RP2040-Zero. Set to -1 to
+// compile the tool without driving a status pixel on other fixtures.
+#ifndef STATUS_LED_PIN
+#define STATUS_LED_PIN 16
+#endif
+
+#ifndef STATUS_LED_BRIGHTNESS
+#define STATUS_LED_BRIGHTNESS 48
+#endif
+
 static constexpr uint16_t DMX_MAX_SLOTS = 512;
 static constexpr uint16_t DMX_MAX_PACKET_BYTES = DMX_MAX_SLOTS + 1;
 static constexpr uint32_t DEFAULT_DMX_BAUD = 250000;
@@ -56,6 +66,6 @@ static constexpr uint16_t DEFAULT_DISPLAY_FIRST_CHANNEL = 1;
 static constexpr uint16_t DEFAULT_DISPLAY_CHANNELS = 64;
 static constexpr size_t DMX_UART_RX_BUFFER_SIZE = 2048;
 static constexpr size_t MAX_COMMAND_LINE_LENGTH = 8192;
-static constexpr const char* TOOL_VERSION = "0.3.1";
+static constexpr const char* TOOL_VERSION = "0.3.2";
 
 #endif

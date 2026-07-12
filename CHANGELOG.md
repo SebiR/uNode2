@@ -13,6 +13,9 @@ explicitly in each release entry.
 
 ### Changed
 
+- Extended the RP2040 DMX tester to version `0.3.2`. Its onboard GPIO16
+  WS2812 now indicates boot, idle/high-impedance state, RX/TX mode, DMX frame
+  activity, and command errors without updating during active RX frames.
 - Extracted the Art-Net parser, packet generation, ArtPollReply state, and
   management packet handling into the reusable `uNodeArtNet` Arduino library.
   The library now accepts the standard Arduino `UDP` interface plus an
