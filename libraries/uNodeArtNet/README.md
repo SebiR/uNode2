@@ -27,6 +27,16 @@ artnet.begin(network);
 DMX drivers, merging, failsafe behavior, LEDs, persistent configuration and web
 interfaces intentionally remain application responsibilities.
 
+## Examples
+
+- `WiFiDmxReceiver`: receives ArtDmx through `WiFiUDP` on ESP8266 or ESP32.
+- `EthernetDmxReceiver`: uses the same API with `EthernetUDP`.
+- `UnicastDmxSender`: sends a small ArtDmx chase to a fixed destination.
+- `ArtPollDiscovery`: broadcasts ArtPoll and prints discovered nodes and ports.
+
+The examples use Art-Net Port-Address `0` (Net 0, Sub-Net 0, Universe 0). Some
+controller user interfaces display this first wire-level Universe as `U1`.
+
 ## License
 
 This code is derived from GPLv2-licensed `ArtnetnodeWifi` work by Charles
