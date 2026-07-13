@@ -57,6 +57,24 @@ The Linux discovery helper reads every active IPv4 interface through
 `iproute2`. A Raspberry Pi can therefore keep Internet/SSH on Ethernet while
 its Wi-Fi interface is connected directly to the uNode access point.
 
+For a dedicated Raspberry Pi test rig, keep the uNode Wi-Fi connection away
+from the default route and pin the directly connected `2.0.0.0/24` network to
+`wlan0`. This prevents NetworkManager from sending uNode traffic through the
+Ethernet router after the access point briefly disappears during a restart:
+
+```bash
+sudo nmcli connection modify "uNode_CHIPID" \
+  connection.interface-name wlan0 \
+  connection.autoconnect yes \
+  connection.autoconnect-priority 100 \
+  ipv4.never-default yes \
+  ipv4.routes "2.0.0.0/24"
+sudo nmcli connection up "uNode_CHIPID"
+```
+
+Disable auto-connect on unrelated Wi-Fi profiles when `wlan0` is reserved for
+the test fixture. Ethernet continues to provide SSH and Internet access.
+
 When `-NodeIp` and `-BaseUrl` are omitted, the PowerShell runner sends ArtPoll
 on the available IPv4 interfaces and uses the first responding uNode. If no
 node is discovered, it falls back to the AP/recovery default `2.0.0.1`.
