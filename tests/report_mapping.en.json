@@ -223,5 +223,35 @@
     "group": "sACN",
     "title": "Priority timeout fallback",
     "description": "Falls back to a warm lower-priority source after the higher-priority source times out."
+  },
+  "tests/ota/test_ota_safe.py::test_ota_rejects_missing_invalid_and_oversized_declarations": {
+    "group": "OTA",
+    "title": "OTA request validation",
+    "description": "Rejects missing, invalid, oversized and wrong-layout upload declarations without rebooting."
+  },
+  "tests/ota/test_ota_safe.py::test_ota_rejects_invalid_firmware_magic_and_truncated_upload": {
+    "group": "OTA",
+    "title": "Invalid firmware rejection",
+    "description": "Rejects invalid firmware headers and incomplete uploads without activating them."
+  },
+  "tests/ota/test_ota_safe.py::test_known_good_firmware_update_reboots_into_same_release": {
+    "group": "OTA",
+    "title": "Known-good firmware update",
+    "description": "Reinstalls a manifest-verified firmware image and checks HTTP and ArtPoll recovery."
+  },
+  "tests/ota/test_ota_safe.py::test_known_good_littlefs_update_restores_web_assets_and_config": {
+    "group": "OTA",
+    "title": "Known-good LittleFS update",
+    "description": "Reinstalls manifest-verified web assets and restores the saved node configuration."
+  },
+  "tests/ota/test_ota_recovery_hil.py::test_interrupted_firmware_upload_keeps_previous_firmware_bootable": {
+    "group": "OTA Recovery HIL",
+    "title": "Interrupted firmware upload",
+    "description": "Resets during staged firmware upload and verifies that the previous release remains bootable."
+  },
+  "tests/ota/test_ota_recovery_hil.py::test_corrupted_littlefs_is_recoverable_through_embedded_page": {
+    "group": "OTA Recovery HIL",
+    "title": "Interrupted LittleFS recovery",
+    "description": "Corrupts LittleFS during upload and restores it through the firmware-embedded recovery API."
   }
 }

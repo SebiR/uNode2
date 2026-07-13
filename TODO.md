@@ -26,6 +26,9 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Validate image type, size, upload completion, and updater errors before
       rebooting.
 - [x] Add update progress and automatic browser reconnection after reboot.
+- [ ] Evaluate and enable the ESP8266 core's `ATOMIC_FS_UPDATE` staging mode
+      for the 4M1M layout so an interrupted LittleFS upload leaves the previous
+      filesystem untouched; repeat the existing power-loss HIL test afterwards.
 
 ## Priority 2: Output Failsafe
 
@@ -327,7 +330,12 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       DMX-to-sACN.
 - [ ] Extend the RP2040 soak with simultaneous Art-Net output/DMX output
       monitoring and longer mixed-direction runs.
-- [ ] Test power loss during firmware, LittleFS, and configuration updates.
+- [x] Test external reset during staged firmware OTA and direct LittleFS OTA,
+      including physical recovery-button entry, embedded recovery API status,
+      verified filesystem reinstall, configuration restoration, and ArtPoll
+      smoke testing.
+- [ ] Test interrupted configuration writes and recovery of `config.tmp` /
+      `config.bak` separately from full-image OTA interruption.
 - [ ] Add a Doxygen configuration and generated API-documentation workflow.
 - [ ] Keep `MANUAL.md` and this roadmap synchronized with each release.
 

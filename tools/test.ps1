@@ -1,9 +1,16 @@
 param(
     [switch]$Integration,
+    [switch]$Ota,
+    [switch]$DestructiveOta,
     [string]$NodeIp = "",
     [string]$BaseUrl = "",
     [string]$Password = "",
     [string]$Rp2040Port = "",
+    [int]$ButtonGpio = -1,
+    [int]$ResetGpio = -1,
+    [ValidateSet("normal", "legacy")]
+    [string]$OtaProfile = "normal",
+    [string]$OtaArtifactsDir = "",
     [int]$SoakSeconds = 0,
     [int]$DmxSoakSeconds = 0,
     [int]$LatencySamples = 0,
@@ -27,6 +34,11 @@ $projectRoot =
     )
 
 Set-Location $projectRoot
+
+if ($Ota -or $DestructiveOta)
+{
+    $Integration = $true
+}
 
 if ($BaseUrl.Length -eq 0)
 {
@@ -97,6 +109,50 @@ if ($Integration)
         Remove-Item Env:\UNODE_RP2040_PORT -ErrorAction SilentlyContinue
     }
 
+    if ($ButtonGpio -ge 0)
+    {
+        $env:UNODE_BUTTON_GPIO_PIN = "$ButtonGpio"
+    }
+
+    if ($ResetGpio -ge 0)
+    {
+        $env:UNODE_RESET_GPIO_PIN = "$ResetGpio"
+    }
+
+    if ($Ota -or $DestructiveOta)
+    {
+        $env:UNODE_OTA_PROFILE = $OtaProfile
+        if ($OtaArtifactsDir.Length -gt 0)
+        {
+            $env:UNODE_OTA_ARTIFACTS_DIR =
+                (Resolve-Path $OtaArtifactsDir).Path
+        }
+        else
+        {
+            $env:UNODE_OTA_ARTIFACTS_DIR =
+                Join-Path $projectRoot "artifacts\release"
+        }
+    }
+
+    if ($DestructiveOta)
+    {
+        $env:UNODE_RUN_DESTRUCTIVE_OTA =
+            "I_UNDERSTAND_THIS_CAN_CORRUPT_FLASH"
+        Remove-Item Env:\UNODE_RUN_OTA -ErrorAction SilentlyContinue
+    }
+    elseif ($Ota)
+    {
+        $env:UNODE_RUN_OTA = "1"
+        Remove-Item Env:\UNODE_RUN_DESTRUCTIVE_OTA -ErrorAction SilentlyContinue
+    }
+    else
+    {
+        Remove-Item Env:\UNODE_RUN_OTA -ErrorAction SilentlyContinue
+        Remove-Item Env:\UNODE_RUN_DESTRUCTIVE_OTA -ErrorAction SilentlyContinue
+        Remove-Item Env:\UNODE_OTA_PROFILE -ErrorAction SilentlyContinue
+        Remove-Item Env:\UNODE_OTA_ARTIFACTS_DIR -ErrorAction SilentlyContinue
+    }
+
     if ($SoakSeconds -gt 0)
     {
         $env:UNODE_SOAK_SECONDS = "$SoakSeconds"
@@ -154,7 +210,18 @@ if ($Integration)
 
     if ($Path.Length -eq 0)
     {
-        $Path = "tests/integration"
+        if ($DestructiveOta)
+        {
+            $Path = "tests/ota/test_ota_recovery_hil.py"
+        }
+        elseif ($Ota)
+        {
+            $Path = "tests/ota/test_ota_safe.py"
+        }
+        else
+        {
+            $Path = "tests/integration"
+        }
     }
 
     $pytestArgs = @("-s", "-vv", $Path)
@@ -165,6 +232,14 @@ if ($Integration)
     if ($env:UNODE_RP2040_PORT)
     {
         Write-Host "RP2040  : $env:UNODE_RP2040_PORT"
+    }
+    if ($Ota)
+    {
+        Write-Host "OTA     : safe ($env:UNODE_OTA_PROFILE)" -ForegroundColor Cyan
+    }
+    if ($DestructiveOta)
+    {
+        Write-Host "OTA     : DESTRUCTIVE recovery ($env:UNODE_OTA_PROFILE)" -ForegroundColor Red
     }
     if ($env:UNODE_SOAK_SECONDS)
     {
@@ -202,6 +277,10 @@ else
     Remove-Item Env:\UNODE_SOAK_INTERVAL -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_SOAK_REACHABILITY_GRACE -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_TEST_REPORT_JSON -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_RUN_OTA -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_RUN_DESTRUCTIVE_OTA -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_OTA_PROFILE -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_OTA_ARTIFACTS_DIR -ErrorAction SilentlyContinue
 
     if ($Path.Length -eq 0)
     {

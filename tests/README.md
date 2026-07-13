@@ -64,6 +64,40 @@ bash tools/test.sh --integration --rp2040-port auto --reset-gpio 7 \
 The reset test records time-to-API, time-to-ArtPollReply, and time-to-working
 physical DMX output in the JSON test report.
 
+Run safe OTA validation plus a known-good reinstall of the currently running
+firmware and LittleFS release. The selected binaries are checked against the
+release manifest before the first upload. Because LittleFS contains
+`config.json`, this test currently requires AP mode and disabled access
+control; it restores the previous configuration afterwards:
+
+```bash
+bash tools/test.sh --ota --node-ip 2.0.0.1 --ota-profile normal
+```
+
+PowerShell equivalent:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 `
+  -Ota -NodeIp 2.0.0.1 -OtaProfile normal
+```
+
+OTA interruption/recovery is a separate destructive HIL profile. It requires
+the RP2040 reset and recovery-button wiring and deliberately overwrites the
+LittleFS superblocks before proving that the embedded recovery page can
+restore a verified image. The explicit switch supplies a second internal
+acknowledgement guard, so these tests can never run as part of the ordinary
+integration directory:
+
+```bash
+bash tools/test.sh --destructive-ota --node-ip 2.0.0.1 \
+  --rp2040-port auto --button-gpio 8 --reset-gpio 7 \
+  --ota-profile normal
+```
+
+Do not disconnect power after the destructive LittleFS phase has started. If
+the automated recovery upload itself fails, keep the recovery button held
+during reset and reinstall the matching LittleFS image manually.
+
 The Linux discovery helper reads every active IPv4 interface through
 `iproute2`. A Raspberry Pi can therefore keep Internet/SSH on Ethernet while
 its Wi-Fi interface is connected directly to the uNode access point.
@@ -206,6 +240,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
 
 - Integration tests may change the node configuration temporarily. They try to
   restore the previous configuration afterwards.
+- OTA tests are intentionally outside `tests/integration`. Safe OTA still
+  erases/writes flash and reboots the node, while destructive OTA additionally
+  requires RP2040 GPIO7/GPIO8 and an explicit acknowledgement switch.
 - Offline release-helper tests verify that `data/version.json` matches the
   firmware/config schema defines, that the UART flash helper lists normal and
   legacy release artifacts in the expected order, and that the OTA flash helper

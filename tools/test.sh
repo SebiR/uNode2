@@ -14,6 +14,10 @@ BASE_URL=""
 PASSWORD=""
 RP2040_PORT=""
 TEST_PATH=""
+OTA=0
+DESTRUCTIVE_OTA=0
+OTA_PROFILE="normal"
+OTA_ARTIFACTS_DIR=""
 PYTEST_EXTRA=()
 
 usage() {
@@ -27,6 +31,10 @@ Usage: tools/test.sh [options] [-- pytest-args]
   --rp2040-port PORT            Serial device or "auto"
   --button-gpio PIN             RP2040 GPIO wired to the uNode button
   --reset-gpio PIN              RP2040 GPIO wired to the uNode reset input
+  --ota                          Run safe OTA validation/reinstall tests
+  --destructive-ota              Run opt-in OTA interruption/recovery tests
+  --ota-profile PROFILE          Release profile: normal or legacy
+  --ota-artifacts DIR            Release artifact directory
   --path PATH                   Test file/directory (default depends on mode)
   --soak-seconds N              Host/network soak duration
   --dmx-soak-seconds N          RP2040 DMX soak duration
@@ -56,6 +64,10 @@ while [[ $# -gt 0 ]]; do
         --rp2040-port) require_value "$@"; RP2040_PORT="$2"; shift 2 ;;
         --button-gpio) require_value "$@"; export UNODE_BUTTON_GPIO_PIN="$2"; shift 2 ;;
         --reset-gpio) require_value "$@"; export UNODE_RESET_GPIO_PIN="$2"; shift 2 ;;
+        --ota) OTA=1; INTEGRATION=1; shift ;;
+        --destructive-ota) DESTRUCTIVE_OTA=1; INTEGRATION=1; shift ;;
+        --ota-profile) require_value "$@"; OTA_PROFILE="$2"; shift 2 ;;
+        --ota-artifacts) require_value "$@"; OTA_ARTIFACTS_DIR="$2"; shift 2 ;;
         --path) require_value "$@"; TEST_PATH="$2"; shift 2 ;;
         --soak-seconds) require_value "$@"; export UNODE_SOAK_SECONDS="$2"; shift 2 ;;
         --dmx-soak-seconds) require_value "$@"; export UNODE_DMX_SOAK_SECONDS="$2"; shift 2 ;;
@@ -100,7 +112,19 @@ if [[ "$INTEGRATION" -eq 1 ]]; then
     unset UNODE_PASSWORD UNODE_RP2040_PORT
     [[ -n "$PASSWORD" ]] && export UNODE_PASSWORD="$PASSWORD"
     [[ -n "$RP2040_PORT" ]] && export UNODE_RP2040_PORT="$RP2040_PORT"
-    TEST_PATH="${TEST_PATH:-tests/integration}"
+    if [[ "$OTA" -eq 1 || "$DESTRUCTIVE_OTA" -eq 1 ]]; then
+        export UNODE_OTA_PROFILE="$OTA_PROFILE"
+        export UNODE_OTA_ARTIFACTS_DIR="${OTA_ARTIFACTS_DIR:-$PROJECT_ROOT/artifacts/release}"
+    fi
+    if [[ "$DESTRUCTIVE_OTA" -eq 1 ]]; then
+        export UNODE_RUN_DESTRUCTIVE_OTA="I_UNDERSTAND_THIS_CAN_CORRUPT_FLASH"
+        TEST_PATH="${TEST_PATH:-tests/ota/test_ota_recovery_hil.py}"
+    elif [[ "$OTA" -eq 1 ]]; then
+        export UNODE_RUN_OTA=1
+        TEST_PATH="${TEST_PATH:-tests/ota/test_ota_safe.py}"
+    else
+        TEST_PATH="${TEST_PATH:-tests/integration}"
+    fi
     PYTEST_ARGS=(-s -vv "$TEST_PATH")
     MODE="integration"
 else
@@ -119,6 +143,8 @@ if [[ "$INTEGRATION" -eq 1 ]]; then
     echo "Node IP : $UNODE_IP"
     echo "Base URL: $UNODE_BASE_URL"
     [[ -n "${UNODE_RP2040_PORT:-}" ]] && echo "RP2040  : $UNODE_RP2040_PORT"
+    [[ "$OTA" -eq 1 ]] && echo "OTA     : safe ($UNODE_OTA_PROFILE)"
+    [[ "$DESTRUCTIVE_OTA" -eq 1 ]] && echo "OTA     : DESTRUCTIVE recovery ($UNODE_OTA_PROFILE)"
 fi
 echo "Tests   : $TEST_PATH"
 echo
