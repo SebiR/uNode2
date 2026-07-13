@@ -19,6 +19,7 @@ from unode_client import UNodeClient
 
 _TEST_REPORTS: dict[str, dict[str, object]] = {}
 _SESSION_STARTED_AT = datetime.now(timezone.utc)
+_NODE_STATUS_SNAPSHOT: dict[str, object] = {}
 _RP2040_INFO: dict[str, object] = {
     "configuredPort": os.environ.get("UNODE_RP2040_PORT", ""),
     "port": "",
@@ -224,7 +225,13 @@ def pytest_terminal_summary(terminalreporter, exitstatus: int, config: pytest.Co
 
     node_status = {}
     if integration_enabled():
-        node_status = _read_node_status()
+        # Prefer the final live state, but retain identity and firmware details
+        # captured at session start when the very failure under test leaves the
+        # node or its network stack unreachable.
+        node_status = {
+            **_NODE_STATUS_SNAPSHOT,
+            **_read_node_status(),
+        }
         chip_id = node_status.get("chipId", "unknown")
         firmware = node_status.get("firmware", "unknown")
         node_name = node_status.get("name", "unknown")
@@ -290,6 +297,10 @@ def unode_client() -> UNodeClient:
         os.environ.get("UNODE_PASSWORD") or None,
     )
     client.ensure_authenticated()
+    try:
+        _NODE_STATUS_SNAPSHOT.update(client.get_json("/api/status"))
+    except Exception:  # noqa: BLE001 - test setup reports the real error later.
+        pass
     return client
 
 

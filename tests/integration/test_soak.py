@@ -256,7 +256,8 @@ def test_host_soak_network_output_and_runtime_stability(
             except Exception as error:
                 raise AssertionError(
                     "uNode HTTP API became unreachable during soak; "
-                    f"api_failures={stats.api_failures}, last_status={stats.last_status}"
+                    f"recovered_attempt_failures={stats.api_failures}, "
+                    f"last_status={stats.last_status}, cause={error}"
                 ) from error
 
             boot_count = int(status["bootCount"])
@@ -296,7 +297,8 @@ def test_host_soak_network_output_and_runtime_stability(
             except Exception as error:
                 raise AssertionError(
                     "uNode ArtPollReply became unreachable during soak; "
-                    f"poll_failures={stats.poll_failures}, last_status={stats.last_status}"
+                    f"recovered_attempt_failures={stats.poll_failures}, "
+                    f"last_status={stats.last_status}, cause={error}"
                 ) from error
 
             payload_length = rng.choice([2, 4, 6, 24, 64, 128, 512])

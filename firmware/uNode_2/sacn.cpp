@@ -19,6 +19,7 @@ static const uint32_t SACN_OUTPUT_TIMEOUT_MS = 2500;
 static const uint32_t SACN_BIND_RETRY_MS = 5000;
 static const uint32_t SACN_SOURCE_TIMEOUT_MS = SACN_OUTPUT_TIMEOUT_MS;
 static const uint8_t MAX_SACN_SOURCES = 2;
+static const uint8_t SACN_MAX_PACKETS_PER_LOOP = 4;
 
 static WiFiUDP sacnUdp;
 static bool sacnSocketReady = false;
@@ -552,10 +553,19 @@ void updateSacn() {
     return;
   }
 
-  int packetSize =
-    sacnUdp.parsePacket();
+  uint8_t processedPackets = 0;
 
-  while (packetSize > 0) {
+  // Bound one loop pass so a receive burst cannot monopolize the cooperative
+  // ESP8266 task and starve HTTP, mDNS, DMX housekeeping, or the Wi-Fi stack.
+  // Remaining datagrams stay queued and are picked up on the next loop pass.
+  while (processedPackets < SACN_MAX_PACKETS_PER_LOOP) {
+    const int packetSize =
+      sacnUdp.parsePacket();
+
+    if (packetSize <= 0) {
+      break;
+    }
+
     if (packetSize > SACN_MAX_PACKET_SIZE) {
       malformedPacketCounter++;
       while (sacnUdp.available()) {
@@ -575,8 +585,7 @@ void updateSacn() {
       }
     }
 
-    packetSize =
-      sacnUdp.parsePacket();
+    processedPackets++;
   }
 
   now = millis();

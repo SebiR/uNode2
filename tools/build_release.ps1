@@ -149,6 +149,27 @@ function Build-FirmwareArtifact {
         -Destination $artifact `
         -Force
 
+    foreach ($extension in @("elf", "map")) {
+        $debugSource =
+            Get-ChildItem `
+                -Path $buildPath `
+                -Filter "*.ino.$extension" `
+                -Recurse |
+            Select-Object -First 1
+
+        if (!$debugSource) {
+            throw "$Profile firmware $extension file not found in $buildPath"
+        }
+
+        $debugArtifact =
+            Join-Path $OutputDir "uNode-$version$Suffix-firmware.$extension"
+
+        Copy-Item `
+            -LiteralPath $debugSource.FullName `
+            -Destination $debugArtifact `
+            -Force
+    }
+
     return $artifact
 }
 
@@ -177,6 +198,15 @@ $legacyFirmwareArtifact =
         -BuildProperties @(
             "compiler.cpp.extra_flags=-DUSE_LEGACY_HARDWARE=1"
         )
+
+$firmwareElfArtifact =
+    Join-Path $OutputDir "uNode-$version-firmware.elf"
+$firmwareMapArtifact =
+    Join-Path $OutputDir "uNode-$version-firmware.map"
+$legacyFirmwareElfArtifact =
+    Join-Path $OutputDir "uNode-$version`_legacy-firmware.elf"
+$legacyFirmwareMapArtifact =
+    Join-Path $OutputDir "uNode-$version`_legacy-firmware.map"
 
 $mklittlefs =
     Get-ChildItem `
@@ -251,6 +281,15 @@ $legacyFirmwareHash =
         -Algorithm SHA256 `
         -LiteralPath $legacyFirmwareArtifact
 
+$firmwareElfHash =
+    Get-FileHash -Algorithm SHA256 -LiteralPath $firmwareElfArtifact
+$firmwareMapHash =
+    Get-FileHash -Algorithm SHA256 -LiteralPath $firmwareMapArtifact
+$legacyFirmwareElfHash =
+    Get-FileHash -Algorithm SHA256 -LiteralPath $legacyFirmwareElfArtifact
+$legacyFirmwareMapHash =
+    Get-FileHash -Algorithm SHA256 -LiteralPath $legacyFirmwareMapArtifact
+
 $filesystemHash =
     Get-FileHash `
         -Algorithm SHA256 `
@@ -276,6 +315,18 @@ $manifest = [ordered]@{
                 size = (Get-Item $firmwareArtifact).Length
                 sha256 = $firmwareHash.Hash
             }
+            debug = [ordered]@{
+                elf = [ordered]@{
+                    file = (Split-Path $firmwareElfArtifact -Leaf)
+                    size = (Get-Item $firmwareElfArtifact).Length
+                    sha256 = $firmwareElfHash.Hash
+                }
+                map = [ordered]@{
+                    file = (Split-Path $firmwareMapArtifact -Leaf)
+                    size = (Get-Item $firmwareMapArtifact).Length
+                    sha256 = $firmwareMapHash.Hash
+                }
+            }
             littleFs = [ordered]@{
                 size = 1024000
                 blockSize = 8192
@@ -293,6 +344,18 @@ $manifest = [ordered]@{
                 file = (Split-Path $legacyFirmwareArtifact -Leaf)
                 size = (Get-Item $legacyFirmwareArtifact).Length
                 sha256 = $legacyFirmwareHash.Hash
+            }
+            debug = [ordered]@{
+                elf = [ordered]@{
+                    file = (Split-Path $legacyFirmwareElfArtifact -Leaf)
+                    size = (Get-Item $legacyFirmwareElfArtifact).Length
+                    sha256 = $legacyFirmwareElfHash.Hash
+                }
+                map = [ordered]@{
+                    file = (Split-Path $legacyFirmwareMapArtifact -Leaf)
+                    size = (Get-Item $legacyFirmwareMapArtifact).Length
+                    sha256 = $legacyFirmwareMapHash.Hash
+                }
             }
             littleFs = [ordered]@{
                 size = 1024000
@@ -319,7 +382,9 @@ $manifest |
 Write-Host ""
 Write-Host "Artifacts written to $OutputDir"
 Write-Host "Firmware normal : $firmwareArtifact"
+Write-Host "Debug normal    : $firmwareElfArtifact / $firmwareMapArtifact"
 Write-Host "LittleFS normal : $filesystemArtifact"
 Write-Host "Firmware legacy : $legacyFirmwareArtifact"
+Write-Host "Debug legacy    : $legacyFirmwareElfArtifact / $legacyFirmwareMapArtifact"
 Write-Host "LittleFS legacy : $legacyFilesystemArtifact"
 Write-Host "Manifest        : $manifestPath"

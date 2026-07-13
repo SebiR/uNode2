@@ -13,6 +13,18 @@ explicitly in each release entry.
 
 ### Changed
 
+- Hardened long-running SoftAP operation after a host soak exposed a hardware
+  watchdog reset followed by an unresponsive Wi-Fi stack. Wi-Fi status, RSSI,
+  and SoftAP station-count queries are now rate-limited, while sACN receive
+  bursts use a bounded per-loop packet budget so cooperative network and web
+  processing cannot be starved.
+- Integration reports now retain the node identity captured at test startup,
+  so a network-stack lockup no longer produces an anonymous failure certificate.
+- Soak failures now include the final reachability error and distinguish it
+  from earlier transient failures that recovered within the grace period.
+- Release builds now preserve matching ELF and linker MAP sidecars, including
+  hashes in the manifest, so watchdog EPC addresses can be decoded against the
+  exact shipped firmware image.
 - Added the modified `LXESP8266DMX` implementation to the repository as local
   fork version `2.2.1-unode.1`. Release builds now consume the tracked copy,
   including UART0 TX, short-frame RX timeout handling, atomic frame APIs, and

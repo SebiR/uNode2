@@ -21,9 +21,11 @@ static uint32_t disconnectedSince = 0;
 static uint32_t nextReconnectMillis = 0;
 static uint32_t reconnectDelayMillis = 1000;
 static uint8_t reconnectAttempts = 0;
+static uint32_t lastNetworkPollMillis = 0;
 
 static const uint32_t RECONNECT_DELAY_MIN_MS = 1000;
 static const uint32_t RECONNECT_DELAY_MAX_MS = 60000;
+static const uint32_t NETWORK_STATUS_POLL_INTERVAL_MS = 250;
 
 /** @brief Advances LED animation while WiFiManager owns the main loop. */
 static void updateConfigPortalLED() {
@@ -58,29 +60,29 @@ static bool hasAccessPoint() {
 }
 
 /** @return IP address of the currently preferred reachable interface. */
-static IPAddress getActiveIP() {
-    return WiFi.status() == WL_CONNECTED
+static IPAddress getActiveIP(wl_status_t status) {
+    return status == WL_CONNECTED
         ? WiFi.localIP()
         : WiFi.softAPIP();
 }
 
 /** @return Subnet mask of the currently preferred interface. */
-static IPAddress getActiveSubnet() {
-    return WiFi.status() == WL_CONNECTED
+static IPAddress getActiveSubnet(wl_status_t status) {
+    return status == WL_CONNECTED
         ? WiFi.subnetMask()
         : IPAddress(255, 255, 255, 0);
 }
 
 /** @return Gateway address of the currently preferred interface. */
-static IPAddress getActiveGateway() {
-    return WiFi.status() == WL_CONNECTED
+static IPAddress getActiveGateway(wl_status_t status) {
+    return status == WL_CONNECTED
         ? WiFi.gatewayIP()
         : WiFi.softAPIP();
 }
 
 /** @brief Maps current Wi-Fi state onto the logical network LED. */
-static void updateNetworkLED() {
-    if (WiFi.status() == WL_CONNECTED)
+static void updateNetworkLED(wl_status_t status) {
+    if (status == WL_CONNECTED)
     {
         const int rssi =
             WiFi.RSSI();
@@ -363,12 +365,14 @@ bool initNetwork()
     LOG_DEBUG_PRINT("softAPIP = ");
     LOG_PRINTLN(LOG_LEVEL_DEBUG, WiFi.softAPIP());
 
-    updateNetworkLED();
+    const wl_status_t status = WiFi.status();
+    updateNetworkLED(status);
 
-    lastWifiStatus = WiFi.status();
-    lastActiveIP = getActiveIP();
-    lastActiveSubnet = getActiveSubnet();
-    lastActiveGateway = getActiveGateway();
+    lastWifiStatus = status;
+    lastActiveIP = getActiveIP(status);
+    lastActiveSubnet = getActiveSubnet(status);
+    lastActiveGateway = getActiveGateway(status);
+    lastNetworkPollMillis = millis();
 
     if (lastWifiStatus != WL_CONNECTED
         && config.wifiMode != WIFI_MODE_AP) {
@@ -403,7 +407,7 @@ bool initRecoveryNetwork()
 
     recoveryAPActive = started;
 
-    updateNetworkLED();
+    updateNetworkLED(WiFi.status());
 
     LOG_INFO_PRINT("Recovery AP SSID: ");
     LOG_PRINTLN(LOG_LEVEL_INFO, apSSID);
@@ -417,6 +421,22 @@ bool initRecoveryNetwork()
 bool updateNetwork()
 {
     const uint32_t now = millis();
+
+    // mDNS owns a UDP receive queue and is intentionally serviced on every
+    // Arduino loop pass. Wi-Fi SDK status queries are different: polling them
+    // as fast as the loop can run adds no useful responsiveness and can put
+    // sustained pressure on the ESP8266 radio task, especially in SoftAP mode.
+    if (mdnsStarted)
+    {
+        MDNS.update();
+    }
+
+    if (now - lastNetworkPollMillis
+        < NETWORK_STATUS_POLL_INTERVAL_MS) {
+        return false;
+    }
+
+    lastNetworkPollMillis = now;
     const wl_status_t status = WiFi.status();
     bool networkChanged = false;
 
@@ -459,9 +479,9 @@ bool updateNetwork()
         }
     }
 
-    const IPAddress activeIP = getActiveIP();
-    const IPAddress activeSubnet = getActiveSubnet();
-    const IPAddress activeGateway = getActiveGateway();
+    const IPAddress activeIP = getActiveIP(status);
+    const IPAddress activeSubnet = getActiveSubnet(status);
+    const IPAddress activeGateway = getActiveGateway(status);
 
     if (activeIP != lastActiveIP
         || activeSubnet != lastActiveSubnet
@@ -477,12 +497,7 @@ bool updateNetwork()
     }
 
     lastWifiStatus = status;
-    updateNetworkLED();
-
-    if (mdnsStarted)
-    {
-        MDNS.update();
-    }
+    updateNetworkLED(status);
 
     return networkChanged;
 }
