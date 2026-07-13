@@ -1,0 +1,204 @@
+{
+  "id": "a11e000000000001",
+  "label": "uNode Monitor",
+  "disabled": false,
+  "info": "Read-only uNode test-rig status dashboard.",
+  "nodes": [
+    {
+      "id": "a11e000000000101",
+      "type": "inject",
+      "z": "a11e000000000001",
+      "name": "Poll every 5 seconds",
+      "props": [
+        {
+          "p": "payload"
+        }
+      ],
+      "repeat": "5",
+      "crontab": "",
+      "once": true,
+      "onceDelay": "0.5",
+      "topic": "",
+      "payload": "",
+      "payloadType": "date",
+      "x": 150,
+      "y": 120,
+      "wires": [
+        [
+          "a11e000000000102"
+        ]
+      ]
+    },
+    {
+      "id": "a11e000000000102",
+      "type": "http request",
+      "z": "a11e000000000001",
+      "name": "GET uNode status",
+      "method": "GET",
+      "ret": "obj",
+      "paytoqs": "ignore",
+      "url": "http://2.0.0.1/api/status",
+      "tls": "",
+      "persist": false,
+      "proxy": "",
+      "insecureHTTPParser": false,
+      "authType": "",
+      "senderr": true,
+      "headers": [],
+      "x": 380,
+      "y": 120,
+      "wires": [
+        [
+          "a11e000000000103"
+        ]
+      ]
+    },
+    {
+      "id": "a11e000000000104",
+      "type": "catch",
+      "z": "a11e000000000001",
+      "name": "uNode request failed",
+      "scope": [
+        "a11e000000000102"
+      ],
+      "uncaught": false,
+      "x": 380,
+      "y": 180,
+      "wires": [
+        [
+          "a11e000000000103"
+        ]
+      ]
+    },
+    {
+      "id": "a11e000000000103",
+      "type": "function",
+      "z": "a11e000000000001",
+      "name": "Normalize status",
+      "func": "const s = msg.payload && typeof msg.payload === 'object' ? msg.payload : {};\nconst online = Number(msg.statusCode) === 200 && !msg.error;\nconst uptimeSeconds = Math.max(0, Math.floor(Number(s.uptime || 0) / 1000));\nconst days = Math.floor(uptimeSeconds / 86400);\nconst hours = Math.floor((uptimeSeconds % 86400) / 3600);\nconst minutes = Math.floor((uptimeSeconds % 3600) / 60);\nconst networkMode = s.wifiConnected ? 'Client' : (s.softAPActive ? 'Access Point' : 'Disconnected');\nconst protocol = Number(s.liveProtocol) === 1 ? 'sACN' : 'Art-Net';\nconst direction = Number(s.direction) === 1 ? 'DMX → Network' : 'Network → DMX';\nmsg.payload = {\n    online,\n    name: online ? (s.name || 'uNode') : 'uNode unavailable',\n    chipId: online ? (s.chipId || 'N/A') : 'N/A',\n    firmware: online ? (s.firmware || 'N/A') : 'N/A',\n    ip: online ? (s.ip || 'N/A') : '2.0.0.1',\n    networkMode: online ? networkMode : 'Disconnected',\n    stations: Number(s.softAPStations || 0),\n    protocol: online ? protocol : 'N/A',\n    direction: online ? direction : 'N/A',\n    universe: online ? Number(s.universe || 0) : 'N/A',\n    uptime: online ? `${days}d ${hours}h ${minutes}m` : 'N/A',\n    heap: online ? `${Math.round(Number(s.freeHeap || 0) / 1024)} KiB` : 'N/A',\n    heapWarning: Boolean(s.heapWarningActive),\n    bootCount: online ? Number(s.bootCount || 0) : 'N/A',\n    resetReason: online ? (s.resetReason || 'N/A') : (msg.error && msg.error.message ? msg.error.message : 'No response'),\n    artnetPackets: online ? Number(s.artnetPackets || 0) : 'N/A',\n    sacnPackets: online ? Number(s.sacnPackets || 0) : 'N/A',\n    dmxFrames: online ? Number(s.dmxFrames || 0) : 'N/A',\n    updated: new Date().toLocaleString('en-GB')\n};\nreturn msg;",
+      "outputs": 1,
+      "timeout": 0,
+      "noerr": 0,
+      "initialize": "",
+      "finalize": "",
+      "libs": [],
+      "x": 610,
+      "y": 120,
+      "wires": [
+        [
+          "a11e000000000105"
+        ]
+      ]
+    },
+    {
+      "id": "a11e000000000105",
+      "type": "ui-template",
+      "z": "a11e000000000001",
+      "group": "a11e000000000204",
+      "page": "",
+      "ui": "",
+      "name": "uNode status card",
+      "order": 1,
+      "width": 12,
+      "height": 0,
+      "head": "",
+      "format": "<template>\n  <div class=\"unode-monitor\">\n    <div class=\"unode-monitor__header\">\n      <div>\n        <div class=\"unode-monitor__eyebrow\">uNode test rig</div>\n        <h2>{{ msg && msg.payload ? msg.payload.name : 'Waiting for status…' }}</h2>\n        <div class=\"unode-monitor__muted\">ID {{ msg && msg.payload ? msg.payload.chipId : 'N/A' }} · FW {{ msg && msg.payload ? msg.payload.firmware : 'N/A' }} · {{ msg && msg.payload ? msg.payload.ip : 'N/A' }}</div>\n      </div>\n      <span class=\"unode-monitor__badge\" :class=\"msg && msg.payload && msg.payload.online ? 'is-online' : 'is-offline'\">\n        {{ msg && msg.payload && msg.payload.online ? 'ONLINE' : 'OFFLINE' }}\n      </span>\n    </div>\n    <div class=\"unode-monitor__grid\">\n      <div><span>Network</span><strong>{{ msg && msg.payload ? msg.payload.networkMode : 'N/A' }}</strong><small>{{ msg && msg.payload ? msg.payload.stations : 0 }} AP station(s)</small></div>\n      <div><span>Signal path</span><strong>{{ msg && msg.payload ? msg.payload.protocol : 'N/A' }}</strong><small>{{ msg && msg.payload ? msg.payload.direction : 'N/A' }} · U{{ msg && msg.payload ? msg.payload.universe : 'N/A' }}</small></div>\n      <div><span>Runtime</span><strong>{{ msg && msg.payload ? msg.payload.uptime : 'N/A' }}</strong><small>Boot {{ msg && msg.payload ? msg.payload.bootCount : 'N/A' }}</small></div>\n      <div :class=\"msg && msg.payload && msg.payload.heapWarning ? 'is-warning' : ''\"><span>Free heap</span><strong>{{ msg && msg.payload ? msg.payload.heap : 'N/A' }}</strong><small>{{ msg && msg.payload && msg.payload.heapWarning ? 'Warning active' : 'Healthy' }}</small></div>\n      <div><span>Art-Net</span><strong>{{ msg && msg.payload ? msg.payload.artnetPackets : 'N/A' }}</strong><small>received packets</small></div>\n      <div><span>sACN</span><strong>{{ msg && msg.payload ? msg.payload.sacnPackets : 'N/A' }}</strong><small>received packets</small></div>\n      <div><span>DMX</span><strong>{{ msg && msg.payload ? msg.payload.dmxFrames : 'N/A' }}</strong><small>physical frames</small></div>\n      <div><span>Last reset</span><strong class=\"unode-monitor__reset\">{{ msg && msg.payload ? msg.payload.resetReason : 'N/A' }}</strong><small>{{ msg && msg.payload ? msg.payload.updated : 'N/A' }}</small></div>\n    </div>\n  </div>\n</template>\n<style>\n.unode-monitor { color: rgb(var(--v-theme-on-surface)); padding: 4px; }\n.unode-monitor__header { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:18px; }\n.unode-monitor h2 { margin:2px 0 3px; font-size:1.45rem; }\n.unode-monitor__eyebrow, .unode-monitor__muted, .unode-monitor small, .unode-monitor span { color:rgba(var(--v-theme-on-surface),.68); }\n.unode-monitor__eyebrow { text-transform:uppercase; letter-spacing:.09em; font-size:.72rem; font-weight:700; }\n.unode-monitor__badge { padding:5px 9px; border-radius:4px; font-size:.72rem; font-weight:800; letter-spacing:.06em; border:1px solid currentColor; }\n.unode-monitor__badge.is-online { color:#178447; background:#e9f7ef; }\n.unode-monitor__badge.is-offline { color:#b42318; background:#fff0ee; }\n.unode-monitor__grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }\n.unode-monitor__grid > div { min-height:96px; padding:13px 14px; border:1px solid rgba(var(--v-theme-on-surface),.16); border-radius:6px; display:flex; flex-direction:column; gap:4px; }\n.unode-monitor__grid strong { font-size:1.08rem; overflow-wrap:anywhere; }\n.unode-monitor__grid span { font-size:.76rem; text-transform:uppercase; letter-spacing:.05em; }\n.unode-monitor__grid small { margin-top:auto; }\n.unode-monitor__grid .is-warning { border-color:#d18b00; background:rgba(209,139,0,.08); }\n.unode-monitor__reset { font-size:.9rem !important; }\n</style>",
+      "storeOutMessages": true,
+      "passthru": true,
+      "resendOnRefresh": true,
+      "templateScope": "local",
+      "className": "",
+      "x": 850,
+      "y": 120,
+      "wires": [
+        []
+      ]
+    }
+  ],
+  "configs": [
+    {
+      "id": "a11e000000000201",
+      "type": "ui-base",
+      "name": "uNode Monitor",
+      "path": "/unode",
+      "appIcon": "",
+      "includeClientData": true,
+      "acceptsClientConfig": [
+        "ui-notification",
+        "ui-control"
+      ],
+      "showPathInSidebar": false,
+      "headerContent": "page",
+      "navigationStyle": "default",
+      "titleBarStyle": "default",
+      "showReconnectNotification": true,
+      "notificationDisplayTime": 1,
+      "showDisconnectNotification": true,
+      "allowInstall": false
+    },
+    {
+      "id": "a11e000000000202",
+      "type": "ui-theme",
+      "name": "uNode Technical",
+      "colors": {
+        "surface": "#ffffff",
+        "primary": "#315f85",
+        "bgPage": "#edf1f5",
+        "groupBg": "#ffffff",
+        "groupOutline": "#cbd5df"
+      },
+      "sizes": {
+        "density": "default",
+        "pagePadding": "12px",
+        "groupGap": "12px",
+        "groupBorderRadius": "6px",
+        "widgetGap": "12px"
+      }
+    },
+    {
+      "id": "a11e000000000203",
+      "type": "ui-page",
+      "name": "uNode Status",
+      "ui": "a11e000000000201",
+      "path": "/status",
+      "icon": "lan",
+      "layout": "grid",
+      "theme": "a11e000000000202",
+      "breakpoints": [
+        {
+          "name": "Default",
+          "px": 0,
+          "cols": 3
+        },
+        {
+          "name": "Tablet",
+          "px": 576,
+          "cols": 6
+        },
+        {
+          "name": "Desktop",
+          "px": 1024,
+          "cols": 12
+        }
+      ],
+      "order": 1,
+      "className": "",
+      "visible": "true",
+      "disabled": "false"
+    },
+    {
+      "id": "a11e000000000204",
+      "type": "ui-group",
+      "name": "Live Status",
+      "page": "a11e000000000203",
+      "width": 12,
+      "height": 1,
+      "order": 1,
+      "showTitle": true,
+      "className": "",
+      "visible": true,
+      "disabled": false,
+      "groupType": "default"
+    }
+  ]
+}
