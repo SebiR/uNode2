@@ -113,6 +113,77 @@
       "wires": [
         []
       ]
+    },
+    {
+      "id": "a11e000000000106",
+      "type": "inject",
+      "z": "a11e000000000001",
+      "name": "Refresh test log",
+      "props": [
+        {
+          "p": "payload"
+        }
+      ],
+      "repeat": "2",
+      "crontab": "",
+      "once": true,
+      "onceDelay": "1",
+      "topic": "",
+      "payload": "",
+      "payloadType": "date",
+      "x": 150,
+      "y": 260,
+      "wires": [
+        [
+          "a11e000000000107"
+        ]
+      ]
+    },
+    {
+      "id": "a11e000000000107",
+      "type": "exec",
+      "z": "a11e000000000001",
+      "command": "tail -n 120 /home/pi/uNode2/artifacts/test_reports/latest-run.log",
+      "addpay": "",
+      "append": "",
+      "useSpawn": "false",
+      "timer": "",
+      "winHide": false,
+      "oldrc": false,
+      "name": "Read latest pytest output",
+      "x": 390,
+      "y": 260,
+      "wires": [
+        [
+          "a11e000000000108"
+        ],
+        [],
+        []
+      ]
+    },
+    {
+      "id": "a11e000000000108",
+      "type": "ui-template",
+      "z": "a11e000000000001",
+      "group": "a11e000000000205",
+      "page": "",
+      "ui": "",
+      "name": "Live pytest log",
+      "order": 1,
+      "width": 12,
+      "height": 8,
+      "head": "",
+      "format": "<template>\n  <div class=\"unode-testlog\">\n    <div class=\"unode-testlog__head\"><strong>pytest output</strong><span>refreshes every 2 seconds</span></div>\n    <pre>{{ msg && msg.payload ? msg.payload : 'No Linux test run recorded yet.' }}</pre>\n  </div>\n</template>\n<style>\n.unode-testlog__head { display:flex; justify-content:space-between; gap:12px; margin-bottom:8px; }\n.unode-testlog__head span { color:rgba(var(--v-theme-on-surface),.6); font-size:.78rem; }\n.unode-testlog pre { margin:0; padding:12px; min-height:260px; max-height:520px; overflow:auto; border-radius:5px; background:#111923; color:#d9e4ee; font:12px/1.45 Consolas,monospace; white-space:pre-wrap; }\n</style>",
+      "storeOutMessages": true,
+      "passthru": true,
+      "resendOnRefresh": true,
+      "templateScope": "local",
+      "className": "",
+      "x": 650,
+      "y": 260,
+      "wires": [
+        []
+      ]
     }
   ],
   "configs": [
@@ -194,6 +265,20 @@
       "width": 12,
       "height": 1,
       "order": 1,
+      "showTitle": true,
+      "className": "",
+      "visible": true,
+      "disabled": false,
+      "groupType": "default"
+    },
+    {
+      "id": "a11e000000000205",
+      "type": "ui-group",
+      "name": "Latest Test Run",
+      "page": "a11e000000000203",
+      "width": 12,
+      "height": 8,
+      "order": 2,
       "showTitle": true,
       "className": "",
       "visible": true,

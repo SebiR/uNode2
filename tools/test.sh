@@ -25,6 +25,8 @@ Usage: tools/test.sh [options] [-- pytest-args]
   --base-url URL                Override the HTTP base URL
   --password PASSWORD           Web/API password
   --rp2040-port PORT            Serial device or "auto"
+  --button-gpio PIN             RP2040 GPIO wired to the uNode button
+  --reset-gpio PIN              RP2040 GPIO wired to the uNode reset input
   --path PATH                   Test file/directory (default depends on mode)
   --soak-seconds N              Host/network soak duration
   --dmx-soak-seconds N          RP2040 DMX soak duration
@@ -52,6 +54,8 @@ while [[ $# -gt 0 ]]; do
         --base-url) require_value "$@"; BASE_URL="$2"; shift 2 ;;
         --password) require_value "$@"; PASSWORD="$2"; shift 2 ;;
         --rp2040-port) require_value "$@"; RP2040_PORT="$2"; shift 2 ;;
+        --button-gpio) require_value "$@"; export UNODE_BUTTON_GPIO_PIN="$2"; shift 2 ;;
+        --reset-gpio) require_value "$@"; export UNODE_RESET_GPIO_PIN="$2"; shift 2 ;;
         --path) require_value "$@"; TEST_PATH="$2"; shift 2 ;;
         --soak-seconds) require_value "$@"; export UNODE_SOAK_SECONDS="$2"; shift 2 ;;
         --dmx-soak-seconds) require_value "$@"; export UNODE_DMX_SOAK_SECONDS="$2"; shift 2 ;;
@@ -119,9 +123,14 @@ fi
 echo "Tests   : $TEST_PATH"
 echo
 
+LOG_DIR="$PROJECT_ROOT/artifacts/test_reports"
+LATEST_LOG="$LOG_DIR/latest-run.log"
+mkdir -p "$LOG_DIR"
+
 set +e
-"$PYTHON" -m pytest "${PYTEST_ARGS[@]}" "${PYTEST_EXTRA[@]}"
-EXIT_CODE=$?
+PYTHONUNBUFFERED=1 "$PYTHON" -m pytest \
+    "${PYTEST_ARGS[@]}" "${PYTEST_EXTRA[@]}" 2>&1 | tee "$LATEST_LOG"
+EXIT_CODE=${PIPESTATUS[0]}
 set -e
 
 echo

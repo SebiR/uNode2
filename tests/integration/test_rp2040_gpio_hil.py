@@ -1,11 +1,23 @@
 from __future__ import annotations
 
 import os
+import time
 
 import pytest
 
-from artnet_packets import ARTNET_AC_LED_LOCATE, ARTNET_AC_LED_NORMAL, make_artaddress
-from helpers import send_artnet_packet, step, wait_for_status
+from artnet_packets import (
+    ARTNET_AC_LED_LOCATE,
+    ARTNET_AC_LED_NORMAL,
+    make_artaddress,
+    make_artdmx,
+)
+from helpers import (
+    configured_port_address,
+    request_artpoll_reply,
+    send_artnet_packet,
+    step,
+    wait_for_status,
+)
 from rp2040_dmx_tool import Rp2040DmxTool
 from unode_client import UNodeClient
 
@@ -219,7 +231,10 @@ def test_rp2040_gpio_long_press_toggles_unode_led_mute(
 
 def test_rp2040_gpio_can_reset_unode_and_observe_boot_count(
     unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
     rp2040_tool: Rp2040DmxTool,
+    record_property,
 ) -> None:
     pin = _configured_reset_gpio_pin()
     if pin is None:
@@ -228,8 +243,26 @@ def test_rp2040_gpio_can_reset_unode_and_observe_boot_count(
             "uNode active-low reset input"
         )
 
+    config = preserved_config.copy()
+    config["direction"] = 0  # Art-Net -> physical DMX
+    config["liveProtocol"] = 0
+    config["busGuardMode"] = 0
+    step("Preparing Art-Net -> DMX profile for post-reset functional check")
+    unode_client.save_config(config)
+    port_address = configured_port_address(config)
+    wait_for_status(
+        unode_client,
+        lambda data: int(data.get("direction", -1)) == 0
+        and int(data.get("liveProtocol", -1)) == 0
+        and int(data.get("universe", -1)) == port_address,
+    )
+
+    rp2040_tool.mode("rx")
+    rp2040_tool.clear_stats()
+
     before = unode_client.get_json("/api/status")
     initial_boot_count = int(before["bootCount"])
+    started = time.perf_counter()
 
     try:
         rp2040_tool.gpio_release(pin)
@@ -253,5 +286,50 @@ def test_rp2040_gpio_can_reset_unode_and_observe_boot_count(
             interval=0.5,
         )
         assert int(restarted["bootCount"]) > initial_boot_count
+        api_recovery_ms = (time.perf_counter() - started) * 1000.0
+        step(
+            "Node HTTP/API recovered after "
+            f"{api_recovery_ms:.0f} ms: bootCount={restarted['bootCount']}, "
+            f"resetReason='{restarted.get('resetReason', 'N/A')}'"
+        )
+
+        reply = request_artpoll_reply(unode_ip, timeout=5.0)
+        artpoll_recovery_ms = (time.perf_counter() - started) * 1000.0
+        assert reply.net == int(config["net"])
+        assert reply.subnet == int(config["subnetId"])
+        assert reply.sw_out[0] == int(config["universe"])
+        step(f"ArtPollReply recovered after {artpoll_recovery_ms:.0f} ms")
+
+        expected = [17, 51, 85, 119, 153, 187]
+        rp2040_tool.begin_wait_frame(expected, timeout_ms=3000)
+        packet = make_artdmx(
+            port_address,
+            expected,
+            sequence=73,
+        )
+        for _attempt in range(5):
+            send_artnet_packet(unode_ip, packet)
+            time.sleep(0.05)
+        wait_result = rp2040_tool.finish_wait_frame(timeout_ms=3000)
+        assert wait_result.get("matched") is True
+        dmx_recovery_ms = (time.perf_counter() - started) * 1000.0
+        step(
+            "Post-reset Art-Net -> physical DMX conversion verified after "
+            f"{dmx_recovery_ms:.0f} ms"
+        )
+
+        record_property(
+            "metric.resetRecovery",
+            {
+                "gpio": pin,
+                "pulseMs": 250,
+                "apiRecoveryMs": round(api_recovery_ms, 1),
+                "artPollRecoveryMs": round(artpoll_recovery_ms, 1),
+                "dmxRecoveryMs": round(dmx_recovery_ms, 1),
+                "bootCountBefore": initial_boot_count,
+                "bootCountAfter": int(restarted["bootCount"]),
+                "resetReason": restarted.get("resetReason", ""),
+            },
+        )
     finally:
         rp2040_tool.gpio_release(pin)

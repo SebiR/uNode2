@@ -111,8 +111,8 @@
   },
   "tests/integration/test_rp2040_gpio_hil.py::test_rp2040_gpio_can_reset_unode_and_observe_boot_count": {
     "group": "Hardware HIL",
-    "title": "External reset control",
-    "description": "Uses a wired RP2040 AUX GPIO to pulse the uNode reset input and verify the boot counter increases."
+    "title": "External reset and recovery",
+    "description": "Pulses the uNode reset input, measures API and ArtPoll recovery, and verifies physical DMX output after reboot."
   },
   "tests/integration/test_dropout_hil.py::test_each_network_update_reaches_physical_dmx_output[Art-Net]": {
     "group": "Dropout HIL",

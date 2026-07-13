@@ -53,6 +53,17 @@ Linux/Raspberry Pi, including RP2040 auto-detection:
 bash tools/test.sh --integration --rp2040-port auto
 ```
 
+The production fixture can expose the uNode button and reset input through the
+RP2040 AUX GPIOs. For example, with reset wired to GPIO7:
+
+```bash
+bash tools/test.sh --integration --rp2040-port auto --reset-gpio 7 \
+  --path tests/integration/test_rp2040_gpio_hil.py
+```
+
+The reset test records time-to-API, time-to-ArtPollReply, and time-to-working
+physical DMX output in the JSON test report.
+
 The Linux discovery helper reads every active IPv4 interface through
 `iproute2`. A Raspberry Pi can therefore keep Internet/SSH on Ethernet while
 its Wi-Fi interface is connected directly to the uNode access point.

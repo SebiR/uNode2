@@ -12,4 +12,6 @@ cd ~/uNode2
 ```
 
 Open `http://printer.local:1880/unode/status`. The installer uses Node-RED's
-single-flow Admin API and therefore leaves unrelated flows untouched.
+single-flow Admin API and therefore leaves unrelated flows untouched. The
+dashboard also tails `artifacts/test_reports/latest-run.log`, which is updated
+live by `tools/test.sh` while pytest is running.
