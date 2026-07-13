@@ -42,19 +42,40 @@ def main() -> int:
     args = parser.parse_args()
 
     flow = json.loads(args.flow.read_text(encoding="utf-8"))
-    flow_id = flow["id"]
-    status, _body = request(args.url, "GET", f"/flow/{flow_id}")
+    status, body = request(args.url, "GET", "/flows")
+    if status != 200:
+        raise SystemExit(f"Node-RED flow list failed with HTTP {status}")
 
-    if status == 200:
+    flow_list_response = json.loads(body.decode("utf-8"))
+    installed_nodes = (
+        flow_list_response.get("flows", [])
+        if isinstance(flow_list_response, dict)
+        else flow_list_response
+    )
+    installed_tab = next(
+        (
+            node
+            for node in installed_nodes
+            if node.get("type") == "tab"
+            and node.get("label") == flow.get("label")
+        ),
+        None,
+    )
+
+    if installed_tab is not None:
+        flow_id = installed_tab["id"]
+        flow["id"] = flow_id
+        for node in flow.get("nodes", []):
+            node["z"] = flow_id
+        for config in flow.get("configs", []):
+            config["z"] = flow_id
         method = "PUT"
         path = f"/flow/{flow_id}"
         action = "updated"
-    elif status == 404:
+    else:
         method = "POST"
         path = "/flow"
         action = "created"
-    else:
-        raise SystemExit(f"Node-RED flow lookup failed with HTTP {status}")
 
     status, body = request(args.url, method, path, flow)
     if not 200 <= status < 300:
