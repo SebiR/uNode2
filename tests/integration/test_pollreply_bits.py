@@ -61,7 +61,7 @@ def test_artpollreply_port_and_status_bits_follow_runtime_config(
     )
     unode_client.save_config(output_config)
     output_port_address = configured_port_address(output_config)
-    wait_for_status(
+    output_status = wait_for_status(
         unode_client,
         lambda data: int(data["direction"]) == 0
         and int(data["universe"]) == output_port_address
@@ -94,7 +94,11 @@ def test_artpollreply_port_and_status_bits_follow_runtime_config(
     assert reply.status2 & STATUS2_DHCP_CAPABLE
     assert reply.status2 & STATUS2_15_BIT_PORT_ADDRESS
     assert not (reply.status2 & STATUS2_SQUAWKING)
-    if output_config.get("dhcp") is True:
+    dhcp_client_active = bool(
+        output_config.get("dhcp") is True
+        and output_status.get("wifiConnected") is True
+    )
+    if dhcp_client_active:
         assert reply.status2 & STATUS2_DHCP_CONFIGURED
     else:
         assert not (reply.status2 & STATUS2_DHCP_CONFIGURED)
