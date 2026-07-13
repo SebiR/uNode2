@@ -22,6 +22,10 @@ from rp2040_dmx_tool import Rp2040DmxTool
 from unode_client import UNodeClient
 
 
+BUTTON_LONG_PRESS_MS = 2300
+BUTTON_RELEASE_SETTLE_SECONDS = 0.3
+
+
 def _configured_button_gpio_pin() -> int | None:
     value = os.environ.get("UNODE_BUTTON_GPIO_PIN", "").strip()
     if not value:
@@ -34,6 +38,23 @@ def _configured_reset_gpio_pin() -> int | None:
     if not value:
         return None
     return int(value, 0)
+
+
+def _long_press_and_release_button(
+    tool: Rp2040DmxTool,
+    pin: int,
+) -> None:
+    """Hold the active-low button, then allow its release to debounce."""
+    tool.gpio_pulse(
+        pin,
+        value=0,
+        duration_ms=BUTTON_LONG_PRESS_MS,
+        release=True,
+    )
+    # The uNode uses a 200 ms debounce interval. Without this explicit release
+    # window, a following pulse can begin before the firmware observes the
+    # released state and both pulses are interpreted as one continuous press.
+    time.sleep(BUTTON_RELEASE_SETTLE_SECONDS)
 
 
 def test_rp2040_aux_gpio_json_commands(
@@ -164,12 +185,7 @@ def test_rp2040_gpio_long_press_toggles_unode_led_mute(
         rp2040_tool.gpio_release(pin)
 
         step("Holding active-low button input for 2300 ms to enable LED mute")
-        rp2040_tool.gpio_pulse(
-            pin,
-            value=0,
-            duration_ms=2300,
-            release=True,
-        )
+        _long_press_and_release_button(rp2040_tool, pin)
 
         muted = wait_for_status(
             unode_client,
@@ -179,12 +195,7 @@ def test_rp2040_gpio_long_press_toggles_unode_led_mute(
         assert muted["ledMuted"] is True
 
         step("Holding active-low button input again to disable LED mute")
-        rp2040_tool.gpio_pulse(
-            pin,
-            value=0,
-            duration_ms=2300,
-            release=True,
-        )
+        _long_press_and_release_button(rp2040_tool, pin)
 
         unmuted = wait_for_status(
             unode_client,
@@ -194,12 +205,7 @@ def test_rp2040_gpio_long_press_toggles_unode_led_mute(
         assert unmuted["ledMuted"] is False
 
         step("Muting once more and clearing LED mute via ArtAddress Normal")
-        rp2040_tool.gpio_pulse(
-            pin,
-            value=0,
-            duration_ms=2300,
-            release=True,
-        )
+        _long_press_and_release_button(rp2040_tool, pin)
         wait_for_status(
             unode_client,
             lambda data: data.get("ledMuted") is True,
