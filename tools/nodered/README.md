@@ -14,6 +14,16 @@ takes approximately two hours in total. A shared `flock` prevents two dashboard
 or wrapper-started soak tests from using the fixture at the same time. Test
 progress remains visible in the live pytest log.
 
+The regression controls can run the regular integration suite with selectable
+RP2040 DMX/HIL, button GPIO 8, reset GPIO 7, one-minute soak, and safe OTA
+coverage. The OTA hardware profile is selectable when OTA coverage is enabled.
+Destructive OTA recovery tests deliberately remain command-line only.
+
+An active job can be cancelled from the dashboard. The wrapper sends `SIGINT`
+to the isolated pytest process group, allowing test fixtures to restore the
+saved node configuration before the job is marked `cancelled`. Soak and
+regression runs share the same lock and cannot run concurrently.
+
 Install or update the flow locally on the Node-RED host:
 
 ```bash
@@ -29,7 +39,9 @@ live by `tools/test.sh` while pytest is running.
 The same guarded entry point can be used from a shell:
 
 ```bash
-tools/nodered/run_soak.sh host 3600
-tools/nodered/run_soak.sh dmx 3600
-tools/nodered/run_soak.sh status
+tools/nodered/run_test_job.sh host 3600
+tools/nodered/run_test_job.sh dmx 3600
+tools/nodered/run_test_job.sh regression rp2040,button,reset
+tools/nodered/run_test_job.sh stop
+tools/nodered/run_test_job.sh status
 ```
