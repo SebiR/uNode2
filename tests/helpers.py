@@ -119,7 +119,12 @@ def request_artpoll_reply(
     *,
     timeout: float = 2.0,
 ) -> ArtPollReply:
-    """Send ArtPoll to the target node and return the first valid ArtPollReply."""
+    """Poll repeatedly and return the first valid ArtPollReply.
+
+    The HTTP server may become reachable slightly before the Art-Net UDP
+    listener after a node restart. Re-sending ArtPoll also makes the helper
+    tolerant of one lost Wi-Fi/UDP packet without hiding a sustained failure.
+    """
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -129,18 +134,24 @@ def request_artpoll_reply(
         except OSError as error:
             pytest.skip(f"UDP {ARTNET_PORT} is unavailable: {error}")
 
-        sock.settimeout(timeout)
-        sock.sendto(make_artpoll(), (unode_ip, ARTNET_PORT))
-
-        deadline = time.time() + timeout
+        packet = make_artpoll()
+        deadline = time.monotonic() + timeout
+        next_poll = 0.0
         last_error: Exception | None = None
 
-        while time.time() < deadline:
+        while time.monotonic() < deadline:
+            now = time.monotonic()
+            if now >= next_poll:
+                sock.sendto(packet, (unode_ip, ARTNET_PORT))
+                next_poll = now + 0.25
+
+            remaining = deadline - time.monotonic()
+            sock.settimeout(max(0.01, min(0.1, remaining)))
             try:
                 data, sender = sock.recvfrom(1024)
             except socket.timeout as error:
                 last_error = error
-                break
+                continue
 
             if sender[0] != unode_ip:
                 continue
