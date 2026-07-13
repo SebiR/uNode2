@@ -2,7 +2,7 @@
   "id": "a11e000000000001",
   "label": "uNode Monitor",
   "disabled": false,
-  "info": "Read-only uNode test-rig status dashboard.",
+  "info": "uNode test-rig status dashboard with guarded soak-test controls.",
   "nodes": [
     {
       "id": "a11e000000000101",
@@ -115,6 +115,168 @@
       ]
     },
     {
+      "id": "a11e000000000109",
+      "type": "ui-template",
+      "z": "a11e000000000001",
+      "group": "a11e000000000206",
+      "page": "",
+      "ui": "",
+      "name": "Soak test controls",
+      "order": 1,
+      "width": 12,
+      "height": 0,
+      "head": "",
+      "format": "<template>\n  <div class=\"unode-soak\">\n    <div class=\"unode-soak__row\">\n      <label>\n        <span>Duration</span>\n        <select v-model.number=\"duration\" :disabled=\"running\">\n          <option :value=\"300\">5 minutes</option>\n          <option :value=\"900\">15 minutes</option>\n          <option :value=\"3600\">1 hour</option>\n          <option :value=\"14400\">4 hours</option>\n          <option :value=\"28800\">8 hours</option>\n        </select>\n      </label>\n      <div class=\"unode-soak__buttons\">\n        <button @click=\"start('host')\" :disabled=\"running\">Start Network Soak</button>\n        <button @click=\"start('dmx')\" :disabled=\"running\">Start DMX HIL Soak</button>\n      </div>\n    </div>\n    <div class=\"unode-soak__status\" :class=\"'is-' + stateName\">\n      <span class=\"unode-soak__dot\"></span>\n      <strong>{{ statusText }}</strong>\n    </div>\n    <p>Only one soak can use the uNode/RP2040 fixture at a time. Progress appears in the pytest log below.</p>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { duration: 3600 }\n  },\n  computed: {\n    state() {\n      return this.msg && this.msg.payload && typeof this.msg.payload === 'object'\n        ? this.msg.payload\n        : {}\n    },\n    running() {\n      return Boolean(this.state.running)\n    },\n    stateName() {\n      return this.running ? 'running' : (this.state.state || 'idle')\n    },\n    statusText() {\n      const profile = this.state.profile === 'dmx' ? 'DMX HIL soak' : 'Network soak'\n      if (this.running) {\n        return `${profile} running (${this.formatDuration(this.state.duration)})`\n      }\n      if (this.state.state === 'passed') {\n        return `Last ${profile} passed`\n      }\n      if (this.state.state === 'failed') {\n        return `Last ${profile} failed (exit ${this.state.exitCode})`\n      }\n      if (this.state.state === 'interrupted') {\n        return `Last ${profile} was interrupted`\n      }\n      if (this.state.state === 'error') {\n        return this.state.message || 'Invalid soak request'\n      }\n      return 'Test fixture idle'\n    }\n  },\n  methods: {\n    start(profile) {\n      if (this.running) return\n      this.send({\n        topic: 'start-soak',\n        payload: { profile, duration: Number(this.duration) }\n      })\n    },\n    formatDuration(seconds) {\n      const value = Number(seconds || 0)\n      if (value >= 3600) return `${value / 3600} h`\n      return `${Math.round(value / 60)} min`\n    }\n  }\n}\n</script>\n<style>\n.unode-soak { padding:4px; }\n.unode-soak__row { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; justify-content:space-between; }\n.unode-soak label { display:flex; flex-direction:column; gap:6px; min-width:180px; color:rgba(var(--v-theme-on-surface),.7); font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; }\n.unode-soak select { min-height:38px; padding:7px 10px; border:1px solid rgba(var(--v-theme-on-surface),.22); border-radius:5px; color:rgb(var(--v-theme-on-surface)); background:rgb(var(--v-theme-surface)); }\n.unode-soak__buttons { display:flex; flex-wrap:wrap; gap:10px; }\n.unode-soak button { min-height:38px; padding:8px 14px; border:1px solid #315f85; border-radius:5px; background:#315f85; color:#fff; font-weight:700; cursor:pointer; }\n.unode-soak button:last-child { background:#245f50; border-color:#245f50; }\n.unode-soak button:disabled, .unode-soak select:disabled { opacity:.5; cursor:not-allowed; }\n.unode-soak__status { display:flex; align-items:center; gap:8px; margin-top:14px; padding:10px 12px; border:1px solid rgba(var(--v-theme-on-surface),.16); border-radius:5px; }\n.unode-soak__dot { width:9px; height:9px; border-radius:50%; background:#77838e; }\n.unode-soak__status.is-running .unode-soak__dot { background:#2b83ba; box-shadow:0 0 0 4px rgba(43,131,186,.15); }\n.unode-soak__status.is-passed .unode-soak__dot { background:#178447; }\n.unode-soak__status.is-failed .unode-soak__dot, .unode-soak__status.is-error .unode-soak__dot { background:#b42318; }\n.unode-soak__status.is-interrupted .unode-soak__dot { background:#d18b00; }\n.unode-soak p { margin:9px 0 0; color:rgba(var(--v-theme-on-surface),.62); font-size:.8rem; }\n</style>",
+      "storeOutMessages": true,
+      "passthru": false,
+      "resendOnRefresh": true,
+      "templateScope": "local",
+      "className": "",
+      "x": 250,
+      "y": 260,
+      "wires": [
+        [
+          "a11e000000000110"
+        ]
+      ]
+    },
+    {
+      "id": "a11e000000000110",
+      "type": "function",
+      "z": "a11e000000000001",
+      "name": "Validate soak request",
+      "func": "const request = msg.payload && typeof msg.payload === 'object' ? msg.payload : {};\nconst profile = request.profile;\nconst duration = Math.floor(Number(request.duration));\nconst allowedDurations = [300, 900, 3600, 14400, 28800];\nif (!['host', 'dmx'].includes(profile) || !allowedDurations.includes(duration)) {\n    return [null, { payload: { running: false, state: 'error', message: 'Invalid soak profile or duration' } }];\n}\nmsg.payload = `${profile} ${duration}`;\nmsg.topic = 'start-soak';\nconst status = {\n    payload: { running: true, state: 'starting', profile, duration, pid: 0, exitCode: null }\n};\nreturn [msg, status];",
+      "outputs": 2,
+      "timeout": 0,
+      "noerr": 0,
+      "initialize": "",
+      "finalize": "",
+      "libs": [],
+      "x": 520,
+      "y": 260,
+      "wires": [
+        [
+          "a11e000000000111"
+        ],
+        [
+          "a11e000000000109"
+        ]
+      ]
+    },
+    {
+      "id": "a11e000000000115",
+      "type": "ui-template",
+      "z": "a11e000000000001",
+      "group": "a11e000000000206",
+      "page": "",
+      "ui": "",
+      "name": "Soak duration note",
+      "order": 2,
+      "width": 12,
+      "height": 0,
+      "head": "",
+      "format": "<template><p class=\"unode-soak-note\">The selected duration runs once for Art-Net and once for sACN. Total runtime is approximately twice the selected value.</p></template><style>.unode-soak-note{margin:0;padding:0 4px 4px;color:rgba(var(--v-theme-on-surface),.62);font-size:.8rem}</style>",
+      "storeOutMessages": true,
+      "passthru": true,
+      "resendOnRefresh": true,
+      "templateScope": "local",
+      "className": "",
+      "x": 250,
+      "y": 360,
+      "wires": [
+        []
+      ]
+    },
+    {
+      "id": "a11e000000000111",
+      "type": "exec",
+      "z": "a11e000000000001",
+      "command": "bash /home/pi/uNode2/tools/nodered/run_soak.sh",
+      "addpay": "payload",
+      "append": "",
+      "useSpawn": "true",
+      "timer": "",
+      "winHide": false,
+      "oldrc": false,
+      "name": "Run selected soak",
+      "x": 780,
+      "y": 260,
+      "wires": [
+        [],
+        [],
+        [
+          "a11e000000000113"
+        ]
+      ]
+    },
+    {
+      "id": "a11e000000000112",
+      "type": "inject",
+      "z": "a11e000000000001",
+      "name": "Refresh soak status",
+      "props": [
+        {
+          "p": "payload"
+        }
+      ],
+      "repeat": "2",
+      "crontab": "",
+      "once": true,
+      "onceDelay": "0.2",
+      "topic": "",
+      "payload": "",
+      "payloadType": "date",
+      "x": 150,
+      "y": 320,
+      "wires": [
+        [
+          "a11e000000000113"
+        ]
+      ]
+    },
+    {
+      "id": "a11e000000000113",
+      "type": "exec",
+      "z": "a11e000000000001",
+      "command": "bash /home/pi/uNode2/tools/nodered/run_soak.sh status",
+      "addpay": "",
+      "append": "",
+      "useSpawn": "false",
+      "timer": "",
+      "winHide": false,
+      "oldrc": false,
+      "name": "Read soak status",
+      "x": 390,
+      "y": 320,
+      "wires": [
+        [
+          "a11e000000000114"
+        ],
+        [],
+        []
+      ]
+    },
+    {
+      "id": "a11e000000000114",
+      "type": "function",
+      "z": "a11e000000000001",
+      "name": "Parse soak status",
+      "func": "try {\n    const text = Buffer.isBuffer(msg.payload) ? msg.payload.toString('utf8') : String(msg.payload || '');\n    msg.payload = JSON.parse(text.trim());\n} catch (error) {\n    msg.payload = { running: false, state: 'error', message: `Status read failed: ${error.message}` };\n}\nreturn msg;",
+      "outputs": 1,
+      "timeout": 0,
+      "noerr": 0,
+      "initialize": "",
+      "finalize": "",
+      "libs": [],
+      "x": 630,
+      "y": 320,
+      "wires": [
+        [
+          "a11e000000000109"
+        ]
+      ]
+    },
+    {
       "id": "a11e000000000106",
       "type": "inject",
       "z": "a11e000000000001",
@@ -132,7 +294,7 @@
       "payload": "",
       "payloadType": "date",
       "x": 150,
-      "y": 260,
+      "y": 420,
       "wires": [
         [
           "a11e000000000107"
@@ -152,7 +314,7 @@
       "oldrc": false,
       "name": "Read latest pytest output",
       "x": 390,
-      "y": 260,
+      "y": 420,
       "wires": [
         [
           "a11e000000000108"
@@ -180,7 +342,7 @@
       "templateScope": "local",
       "className": "",
       "x": 650,
-      "y": 260,
+      "y": 420,
       "wires": [
         []
       ]
@@ -278,6 +440,20 @@
       "page": "a11e000000000203",
       "width": 12,
       "height": 8,
+      "order": 3,
+      "showTitle": true,
+      "className": "",
+      "visible": true,
+      "disabled": false,
+      "groupType": "default"
+    },
+    {
+      "id": "a11e000000000206",
+      "type": "ui-group",
+      "name": "Soak Test Controls",
+      "page": "a11e000000000203",
+      "width": 12,
+      "height": 4,
       "order": 2,
       "showTitle": true,
       "className": "",
