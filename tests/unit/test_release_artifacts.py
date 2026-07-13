@@ -6,6 +6,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -45,7 +47,7 @@ def test_littlefs_version_file_matches_firmware_defines() -> None:
 def test_uart_flash_helper_lists_normal_and_legacy_artifacts(tmp_path: Path) -> None:
     powershell = shutil.which("powershell")
     if powershell is None:
-        raise AssertionError("PowerShell is required to test flash_uart.ps1")
+        pytest.skip("PowerShell is required to test flash_uart.ps1")
 
     artifact_names = [
         "uNode-0.99.0-firmware.bin",
@@ -92,7 +94,7 @@ def test_ota_flash_helper_dry_run_targets_expected_update_endpoint(
 ) -> None:
     powershell = shutil.which("powershell")
     if powershell is None:
-        raise AssertionError("PowerShell is required to test flash_ota.ps1")
+        pytest.skip("PowerShell is required to test flash_ota.ps1")
 
     artifact_names = [
         "uNode-0.99.0-firmware.bin",

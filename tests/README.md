@@ -24,6 +24,14 @@ Or use the PowerShell test runner:
 .\tools\test.ps1
 ```
 
+On Linux or Raspberry Pi, prepare a virtual environment once and use the
+equivalent shell runner:
+
+```bash
+bash tools/bootstrap_test_host.sh
+bash tools/test.sh
+```
+
 Run integration tests against a real node:
 
 ```powershell
@@ -38,6 +46,16 @@ Or:
 ```powershell
 .\tools\test.ps1 -Integration
 ```
+
+Linux/Raspberry Pi, including RP2040 auto-detection:
+
+```bash
+bash tools/test.sh --integration --rp2040-port auto
+```
+
+The Linux discovery helper reads every active IPv4 interface through
+`iproute2`. A Raspberry Pi can therefore keep Internet/SSH on Ethernet while
+its Wi-Fi interface is connected directly to the uNode access point.
 
 When `-NodeIp` and `-BaseUrl` are omitted, the PowerShell runner sends ArtPoll
 on the available IPv4 interfaces and uses the first responding uNode. If no

@@ -93,6 +93,59 @@ def _windows_interfaces() -> list[InterfaceTarget]:
     return targets
 
 
+def _linux_interfaces() -> list[InterfaceTarget]:
+    """Read active IPv4 interfaces from iproute2's JSON output."""
+    result = subprocess.run(
+        ["ip", "-j", "-4", "address", "show", "up"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+
+    if result.returncode != 0 or not result.stdout.strip():
+        return []
+
+    try:
+        interfaces = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return []
+
+    targets: list[InterfaceTarget] = []
+    for interface in interfaces:
+        name = str(interface.get("ifname", ""))
+        for address_info in interface.get("addr_info", []):
+            if address_info.get("family") != "inet":
+                continue
+            if address_info.get("scope") not in (None, "global"):
+                continue
+
+            address = str(address_info.get("local", ""))
+            if not address or address.startswith("127."):
+                continue
+
+            try:
+                broadcast = str(
+                    address_info.get("broadcast")
+                    or _prefix_to_broadcast(
+                        address,
+                        int(address_info.get("prefixlen", 24)),
+                    )
+                )
+            except (ValueError, TypeError):
+                continue
+
+            targets.append(
+                InterfaceTarget(
+                    local_ip=address,
+                    broadcast_ip=broadcast,
+                    name=name,
+                )
+            )
+
+    return targets
+
+
 def _hostname_interfaces() -> list[InterfaceTarget]:
     targets: list[InterfaceTarget] = []
     seen: set[str] = set()
@@ -117,8 +170,11 @@ def _hostname_interfaces() -> list[InterfaceTarget]:
 
 
 def _discover_interfaces() -> list[InterfaceTarget]:
-    if platform.system().lower() == "windows":
+    system = platform.system().lower()
+    if system == "windows":
         targets = _windows_interfaces()
+    elif system == "linux":
+        targets = _linux_interfaces()
     else:
         targets = []
 
