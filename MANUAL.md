@@ -490,6 +490,8 @@ The integrated web interface provides:
   configuration schema version, and installed/expected web-asset version.
 - A Detailed Diagnostics page with Art-Net parser/runtime counters for protocol
   debugging.
+- Network diagnostics for the IPv4 Fragment Guard, including discarded
+  incoming fragments and rejected fragmented transmit attempts.
 - A status-bar warning when ArtDmx arrives for the wrong Art-Net Port-Address.
 - Wi-Fi signal quality and reconnection status.
 - A browser-side connection watchdog that reports lost node connectivity and

@@ -630,9 +630,10 @@ void updateSacn() {
 
     if (packetSize > SACN_MAX_PACKET_SIZE) {
       malformedPacketCounter++;
-      while (sacnUdp.available()) {
-        sacnUdp.read();
-      }
+      // Leave the oversized datagram unread. WiFiUDP::parsePacket() releases
+      // the previous datagram when it advances on the next iteration. This
+      // avoids tens of thousands of byte-wise reads for a maximum-size UDP
+      // packet while the four-packet loop budget still bounds burst handling.
     } else {
       const int bytesRead =
         sacnUdp.read(

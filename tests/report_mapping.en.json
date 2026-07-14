@@ -59,6 +59,16 @@
     "title": "Sequence reset and wraparound",
     "description": "Accepts sequence 0 as disabled sequencing and handles 255-to-1 wraparound."
   },
+  "tests/integration/test_udp_flood.py::test_foreign_udp_flood_is_bounded_and_recovers[Art-Net]": {
+    "group": "Network Robustness",
+    "title": "Art-Net foreign UDP flood",
+    "description": "Floods the Art-Net port with malformed and jumbo datagrams, then verifies API, heap, ArtPoll and valid ArtDmx recovery without a reboot."
+  },
+  "tests/integration/test_udp_flood.py::test_foreign_udp_flood_is_bounded_and_recovers[sACN]": {
+    "group": "Network Robustness",
+    "title": "sACN foreign UDP flood",
+    "description": "Floods the sACN port with malformed and jumbo datagrams, then verifies API, heap, ArtPoll and valid sACN recovery without a reboot."
+  },
   "tests/integration/test_artipprog.py::test_artipprog_enquiry_reports_current_network_without_changing_it": {
     "group": "ArtIpProg",
     "title": "Network enquiry",

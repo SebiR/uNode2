@@ -9,7 +9,7 @@
 
 #define FW_VERSION_MAJOR 0
 #define FW_VERSION_MINOR 23
-#define FW_VERSION_PATCH 21
+#define FW_VERSION_PATCH 23
 
 #define FW_STRINGIFY_IMPL(value) #value
 #define FW_STRINGIFY(value) FW_STRINGIFY_IMPL(value)

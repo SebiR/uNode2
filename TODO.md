@@ -308,6 +308,9 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Add malformed and truncated UDP-packet tests for oversized packets,
       short packets, invalid Art-Net IDs, unsupported protocol versions,
       malformed ArtDmx lengths, and unsupported opcodes.
+- [x] Harden both UDP live-data ports against maximum-size fragmented
+      datagrams and sustained foreign-packet floods, with reboot, heap, API,
+      parser-recovery, and post-flood valid-traffic checks.
 - [x] Add ArtDmx sequencing tests for duplicate drops, out-of-order drops,
       sequence `0` disable/reset behaviour, and `255 -> 1` wraparound.
 - [ ] Add configuration import, migration, and interrupted-write tests.

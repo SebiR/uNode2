@@ -20,6 +20,14 @@ def test_status_endpoint_reports_expected_basics(unode_client: UNodeClient) -> N
     assert isinstance(status["artNetDiagnostics"], dict)
     assert isinstance(status["artNetSources"], list)
     assert isinstance(status["sacnDiagnostics"], dict)
+    assert isinstance(status["networkDiagnostics"], dict)
+
+    network_diagnostics = status["networkDiagnostics"]
+    assert network_diagnostics["ipFragmentGuardEnabled"] is True
+    assert isinstance(network_diagnostics["ipv4FragmentsDropped"], int)
+    assert network_diagnostics["ipv4FragmentsDropped"] >= 0
+    assert isinstance(network_diagnostics["ipv4FragmentedTxRejected"], int)
+    assert network_diagnostics["ipv4FragmentedTxRejected"] >= 0
 
     for key in (
         "multicastJoined",

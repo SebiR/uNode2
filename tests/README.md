@@ -229,6 +229,21 @@ Optional dropout tuning:
 powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Rp2040Port auto -Path tests/integration/test_dropout_hil.py -DropoutSamples 200 -DropoutInterval 0.05 -DropoutTimeout 2.0 -DropoutAllowedLosses 0
 ```
 
+Run the host-only UDP robustness profile. It sends malformed traffic, jumbo
+datagrams up to the IPv4 UDP maximum, and a sustained mixed-size flood to both
+live-data ports while monitoring HTTP, heap, reboot state, and recovery:
+
+```powershell
+$env:UNODE_UDP_FLOOD_SECONDS = "8"
+$env:UNODE_UDP_FLOOD_PPS = "250"
+powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2.0.0.1 -Path tests/integration/test_udp_flood.py
+```
+
+Higher `UNODE_UDP_FLOOD_PPS` values are useful as an explicit radio/driver
+stress test. The default deliberately remains above normal DMX frame rates but
+below the point where fragmented Wi-Fi traffic can starve the ESP8266 closed
+SDK interrupt path before lwIP or uNode can reject it.
+
 Capture Serial1/GPIO2 debug output in a second terminal while soak tests run:
 
 ```powershell
@@ -292,6 +307,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
 - Parser diagnostics tests send malformed UDP/Art-Net packets and verify the
   counters for oversized packets, short packets, invalid IDs, unsupported
   protocol versions, malformed ArtDmx lengths, and unsupported opcodes.
+- The UDP robustness profile verifies that IPv4 fragments are rejected before
+  reassembly, parser work remains bounded, and valid Art-Net/sACN plus ArtPoll
+  recover without a reboot after sustained foreign traffic.
 - ArtDmx sequencing tests verify duplicate/out-of-order packet drops, sequence
   `0` as sequencing-disabled reset, and `255 -> 1` wraparound acceptance.
 - The PollReply bit tests verify direction-dependent PortTypes, SwIn/SwOut,

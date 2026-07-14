@@ -7,6 +7,7 @@
 #include "dmx.h"
 #include "network.h"
 #include "leds.h"
+#include "ip_fragment_guard.h"
 
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
@@ -206,6 +207,15 @@ void broadcastStatus() {
 
   doc["uptime"] =
     millis();
+
+  JsonObject networkDiagnostics =
+    doc["networkDiagnostics"].to<JsonObject>();
+  networkDiagnostics["ipFragmentGuardEnabled"] =
+    isIpFragmentGuardEnabled();
+  networkDiagnostics["ipv4FragmentsDropped"] =
+    getDroppedIpv4FragmentCount();
+  networkDiagnostics["ipv4FragmentedTxRejected"] =
+    getRejectedIpv4FragmentedTxCount();
 
   doc["artnetPackets"] =
     getArtDmxCounter();

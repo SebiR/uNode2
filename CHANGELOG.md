@@ -13,6 +13,16 @@ explicitly in each release entry.
 
 ### Changed
 
+- Hardened oversized UDP handling for Art-Net and sACN. The portable Art-Net
+  library now uses a bounded discard state machine for unknown UDP transports
+  and supports an explicit constant-time discard capability for transports
+  such as ESP8266 `WiFiUDP`. This keeps cooperative loop work bounded without
+  tying the library to one network backend. Updated the bundled uNodeArtNet
+  library to `0.1.2`.
+- Added an IPv4 Fragment Guard for the ESP8266 network stack. uNode never needs
+  fragmented live-data packets, so incoming fragments are discarded before
+  lwIP reassembly can be abused by maximum-size UDP datagrams. Diagnostics
+  report dropped RX fragments and rejected fragmented TX attempts.
 - Added an explicit ESP8266 scheduler/Wi-Fi yield after every OTA upload
   block, matching the core HTTP update server and preventing fast full-size
   LittleFS uploads from starving the hardware watchdog.

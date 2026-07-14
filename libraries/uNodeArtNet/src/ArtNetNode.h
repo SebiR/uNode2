@@ -261,6 +261,17 @@ public:
     return parserDiagnostics;
   }
 
+  /**
+   * @brief Selects an O(1) discard path for capable UDP transports.
+   *
+   * Enable this only when the transport guarantees that parsePacket()
+   * releases any unread payload from the preceding datagram. Unknown
+   * transports use the portable bounded-discard state machine by default.
+   */
+  inline void setDiscardUnreadPacketOnNextParse(bool supported) {
+    discardUnreadPacketOnNextParse = supported;
+  }
+
   static const char artnetId[];
 
 private:
@@ -291,8 +302,8 @@ private:
   void queuePollReply(IPAddress requester);
   /** @brief Sends delayed ArtPollReply entries whose deadlines elapsed. */
   void processPendingPollReplies();
-  /** @brief Consumes and drops an oversized UDP datagram. */
-  void discardUdpPacket(int length);
+  /** @brief Discards one bounded chunk of the current oversized UDP packet. */
+  void discardOversizedPacketChunk();
   /** @return True when the current packet declares protocol version 14+. */
   bool hasSupportedProtocolVersion() const;
   /** @return True when a targeted ArtPoll includes this node. */
@@ -307,6 +318,8 @@ private:
   uint8_t incomingPhysical;
   uint16_t outgoingUniverse;
   uint16_t dmxDataLength;
+  int oversizedPacketBytesRemaining;
+  bool discardUnreadPacketOnNextParse;
   // Packet functions
   /** @return Even ArtDmx payload length, or zero when configuration is invalid. */
   uint16_t makePacket(void);

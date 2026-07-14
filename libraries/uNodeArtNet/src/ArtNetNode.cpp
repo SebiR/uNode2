@@ -32,6 +32,8 @@ ArtNetNode::ArtNetNode(UDP& udp)
   outgoingUniverse = 0;
   dmxDataLength = 0;
   packetSize = 0;
+  oversizedPacketBytesRemaining = 0;
+  discardUnreadPacketOnNextParse = false;
   opcode = 0;
   networkConfig = {};
   senderIp = IPAddress();
@@ -54,6 +56,7 @@ ArtNetNode::ArtNetNode(UDP& udp)
 */
 uint8_t ArtNetNode::begin(const ArtNetNetworkConfig& network) {
   Udp.stop();
+  oversizedPacketBytesRemaining = 0;
   if (!Udp.begin(ARTNET_PORT)) {
     return 1;
   }
@@ -166,6 +169,11 @@ uint16_t ArtNetNode::read() {
 
   processPendingPollReplies();
 
+  if (oversizedPacketBytesRemaining > 0) {
+    discardOversizedPacketChunk();
+    return 0;
+  }
+
   const int parsedSize = Udp.parsePacket();
 
   if (parsedSize <= 0) {
@@ -174,7 +182,12 @@ uint16_t ArtNetNode::read() {
 
   if (parsedSize > ARTNET_MAX_BUFFER) {
     parserDiagnostics.oversizedPackets++;
-    discardUdpPacket(parsedSize);
+
+    if (!discardUnreadPacketOnNextParse) {
+      oversizedPacketBytesRemaining = parsedSize;
+      discardOversizedPacketChunk();
+    }
+
     return 0;
   }
 
@@ -289,19 +302,23 @@ uint16_t ArtNetNode::read() {
   return 0;
 }
 
-void ArtNetNode::discardUdpPacket(int length) {
-  uint8_t discard[32];
+void ArtNetNode::discardOversizedPacketChunk() {
+  static const size_t DISCARD_CHUNK_SIZE = 256;
+  uint8_t discard[DISCARD_CHUNK_SIZE];
 
-  while (length > 0) {
-    const int chunk = min(length, (int)sizeof(discard));
-    const int bytesRead = Udp.read(discard, chunk);
+  const size_t requested = min(
+    (size_t)oversizedPacketBytesRemaining,
+    DISCARD_CHUNK_SIZE);
+  const int bytesRead = Udp.read(discard, requested);
 
-    if (bytesRead <= 0) {
-      break;
-    }
-
-    length -= bytesRead;
+  if (bytesRead <= 0) {
+    // A transport may already have released the current datagram. Avoid
+    // stalling all future packets when no more bytes can be consumed.
+    oversizedPacketBytesRemaining = 0;
+    return;
   }
+
+  oversizedPacketBytesRemaining -= bytesRead;
 }
 
 bool ArtNetNode::hasSupportedProtocolVersion() const {

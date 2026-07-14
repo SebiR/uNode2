@@ -9,6 +9,7 @@
 #include "dmx_frame.h"
 #include "hardware.h"
 #include "event_log.h"
+#include "ip_fragment_guard.h"
 
 #include <ESP8266WebServer.h>
 #include <LittleFS.h>
@@ -1188,6 +1189,15 @@ static void handleStatus() {
 
   doc["softAPIP"] =
     getSoftAPIPAddress();
+
+  JsonObject networkDiagnostics =
+    doc["networkDiagnostics"].to<JsonObject>();
+  networkDiagnostics["ipFragmentGuardEnabled"] =
+    isIpFragmentGuardEnabled();
+  networkDiagnostics["ipv4FragmentsDropped"] =
+    getDroppedIpv4FragmentCount();
+  networkDiagnostics["ipv4FragmentedTxRejected"] =
+    getRejectedIpv4FragmentedTxCount();
 
   doc["uptime"] = millis();
 

@@ -1571,6 +1571,12 @@ static void onArtAddress(
 bool initArtNet() {
   LOG_SECTION("Art-Net Init");
 
+  // ESP8266 WiFiUDP::parsePacket() advances its receive context with next(),
+  // which releases an unread preceding datagram without copying its payload.
+  // Advertise that transport capability so oversized foreign packets take
+  // the constant-time discard path in the otherwise portable Art-Net parser.
+  artnet.setDiscardUnreadPacketOnNextParse(true);
+
   artnetSocketReady =
     artnet.begin(getArtNetNetworkConfig()) == 0;
 
