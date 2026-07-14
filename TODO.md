@@ -26,6 +26,9 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Validate image type, size, upload completion, and updater errors before
       rebooting.
 - [x] Add update progress and automatic browser reconnection after reboot.
+- [x] Add a guarded Node-RED production updater for AP discovery, normal and
+      Recovery Mode OTA, plus automatic DTR/RTS initial USB flashing of
+      firmware and LittleFS from verified release manifests.
 - [ ] Evaluate and enable the ESP8266 core's `ATOMIC_FS_UPDATE` staging mode
       for the 4M1M layout so an interrupted LittleFS upload leaves the previous
       filesystem untouched; repeat the existing power-loss HIL test afterwards.

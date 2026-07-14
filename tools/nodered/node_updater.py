@@ -11,6 +11,7 @@ is passed to NetworkManager or the OTA client.
 from __future__ import annotations
 
 import base64
+import importlib.metadata
 import json
 import os
 import re
@@ -22,6 +23,8 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from serial.tools import list_ports
 
 try:
     import fcntl
@@ -67,11 +70,19 @@ LOG_FILE = Path(
 WIFI_INTERFACE = os.environ.get("UNODE_UPDATER_WIFI_INTERFACE", "wlan0")
 NODE_IP = os.environ.get("UNODE_UPDATER_NODE_IP", "2.0.0.1")
 BASE_URL = f"http://{NODE_IP}"
+SERIAL_BY_ID_DIR = Path(
+    os.environ.get("UNODE_UPDATER_SERIAL_BY_ID_DIR", "/dev/serial/by-id")
+)
 
 SSID_PATTERN = re.compile(r"^uNode_([0-9A-Fa-f]{6})$")
 VERSION_PATTERN = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 ALLOWED_PROFILES = {"normal", "legacy"}
 ALLOWED_COMPONENTS = {"firmware", "littlefs", "both"}
+FLASH_BAUD = 512_000
+FIRMWARE_ADDRESS = 0x000000
+LITTLEFS_ADDRESS = 0x300000
+EXPECTED_FLASH_BYTES = 4 * 1024 * 1024
+CH340_VID_PID = (0x1A86, 0x7523)
 
 
 def utc_now() -> str:
@@ -180,6 +191,104 @@ def available_releases(root: Path = ARTIFACTS_DIR) -> list[dict[str, Any]]:
     return releases
 
 
+def serial_programmers(
+    by_id_root: Path = SERIAL_BY_ID_DIR,
+    ports: list[Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Return attached USB serial devices with stable Linux paths.
+
+    RP2040 CDC devices remain visible for diagnostics but are deliberately not
+    selectable as ESP programmers. A CH340 is marked as recommended because
+    that is the DTR/RTS-capable adapter used by the production fixture.
+    """
+
+    stable_paths: dict[str, str] = {}
+    if by_id_root.is_dir():
+        for candidate in by_id_root.iterdir():
+            try:
+                stable_paths[str(candidate.resolve(strict=True))] = str(candidate)
+            except OSError:
+                continue
+
+    devices: list[dict[str, Any]] = []
+    for port in ports if ports is not None else list(list_ports.comports()):
+        device = str(port.device)
+        try:
+            resolved_device = str(Path(device).resolve(strict=True))
+        except OSError:
+            resolved_device = device
+
+        vid = int(port.vid) if port.vid is not None else None
+        pid = int(port.pid) if port.pid is not None else None
+        product = str(port.product or port.description or "USB serial adapter")
+        manufacturer = str(port.manufacturer or "")
+        is_rp2040 = vid == 0x2E8A or "RP2040" in product.upper()
+        stable_path = stable_paths.get(resolved_device, device)
+        recommended = (vid, pid) == CH340_VID_PID
+        supported = (
+            not is_rp2040
+            and vid is not None
+            and pid is not None
+            and Path(device).exists()
+        )
+
+        devices.append(
+            {
+                "port": stable_path,
+                "device": device,
+                "stablePath": stable_path,
+                "description": product,
+                "manufacturer": manufacturer,
+                "serialNumber": str(port.serial_number or ""),
+                "vid": vid,
+                "pid": pid,
+                "vidPid": (
+                    f"{vid:04X}:{pid:04X}"
+                    if vid is not None and pid is not None
+                    else "unknown"
+                ),
+                "recommended": recommended,
+                "supported": supported,
+                "isRp2040": is_rp2040,
+            }
+        )
+
+    return sorted(
+        devices,
+        key=lambda item: (
+            not bool(item["recommended"]),
+            not bool(item["supported"]),
+            str(item["stablePath"]),
+        ),
+    )
+
+
+def resolve_serial_programmer(requested_port: str) -> dict[str, Any]:
+    """Resolve a request only against the currently attached device list."""
+
+    if not requested_port or len(requested_port) > 256:
+        raise ValueError("A serial programmer must be selected")
+    matches = [
+        device
+        for device in serial_programmers()
+        if requested_port in {device["port"], device["device"]}
+    ]
+    if len(matches) != 1 or not matches[0]["supported"]:
+        raise ValueError(
+            "Selected serial device is unavailable or not an ESP programmer"
+        )
+    return matches[0]
+
+
+def installed_esptool_version() -> str:
+    """Return the installed esptool version or an empty string."""
+
+    try:
+        return importlib.metadata.version("esptool")
+    except importlib.metadata.PackageNotFoundError:
+        return ""
+
+
 class JobStatus:
     """Persist updater state and mirror progress into a plain-text log."""
 
@@ -197,6 +306,7 @@ class JobStatus:
             },
             "nodes": [],
             "releases": available_releases(),
+            "serialProgrammers": serial_programmers(),
             "progress": 0,
         }
         LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -216,6 +326,15 @@ class JobStatus:
             self.data["progress"] = max(0, min(100, int(percent)))
         self.write()
 
+    def log_output(self, output: str) -> None:
+        """Append bounded subprocess output without replacing job progress."""
+
+        if not output:
+            return
+        with LOG_FILE.open("a", encoding="utf-8") as handle:
+            for line in output.rstrip().splitlines():
+                handle.write(f"    {line[:500]}\n")
+
     def finish(self, state: str, message: str, **values: Any) -> None:
         self.data.update(values)
         self.data.update(
@@ -224,7 +343,11 @@ class JobStatus:
                 "state": state,
                 "message": message,
                 "finishedAt": utc_now(),
-                "progress": 100 if state in {"ready", "updated"} else self.data["progress"],
+                "progress": (
+                    100
+                    if state in {"ready", "updated", "flashed"}
+                    else self.data["progress"]
+                ),
             }
         )
         self.progress(message)
@@ -532,6 +655,231 @@ def restore_config(config: dict[str, Any]) -> None:
             raise RuntimeError(f"Configuration restore mismatch for {key}")
 
 
+def run_esptool(
+    job: JobStatus,
+    port: str,
+    arguments: list[str],
+    *,
+    timeout: float = 180.0,
+) -> str:
+    """Run one bounded esptool command and append its complete output."""
+
+    if not installed_esptool_version():
+        raise RuntimeError(
+            "esptool is not installed; rerun tools/bootstrap_test_host.sh"
+        )
+
+    command = [
+        sys.executable,
+        "-m",
+        "esptool",
+        "--chip",
+        "esp8266",
+        "--port",
+        port,
+        "--baud",
+        str(FLASH_BAUD),
+        "--before",
+        "default-reset",
+        "--after",
+        "hard-reset",
+        *arguments,
+    ]
+    job.log_output("$ " + " ".join(command[2:]))
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as error:
+        output = "\n".join(
+            value
+            for value in (
+                str(error.stdout or ""),
+                str(error.stderr or ""),
+            )
+            if value
+        )
+        job.log_output(output[-100_000:])
+        raise RuntimeError(
+            f"esptool timed out after {timeout:.0f} seconds"
+        ) from error
+
+    output = "\n".join(
+        value for value in (result.stdout, result.stderr) if value
+    ).strip()
+    job.log_output(output[-100_000:])
+    if result.returncode != 0:
+        detail = output.splitlines()[-1] if output else "no diagnostic output"
+        raise RuntimeError(
+            f"esptool failed with exit code {result.returncode}: {detail}"
+        )
+    return output
+
+
+def parse_esp8266_chip_id(output: str) -> str:
+    """Extract the six-digit ESP8266 chip identifier from esptool output."""
+
+    chip_match = re.search(r"Chip ID:\s*0x([0-9a-fA-F]+)", output)
+    if chip_match:
+        return f"{int(chip_match.group(1), 16) & 0xFFFFFF:06X}"
+
+    mac_match = re.search(
+        r"MAC:\s*(?:[0-9a-fA-F]{2}:){3}"
+        r"([0-9a-fA-F]{2}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2})",
+        output,
+    )
+    if mac_match:
+        return "".join(mac_match.groups()).upper()
+    raise RuntimeError("Could not read ESP8266 chip ID from esptool output")
+
+
+def parse_flash_size(output: str) -> int:
+    """Extract an auto-detected flash capacity in bytes."""
+
+    match = re.search(
+        r"(?:Auto-detected|Detected) flash size:\s*([0-9]+(?:\.[0-9]+)?)\s*([KMG])B",
+        output,
+        re.IGNORECASE,
+    )
+    if not match:
+        raise RuntimeError("Could not read flash capacity from esptool output")
+    multiplier = {
+        "K": 1024,
+        "M": 1024 * 1024,
+        "G": 1024 * 1024 * 1024,
+    }[match.group(2).upper()]
+    return int(float(match.group(1)) * multiplier)
+
+
+def wait_for_factory_ap(chip_id: str, timeout: float = 35.0) -> dict[str, Any]:
+    """Wait for the freshly flashed firmware to advertise its factory AP."""
+
+    expected_ssid = f"uNode_{chip_id}"
+    deadline = time.monotonic() + timeout
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            for access_point in scan_access_points():
+                if access_point["ssid"] == expected_ssid:
+                    return access_point
+        except Exception as error:  # noqa: BLE001
+            # NetworkManager may still be reconnecting after the hard reset.
+            last_error = error
+        time.sleep(2.0)
+    detail = f": {last_error}" if last_error else ""
+    raise RuntimeError(
+        f"Flashing succeeded, but factory AP {expected_ssid} was not discovered{detail}"
+    )
+
+
+def perform_initial_flash(job: JobStatus, request: dict[str, Any]) -> dict[str, Any]:
+    """Program and verify one ESP8266 through a DTR/RTS USB adapter."""
+
+    version = str(request.get("version", ""))
+    profile = str(request.get("profile", ""))
+    requested_port = str(request.get("port", ""))
+    erase_all = request.get("eraseAll") is True
+
+    version_key(version)
+    if profile not in ALLOWED_PROFILES:
+        raise ValueError("Hardware profile must be normal or legacy")
+
+    artifacts = resolve_release_artifacts(
+        version,
+        profile=profile,
+        artifacts_dir=ARTIFACTS_DIR,
+    )
+    manifest_path = ARTIFACTS_DIR / f"uNode-{version}-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    if manifest.get("flashLayout") != "4M1M":
+        raise RuntimeError("Initial flash requires a 4M1M release manifest")
+    if artifacts.firmware.stat().st_size > LITTLEFS_ADDRESS:
+        raise RuntimeError("Firmware artifact overlaps the LittleFS region")
+    if (
+        LITTLEFS_ADDRESS + artifacts.littlefs.stat().st_size
+        > EXPECTED_FLASH_BYTES
+    ):
+        raise RuntimeError("LittleFS artifact exceeds the 4MB flash layout")
+    programmer = resolve_serial_programmer(requested_port)
+    port = str(programmer["stablePath"])
+    job.data["state"] = "flashing"
+    job.progress(
+        f"Opening {programmer['description']} on {port}",
+        percent=5,
+    )
+
+    job.progress("Reading ESP8266 chip identity", percent=10)
+    identity_output = run_esptool(job, port, ["chip-id"], timeout=45.0)
+    chip_id = parse_esp8266_chip_id(identity_output)
+
+    job.progress(f"Reading flash capacity from uNode {chip_id}", percent=18)
+    flash_output = run_esptool(job, port, ["flash-id"], timeout=45.0)
+    flash_bytes = parse_flash_size(flash_output)
+    if flash_bytes != EXPECTED_FLASH_BYTES:
+        raise RuntimeError(
+            "Unsupported ESP8266 flash capacity: "
+            f"{flash_bytes // (1024 * 1024)}MB detected, 4MB required"
+        )
+
+    if erase_all:
+        job.progress("Erasing complete 4MB flash", percent=25)
+        run_esptool(job, port, ["erase-flash"], timeout=120.0)
+
+    job.progress(
+        f"Flashing uNode {version} ({profile}) firmware and LittleFS",
+        percent=35,
+    )
+    write_output = run_esptool(
+        job,
+        port,
+        [
+            "write-flash",
+            "--flash-size",
+            "detect",
+            f"0x{FIRMWARE_ADDRESS:06X}",
+            str(artifacts.firmware),
+            f"0x{LITTLEFS_ADDRESS:06X}",
+            str(artifacts.littlefs),
+        ],
+        timeout=240.0,
+    )
+    verified_blocks = write_output.lower().count("hash of data verified")
+    if verified_blocks < 2:
+        raise RuntimeError(
+            "esptool completed without verifying both firmware and LittleFS"
+        )
+
+    job.progress(
+        f"Serial flash verified; waiting for factory AP uNode_{chip_id}",
+        percent=85,
+    )
+    access_point = wait_for_factory_ap(chip_id)
+    job.progress(
+        f"Factory AP uNode_{chip_id} is online at {access_point['signal']}% signal",
+        percent=95,
+    )
+    return {
+        "chipId": chip_id,
+        "ssid": f"uNode_{chip_id}",
+        "version": version,
+        "profile": profile,
+        "port": port,
+        "baud": FLASH_BAUD,
+        "flashBytes": flash_bytes,
+        "firmwareAddress": FIRMWARE_ADDRESS,
+        "littleFsAddress": LITTLEFS_ADDRESS,
+        "firmwareSha256": artifacts.firmware_sha256,
+        "littleFsSha256": artifacts.littlefs_sha256,
+        "verifiedBlocks": verified_blocks,
+        "eraseAll": erase_all,
+        "accessPoint": access_point,
+    }
+
+
 def perform_update(job: JobStatus, request: dict[str, Any]) -> dict[str, Any]:
     """Connect to one selected AP and apply verified release artifacts."""
 
@@ -732,6 +1080,8 @@ def idle_status() -> dict[str, Any]:
             status = json.loads(STATUS_FILE.read_text(encoding="utf-8"))
             if isinstance(status, dict):
                 status["releases"] = available_releases()
+                status["serialProgrammers"] = serial_programmers()
+                status["esptoolVersion"] = installed_esptool_version()
                 status["fixtureBusy"] = fixture_busy
                 if (
                     not fixture_busy
@@ -757,6 +1107,8 @@ def idle_status() -> dict[str, Any]:
         "finishedAt": "",
         "nodes": [],
         "releases": available_releases(),
+        "serialProgrammers": serial_programmers(),
+        "esptoolVersion": installed_esptool_version(),
         "progress": 0,
         "fixtureBusy": fixture_busy,
     }
@@ -805,8 +1157,17 @@ def run_request(encoded: str) -> int:
                     f"uNode {result['chipId']} updated to {result['version']}",
                     result=result,
                 )
+            elif action == "initial-flash":
+                result = perform_initial_flash(job, request)
+                job.finish(
+                    "flashed",
+                    f"uNode {result['chipId']} initially flashed to {result['version']}",
+                    result=result,
+                )
             else:
-                raise ValueError("Updater action must be scan or update")
+                raise ValueError(
+                    "Updater action must be scan, update, or initial-flash"
+                )
         except Exception as error:  # noqa: BLE001 - surface complete failure in dashboard.
             job.finish("error", str(error))
             return 1

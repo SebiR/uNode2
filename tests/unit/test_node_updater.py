@@ -4,6 +4,7 @@ import base64
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -119,6 +120,142 @@ def test_idle_status_reports_fixture_lock_and_clears_stale_busy_error(
     assert idle["state"] == "idle"
     assert idle["progress"] == 0
     assert idle["message"] == "Ready to scan for uNode access points"
+
+
+def test_serial_programmers_recommends_ch340_and_excludes_rp2040(
+    tmp_path: Path,
+) -> None:
+    ch340 = tmp_path / "ttyUSB0"
+    rp2040 = tmp_path / "ttyACM0"
+    ch340.touch()
+    rp2040.touch()
+    ports = [
+        SimpleNamespace(
+            device=str(ch340),
+            vid=0x1A86,
+            pid=0x7523,
+            product="USB Serial",
+            description="CH340",
+            manufacturer="QinHeng",
+            serial_number=None,
+        ),
+        SimpleNamespace(
+            device=str(rp2040),
+            vid=0x2E8A,
+            pid=0x0003,
+            product="RP2040 Zero",
+            description="RP2040 Zero",
+            manufacturer="Waveshare",
+            serial_number="ABC123",
+        ),
+    ]
+
+    devices = node_updater.serial_programmers(tmp_path / "missing", ports)
+
+    assert devices[0]["device"] == str(ch340)
+    assert devices[0]["recommended"] is True
+    assert devices[0]["supported"] is True
+    assert devices[0]["vidPid"] == "1A86:7523"
+    assert devices[1]["isRp2040"] is True
+    assert devices[1]["supported"] is False
+
+
+def test_esptool_output_parsers_read_chip_id_mac_and_flash_capacity() -> None:
+    assert node_updater.parse_esp8266_chip_id("Chip ID: 0x005d33bc") == "5D33BC"
+    assert (
+        node_updater.parse_esp8266_chip_id("MAC: 48:3f:da:5d:33:bc")
+        == "5D33BC"
+    )
+    assert (
+        node_updater.parse_flash_size("Auto-detected flash size: 4MB")
+        == 4 * 1024 * 1024
+    )
+    assert (
+        node_updater.parse_flash_size("Detected flash size: 4096KB")
+        == 4 * 1024 * 1024
+    )
+
+
+def test_esptool_output_parsers_reject_missing_identity_and_capacity() -> None:
+    with pytest.raises(RuntimeError, match="chip ID"):
+        node_updater.parse_esp8266_chip_id("Connected to ESP8266")
+    with pytest.raises(RuntimeError, match="flash capacity"):
+        node_updater.parse_flash_size("Manufacturer: ef")
+
+
+def test_initial_flash_uses_verified_release_offsets_and_factory_ap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    firmware = tmp_path / "firmware.bin"
+    littlefs = tmp_path / "littlefs.bin"
+    firmware.write_bytes(b"firmware")
+    littlefs.write_bytes(b"littlefs")
+    (tmp_path / "uNode-0.23.23-manifest.json").write_text(
+        json.dumps({"version": "0.23.23", "flashLayout": "4M1M"}),
+        encoding="utf-8",
+    )
+    artifacts = SimpleNamespace(
+        firmware=firmware,
+        littlefs=littlefs,
+        firmware_sha256="A" * 64,
+        littlefs_sha256="B" * 64,
+    )
+    calls: list[list[str]] = []
+
+    def fake_esptool(
+        _job: object,
+        _port: str,
+        arguments: list[str],
+        **_kwargs: object,
+    ) -> str:
+        calls.append(arguments)
+        if arguments[0] == "chip-id":
+            return "Chip ID: 0x005d33bc"
+        if arguments[0] == "flash-id":
+            return "Detected flash size: 4MB"
+        return "Hash of data verified.\nHash of data verified."
+
+    monkeypatch.setattr(
+        node_updater,
+        "resolve_release_artifacts",
+        lambda *args, **kwargs: artifacts,
+    )
+    monkeypatch.setattr(node_updater, "ARTIFACTS_DIR", tmp_path)
+    monkeypatch.setattr(
+        node_updater,
+        "resolve_serial_programmer",
+        lambda _port: {
+            "stablePath": "/dev/serial/by-id/test-programmer",
+            "description": "Test CH340",
+        },
+    )
+    monkeypatch.setattr(node_updater, "run_esptool", fake_esptool)
+    monkeypatch.setattr(
+        node_updater,
+        "wait_for_factory_ap",
+        lambda chip_id: {"ssid": f"uNode_{chip_id}", "signal": 88},
+    )
+    job = SimpleNamespace(data={}, progress=lambda *_args, **_kwargs: None)
+
+    result = node_updater.perform_initial_flash(
+        job,
+        {
+            "version": "0.23.23",
+            "profile": "normal",
+            "port": "/dev/serial/by-id/test-programmer",
+            "eraseAll": False,
+        },
+    )
+
+    assert result["chipId"] == "5D33BC"
+    assert result["verifiedBlocks"] == 2
+    assert [call[0] for call in calls] == ["chip-id", "flash-id", "write-flash"]
+    assert calls[2][-4:] == [
+        "0x000000",
+        str(firmware),
+        "0x300000",
+        str(littlefs),
+    ]
 
 
 @pytest.mark.parametrize("version", ["v0.23.23", "0.23", "0.23.23-beta", "../../x"])

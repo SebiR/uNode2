@@ -18,6 +18,11 @@ explicitly in each release entry.
   firmware/LittleFS release artifacts. Normal-mode LittleFS updates archive
   and restore the node configuration; updater, regression, and soak jobs share
   an exclusive hardware-fixture lock.
+- Extended the production updater with automatic initial USB programming. It
+  identifies DTR/RTS-capable USB serial adapters, excludes the RP2040 fixture,
+  verifies the ESP8266 chip ID and 4MB flash capacity, writes firmware and the
+  complete LittleFS image at their validated offsets, checks both write hashes,
+  and confirms that the resulting factory AP is advertised.
 - Hardened oversized UDP handling for Art-Net and sACN. The portable Art-Net
   library now uses a bounded discard state machine for unknown UDP transports
   and supports an explicit constant-time discard capability for transports

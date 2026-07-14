@@ -38,6 +38,23 @@ Updater jobs and regression/soak jobs share the same fixture lock. A scan or
 update is rejected while a test is running, and a test cannot start while an
 update owns `wlan0`.
 
+The same page also provides **Initial USB Flash** for blank or reworked nodes.
+It enumerates stable `/dev/serial/by-id/` devices, recommends the CH340 fixture
+adapter, and excludes the RP2040 test tool. Espressif `esptool` uses the
+adapter's DTR/RTS wiring to enter the ESP8266 ROM bootloader automatically. The
+backend reads the chip ID and flash ID first, requires the 4MB layout, then
+writes and verifies firmware at `0x000000` plus the complete LittleFS image at
+`0x300000` in one operation. A successful factory flash is only reported after
+the matching `uNode_XXXXXX` AP has appeared. An optional full-chip erase is
+available for deliberately reworked devices; regular initial flashing already
+replaces the complete application and filesystem regions.
+
+`esptool` is installed with the regular Linux test-host requirements:
+
+```bash
+tools/bootstrap_test_host.sh
+```
+
 An active job can be cancelled from the dashboard. The wrapper sends `SIGINT`
 to the isolated pytest process group, allowing test fixtures to restore the
 saved node configuration before the job is marked `cancelled`. Soak and
