@@ -50,7 +50,7 @@ def resolve_release_artifacts(
     profile: str | None = None,
     artifacts_dir: str | os.PathLike[str] | None = None,
 ) -> ReleaseArtifacts:
-    """Resolve and verify one release pair for the running firmware version."""
+    """Resolve and verify one release pair before OTA or serial flashing."""
 
     selected_profile = (
         profile or os.environ.get("UNODE_OTA_PROFILE", "normal")
@@ -66,7 +66,7 @@ def resolve_release_artifacts(
     ).resolve()
     manifest_path = root / f"uNode-{version}-manifest.json"
     if not manifest_path.is_file():
-        raise AssertionError(f"OTA release manifest is missing: {manifest_path}")
+        raise AssertionError(f"Release manifest is missing: {manifest_path}")
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
     if str(manifest.get("version", "")) != version:
@@ -90,17 +90,19 @@ def resolve_release_artifacts(
         ("LittleFS", littlefs, littlefs_data),
     ):
         if not path.is_file():
-            raise AssertionError(f"OTA {label} artifact is missing: {path}")
+            raise AssertionError(f"Release {label} artifact is missing: {path}")
         expected_size = int(metadata.get("size", -1))
         if path.stat().st_size != expected_size:
             raise AssertionError(
-                f"OTA {label} size mismatch: {path.stat().st_size} != {expected_size}"
+                f"Release {label} size mismatch: "
+                f"{path.stat().st_size} != {expected_size}"
             )
         expected_hash = str(metadata.get("sha256", "")).upper()
         actual_hash = _sha256(path)
         if not expected_hash or actual_hash != expected_hash:
             raise AssertionError(
-                f"OTA {label} SHA-256 mismatch: {actual_hash} != {expected_hash}"
+                f"Release {label} SHA-256 mismatch: "
+                f"{actual_hash} != {expected_hash}"
             )
 
     return ReleaseArtifacts(
