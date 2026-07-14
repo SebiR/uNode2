@@ -304,6 +304,10 @@ powershell -ExecutionPolicy Bypass -File .\tools\serial_capture.ps1 -Port COM8 -
   that read-only status endpoints remain reachable, verifies that mutating API
   endpoints reject anonymous requests, checks login failure/success, and then
   restores the original authentication state.
+- The LED API test applies arbitrary colors using both supported JSON forms,
+  verifies the rendered RGB state and `/api/status` flag, rejects malformed
+  colors, and always releases the volatile override back to normal status
+  indication.
 - Parser diagnostics tests send malformed UDP/Art-Net packets and verify the
   counters for oversized packets, short packets, invalid IDs, unsupported
   protocol versions, malformed ArtDmx lengths, and unsupported opcodes.

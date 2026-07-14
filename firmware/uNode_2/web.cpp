@@ -49,6 +49,7 @@ static const size_t MAX_AUTH_JSON_SIZE = 256;
 static const size_t MAX_CONFIG_JSON_SIZE = 4096;
 static const size_t MAX_CONFIG_UPLOAD_SIZE = 8192;
 static const size_t MAX_BRIGHTNESS_JSON_SIZE = 64;
+static const size_t MAX_LED_OVERRIDE_JSON_SIZE = 192;
 static const size_t MAX_DMX_JSON_SIZE = 3072;
 static const uint32_t RTC_DIAGNOSTICS_OFFSET = 32;
 static const uint32_t RTC_DIAGNOSTICS_MAGIC = 0x554E4F44UL;
@@ -1460,6 +1461,9 @@ static void handleStatus() {
   doc["buttonLongAction"] =
     config.buttonLongAction;
 
+  doc["ledOverrideActive"] =
+    isLedColorOverrideActive();
+
   doc["terminationEnabled"] =
     isTerminationEnabled();
 
@@ -1882,6 +1886,213 @@ static void handleLedMute() {
     200,
     "application/json",
     json);
+}
+
+/** @return Numeric value of one hexadecimal digit or -1 when invalid. */
+static int8_t parseHexDigit(char value) {
+  if (value >= '0' && value <= '9') {
+    return value - '0';
+  }
+
+  if (value >= 'a' && value <= 'f') {
+    return value - 'a' + 10;
+  }
+
+  if (value >= 'A' && value <= 'F') {
+    return value - 'A' + 10;
+  }
+
+  return -1;
+}
+
+/** @return True when a JSON value contains a valid RGB object or #RRGGBB string. */
+static bool parseLedRgb(
+  JsonVariantConst value,
+  StatusLedRgb& color) {
+  if (value.is<const char*>()) {
+    const char* text =
+      value.as<const char*>();
+
+    if (text == nullptr
+        || strlen(text) != 7
+        || text[0] != '#') {
+      return false;
+    }
+
+    uint8_t components[3];
+
+    for (uint8_t i = 0; i < 3; i++) {
+      const int8_t high =
+        parseHexDigit(text[1 + i * 2]);
+      const int8_t low =
+        parseHexDigit(text[2 + i * 2]);
+
+      if (high < 0 || low < 0) {
+        return false;
+      }
+
+      components[i] =
+        (uint8_t)((high << 4) | low);
+    }
+
+    color = {
+      components[0],
+      components[1],
+      components[2]
+    };
+
+    return true;
+  }
+
+  if (!value.is<JsonObjectConst>()) {
+    return false;
+  }
+
+  JsonObjectConst object =
+    value.as<JsonObjectConst>();
+
+  if (!object.containsKey("r")
+      || !object.containsKey("g")
+      || !object.containsKey("b")
+      || !object["r"].is<int>()
+      || !object["g"].is<int>()
+      || !object["b"].is<int>()) {
+    return false;
+  }
+
+  const int red = object["r"].as<int>();
+  const int green = object["g"].as<int>();
+  const int blue = object["b"].as<int>();
+
+  if (red < 0 || red > 255
+      || green < 0 || green > 255
+      || blue < 0 || blue > 255) {
+    return false;
+  }
+
+  color = {
+    (uint8_t)red,
+    (uint8_t)green,
+    (uint8_t)blue
+  };
+
+  return true;
+}
+
+/** @brief Adds one RGB value in component and web-color forms. */
+static void addLedRgbResponse(
+  JsonObject target,
+  const StatusLedRgb& color) {
+  target["r"] = color.red;
+  target["g"] = color.green;
+  target["b"] = color.blue;
+
+  char hex[8];
+  snprintf(
+    hex,
+    sizeof(hex),
+    "#%02X%02X%02X",
+    color.red,
+    color.green,
+    color.blue);
+  target["hex"] = hex;
+}
+
+/** @brief Responds with the direct LED override and currently rendered colors. */
+static void sendLedColorState() {
+  StatusLedRgb networkColor;
+  StatusLedRgb activityColor;
+  getRenderedLedColors(
+    networkColor,
+    activityColor);
+
+  JsonDocument response;
+  response["overrideActive"] =
+    isLedColorOverrideActive();
+  response["fullColor"] =
+    USE_WS2812 != 0;
+  response["brightness"] =
+    config.ledBrightness;
+
+  addLedRgbResponse(
+    response["network"].to<JsonObject>(),
+    networkColor);
+  addLedRgbResponse(
+    response["activity"].to<JsonObject>(),
+    activityColor);
+
+  String json;
+  serializeJson(
+    response,
+    json);
+
+  server.send(
+    200,
+    "application/json",
+    json);
+}
+
+/** @brief Responds with the current direct LED override state. */
+static void handleGetLedColors() {
+  sendLedColorState();
+}
+
+/** @brief Enables a volatile RGB override for both status LEDs. */
+static void handleSetLedColors() {
+  if (!requireAuth()) {
+    return;
+  }
+
+  if (!requirePlainBodyLimit(
+        MAX_LED_OVERRIDE_JSON_SIZE,
+        "LED override")) {
+    return;
+  }
+
+  JsonDocument doc;
+  if (deserializeJson(
+        doc,
+        server.arg("plain"))
+      || !doc.is<JsonObject>()) {
+    server.send(
+      400,
+      "text/plain",
+      "Invalid JSON object");
+    return;
+  }
+
+  StatusLedRgb networkColor;
+  StatusLedRgb activityColor;
+
+  if (!parseLedRgb(
+        doc["network"],
+        networkColor)
+      || !parseLedRgb(
+        doc["activity"],
+        activityColor)) {
+    server.send(
+      400,
+      "text/plain",
+      "network and activity must be #RRGGBB strings or RGB objects with values from 0 to 255");
+    return;
+  }
+
+  setLedColorOverride(
+    networkColor,
+    activityColor);
+  updateLEDs();
+  sendLedColorState();
+}
+
+/** @brief Releases the volatile RGB override back to normal status logic. */
+static void handleReleaseLedColors() {
+  if (!requireAuth()) {
+    return;
+  }
+
+  releaseLedColorOverride();
+  updateLEDs();
+  sendLedColorState();
 }
 
 /** @brief Receives one firmware binary through multipart upload. */
@@ -2372,6 +2583,21 @@ bool initWeb() {
     "/api/led-mute",
     HTTP_POST,
     handleLedMute);
+
+  server.on(
+    "/api/leds",
+    HTTP_GET,
+    handleGetLedColors);
+
+  server.on(
+    "/api/leds",
+    HTTP_POST,
+    handleSetLedColors);
+
+  server.on(
+    "/api/leds/release",
+    HTTP_POST,
+    handleReleaseLedColors);
 
   server.on(
     "/api/config/upload",

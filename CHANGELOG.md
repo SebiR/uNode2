@@ -13,6 +13,10 @@ explicitly in each release entry.
 
 ### Changed
 
+- Added an authenticated, volatile status LED API. Arbitrary RGB colors can
+  temporarily override both WS2812 indicators until explicitly released;
+  Legacy hardware maps non-black colors to its two single-color LEDs. Critical
+  firmware-update and Recovery Mode patterns retain priority.
 - Added a Node-RED production updater page that discovers uNode access points,
   inventories normal and Recovery Mode firmware, and installs verified local
   firmware/LittleFS release artifacts. Normal-mode LittleFS updates archive

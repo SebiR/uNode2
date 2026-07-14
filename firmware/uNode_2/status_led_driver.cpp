@@ -2,6 +2,45 @@
 
 #include "config.h"
 
+StatusLedRgb statusLedColorToRgb(
+  StatusLedColor color) {
+  switch (color) {
+    case StatusLedColor::RED:
+      return {255, 0, 0};
+
+    case StatusLedColor::ORANGE:
+      return {255, 128, 0};
+
+    case StatusLedColor::GREEN:
+      return {0, 255, 0};
+
+    case StatusLedColor::BLUE:
+      return {0, 0, 255};
+
+    case StatusLedColor::CYAN:
+      return {0, 255, 255};
+
+    case StatusLedColor::YELLOW:
+      return {255, 255, 0};
+
+    case StatusLedColor::MAGENTA:
+      return {255, 0, 255};
+
+    case StatusLedColor::OFF:
+    default:
+      return {0, 0, 0};
+  }
+}
+
+/** @return True when both RGB values contain the same components. */
+static bool rgbColorsEqual(
+  const StatusLedRgb& first,
+  const StatusLedRgb& second) {
+  return first.red == second.red
+         && first.green == second.green
+         && first.blue == second.blue;
+}
+
 #if USE_WS2812
 
 #include <Adafruit_NeoPixel.h>
@@ -13,33 +52,11 @@ static Adafruit_NeoPixel pixels(
 
 /** @return NeoPixel-packed RGB value for one logical status color. */
 static uint32_t getPixelColor(
-  StatusLedColor color) {
-  switch (color) {
-    case StatusLedColor::RED:
-      return pixels.Color(255, 0, 0);
-
-    case StatusLedColor::ORANGE:
-      return pixels.Color(255, 128, 0);
-
-    case StatusLedColor::GREEN:
-      return pixels.Color(0, 255, 0);
-
-    case StatusLedColor::BLUE:
-      return pixels.Color(0, 0, 255);
-
-    case StatusLedColor::CYAN:
-      return pixels.Color(0, 255, 255);
-
-    case StatusLedColor::YELLOW:
-      return pixels.Color(255, 255, 0);
-
-    case StatusLedColor::MAGENTA:
-      return pixels.Color(255, 0, 255);
-
-    case StatusLedColor::OFF:
-    default:
-      return pixels.Color(0, 0, 0);
-  }
+  const StatusLedRgb& color) {
+  return pixels.Color(
+    color.red,
+    color.green,
+    color.blue);
 }
 
 void initStatusLedDriver() {
@@ -52,16 +69,26 @@ void renderStatusLeds(
   StatusLedColor statusColor,
   StatusLedColor artnetColor,
   uint8_t brightness) {
-  static StatusLedColor lastStatusColor =
-    StatusLedColor::OFF;
-  static StatusLedColor lastArtnetColor =
-    StatusLedColor::OFF;
+  renderStatusLedsRgb(
+    statusLedColorToRgb(statusColor),
+    statusLedColorToRgb(artnetColor),
+    brightness);
+}
+
+void renderStatusLedsRgb(
+  StatusLedRgb statusColor,
+  StatusLedRgb artnetColor,
+  uint8_t brightness) {
+  static StatusLedRgb lastStatusColor =
+    {0, 0, 0};
+  static StatusLedRgb lastArtnetColor =
+    {0, 0, 0};
   static uint8_t lastBrightness = 255;
 
   brightness = constrain(brightness, 0, 100);
 
-  if (statusColor == lastStatusColor
-      && artnetColor == lastArtnetColor
+  if (rgbColorsEqual(statusColor, lastStatusColor)
+      && rgbColorsEqual(artnetColor, lastArtnetColor)
       && brightness == lastBrightness) {
     return;
   }
@@ -135,16 +162,26 @@ void renderStatusLeds(
   StatusLedColor statusColor,
   StatusLedColor artnetColor,
   uint8_t brightness) {
-  static StatusLedColor lastStatusColor =
-    StatusLedColor::MAGENTA;
-  static StatusLedColor lastArtnetColor =
-    StatusLedColor::MAGENTA;
+  renderStatusLedsRgb(
+    statusLedColorToRgb(statusColor),
+    statusLedColorToRgb(artnetColor),
+    brightness);
+}
+
+void renderStatusLedsRgb(
+  StatusLedRgb statusColor,
+  StatusLedRgb artnetColor,
+  uint8_t brightness) {
+  static StatusLedRgb lastStatusColor =
+    {255, 0, 255};
+  static StatusLedRgb lastArtnetColor =
+    {255, 0, 255};
   static uint8_t lastBrightness = 255;
 
   brightness = constrain(brightness, 0, 100);
 
-  if (statusColor == lastStatusColor
-      && artnetColor == lastArtnetColor
+  if (rgbColorsEqual(statusColor, lastStatusColor)
+      && rgbColorsEqual(artnetColor, lastArtnetColor)
       && brightness == lastBrightness) {
     return;
   }
@@ -155,12 +192,16 @@ void renderStatusLeds(
 
   writeLegacyLED(
     LED_STATUS_PIN,
-    statusColor != StatusLedColor::OFF,
+    statusColor.red > 0
+      || statusColor.green > 0
+      || statusColor.blue > 0,
     brightness);
 
   writeLegacyLED(
     LED_ARTNET_PIN,
-    artnetColor != StatusLedColor::OFF,
+    artnetColor.red > 0
+      || artnetColor.green > 0
+      || artnetColor.blue > 0,
     brightness);
 }
 

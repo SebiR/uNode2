@@ -436,6 +436,43 @@ can also be toggled from the web interface.
 The two software LEDs in the dashboard mirror the colors rendered on the
 physical LEDs.
 
+### Direct LED API
+
+External tools can temporarily take control of both indicators without
+changing the saved configuration. The override is held only in RAM and is
+automatically cleared by a reboot.
+
+Read the current rendered colors and override state:
+
+```http
+GET /api/leds
+```
+
+Set both LEDs using either `#RRGGBB` strings or RGB component objects:
+
+```http
+POST /api/leds
+Content-Type: application/json
+
+{
+  "network": "#123456",
+  "activity": { "r": 171, "g": 205, "b": 239 }
+}
+```
+
+Return control to the regular network and DMX status logic:
+
+```http
+POST /api/leds/release
+```
+
+The two POST endpoints require the normal `X-uNode-Auth` session token when
+web access control is enabled. The configured global LED brightness still
+applies. On Legacy hardware, black switches an LED off and every non-black RGB
+value switches it on because the fitted indicators cannot reproduce colors.
+Firmware-update and Recovery Mode patterns always have priority over a direct
+API override.
+
 ## Hardware Controls
 
 The current hardware build can control the RS-485 transceiver with separate

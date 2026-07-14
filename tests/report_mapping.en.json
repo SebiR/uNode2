@@ -89,10 +89,15 @@
     "title": "Timeout flush",
     "description": "Flushes pending ArtDmx after ArtSync timeout and returns to asynchronous output."
   },
-  "tests/integration/test_auth_protection.py::test_password_protects_mutating_api_endpoints": {
+  "tests/integration/test_auth_protection.py::test_api_write_endpoints_require_auth_when_password_is_enabled": {
     "group": "Access Control",
     "title": "Protected write endpoints",
     "description": "Verifies that mutating API endpoints require login when a password is configured."
+  },
+  "tests/integration/test_led_api.py::test_led_api_applies_and_releases_volatile_rgb_override": {
+    "group": "Hardware",
+    "title": "Status LED direct-color API",
+    "description": "Applies arbitrary RGB colors, validates API state and releases the volatile override."
   },
   "tests/integration/test_bus_guarding.py::test_bus_guard_mode_is_persisted_and_requires_restart": {
     "group": "Hardware",

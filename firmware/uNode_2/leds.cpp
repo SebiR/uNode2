@@ -34,10 +34,16 @@ static bool localMute = false;
 static uint32_t locateLastToggle = 0;
 static bool locateState = false;
 
-static StatusLedColor renderedNetworkColor =
-  StatusLedColor::OFF;
-static StatusLedColor renderedActivityColor =
-  StatusLedColor::OFF;
+static bool colorOverrideActive = false;
+static StatusLedRgb overrideNetworkColor =
+  {0, 0, 0};
+static StatusLedRgb overrideActivityColor =
+  {0, 0, 0};
+
+static StatusLedRgb renderedNetworkColor =
+  {0, 0, 0};
+static StatusLedRgb renderedActivityColor =
+  {0, 0, 0};
 
 void initLEDs() {
   initStatusLedDriver();
@@ -153,9 +159,25 @@ bool areLEDsMuted() {
          || indicatorMode == INDICATORS_MUTE;
 }
 
+void setLedColorOverride(
+  StatusLedRgb networkColor,
+  StatusLedRgb activityLedColor) {
+  overrideNetworkColor = networkColor;
+  overrideActivityColor = activityLedColor;
+  colorOverrideActive = true;
+}
+
+void releaseLedColorOverride() {
+  colorOverrideActive = false;
+}
+
+bool isLedColorOverrideActive() {
+  return colorOverrideActive;
+}
+
 void getRenderedLedColors(
-  StatusLedColor& networkColor,
-  StatusLedColor& activityLedColor) {
+  StatusLedRgb& networkColor,
+  StatusLedRgb& activityLedColor) {
   networkColor = renderedNetworkColor;
   activityLedColor = renderedActivityColor;
 }
@@ -260,17 +282,26 @@ static StatusLedColor getStatusColor(
   }
 }
 
-/** @brief Renders one pair of logical LED colors and stores them for WebSocket mirroring. */
-static void renderLogicalColors(
-  StatusLedColor networkColor,
-  StatusLedColor activityLedColor) {
+/** @brief Renders one RGB pair and stores it for WebSocket mirroring. */
+static void renderRgbColors(
+  StatusLedRgb networkColor,
+  StatusLedRgb activityLedColor) {
   renderedNetworkColor = networkColor;
   renderedActivityColor = activityLedColor;
 
-  renderStatusLeds(
+  renderStatusLedsRgb(
     networkColor,
     activityLedColor,
     config.ledBrightness);
+}
+
+/** @brief Converts and renders one pair of predefined logical LED colors. */
+static void renderLogicalColors(
+  StatusLedColor networkColor,
+  StatusLedColor activityLedColor) {
+  renderRgbColors(
+    statusLedColorToRgb(networkColor),
+    statusLedColorToRgb(activityLedColor));
 }
 
 /** @return True when a temporary or persistent system pattern was rendered. */
@@ -338,6 +369,14 @@ void updateLEDs() {
   const uint32_t now = millis();
 
   if (renderSystemPattern(now)) {
+    return;
+  }
+
+  if (colorOverrideActive) {
+    renderRgbColors(
+      overrideNetworkColor,
+      overrideActivityColor);
+
     return;
   }
 

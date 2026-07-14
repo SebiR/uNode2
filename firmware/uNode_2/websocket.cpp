@@ -20,56 +20,56 @@ static WebSocketsServer ws(81);
 
 static uint32_t lastBroadcast = 0;
 static bool ledStatusInitialized = false;
-static StatusLedColor lastNetworkLedColor =
-  StatusLedColor::OFF;
-static StatusLedColor lastActivityLedColor =
-  StatusLedColor::OFF;
+static StatusLedRgb lastNetworkLedColor =
+  {0, 0, 0};
+static StatusLedRgb lastActivityLedColor =
+  {0, 0, 0};
 
-/** @return CSS color string matching one logical hardware LED color. */
-static const char* ledColorToCss(
-  StatusLedColor color) {
-  switch (color) {
-    case StatusLedColor::RED:
-      return "#ff0000";
+/** @brief Formats one RGB value as a CSS hexadecimal color. */
+static void ledColorToCss(
+  const StatusLedRgb& color,
+  char output[8]) {
+  snprintf(
+    output,
+    8,
+    "#%02x%02x%02x",
+    color.red,
+    color.green,
+    color.blue);
+}
 
-    case StatusLedColor::ORANGE:
-      return "#ff8000";
-
-    case StatusLedColor::GREEN:
-      return "#00ff00";
-
-    case StatusLedColor::BLUE:
-      return "#0000ff";
-
-    case StatusLedColor::CYAN:
-      return "#00ffff";
-
-    case StatusLedColor::YELLOW:
-      return "#ffff00";
-
-    case StatusLedColor::MAGENTA:
-      return "#ff00ff";
-
-    case StatusLedColor::OFF:
-    default:
-      return "#666666";
-  }
+/** @return True when both RGB values contain the same components. */
+static bool ledColorsEqual(
+  const StatusLedRgb& first,
+  const StatusLedRgb& second) {
+  return first.red == second.red
+         && first.green == second.green
+         && first.blue == second.blue;
 }
 
 /** @brief Adds both currently rendered LED colors to a JSON document. */
 static void addLedStatus(JsonDocument& doc) {
-  StatusLedColor networkColor;
-  StatusLedColor activityColor;
+  StatusLedRgb networkColor;
+  StatusLedRgb activityColor;
   getRenderedLedColors(
     networkColor,
     activityColor);
 
+  char networkCss[8];
+  char activityCss[8];
+  ledColorToCss(
+    networkColor,
+    networkCss);
+  ledColorToCss(
+    activityColor,
+    activityCss);
+
   JsonObject leds =
     doc["leds"].to<JsonObject>();
   leds["network"] =
-    ledColorToCss(networkColor);
+    networkCss;
   leds["activity"] =
-    ledColorToCss(activityColor);
+    activityCss;
 }
 
 static String getKnownArtNetName(
@@ -133,15 +133,15 @@ static void sendLedStatus(uint8_t client) {
 
 /** @brief Broadcasts a compact LED-only message after a color transition. */
 static void broadcastLedStatusIfChanged() {
-  StatusLedColor networkColor;
-  StatusLedColor activityColor;
+  StatusLedRgb networkColor;
+  StatusLedRgb activityColor;
   getRenderedLedColors(
     networkColor,
     activityColor);
 
   if (ledStatusInitialized
-      && networkColor == lastNetworkLedColor
-      && activityColor == lastActivityLedColor) {
+      && ledColorsEqual(networkColor, lastNetworkLedColor)
+      && ledColorsEqual(activityColor, lastActivityLedColor)) {
     return;
   }
 
