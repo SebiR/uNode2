@@ -222,6 +222,12 @@ void broadcastStatus() {
     getNetworkReconnectSuccessCount();
   networkDiagnostics["lastReconnectDuration"] =
     getLastNetworkReconnectDuration();
+  networkDiagnostics["testHarnessApiEnabled"] =
+    ENABLE_TEST_HARNESS_API != 0;
+#if ENABLE_TEST_HARNESS_API
+  networkDiagnostics["temporaryTestClientActive"] =
+    isTemporaryTestClientActive();
+#endif
 
   doc["artnetPackets"] =
     getArtDmxCounter();

@@ -266,12 +266,16 @@ http://<hostname>.local
 - Recovery access is intentionally only available when the hardware recovery
   button is held during power-on or reset.
 - In AP + Client mode, the access point intentionally remains active.
-- The authenticated `POST /api/network/reconnect` endpoint can schedule a
-  controlled station disconnect without erasing credentials. Its JSON body
-  accepts `outageMs` from `1000` to `15000`; the normal retry logic resumes
-  afterwards.
 - `/api/status` reports total reconnect attempts, successful reconnect cycles,
   and the last reconnect duration under `networkDiagnostics`.
+
+Development builds compiled with `ENABLE_TEST_HARNESS_API=1` additionally
+provide authenticated fixture-only endpoints for a controlled reconnect and a
+temporary Client connection. Fixture SSID/password data remains in RAM, is
+never written to WiFiManager/SDK flash, and disappears on restart. If the
+temporary network cannot be joined, the node restores its configured AP after
+the bounded connection timeout. These endpoints and their credential buffers
+are absent from normal and Legacy production firmware.
 
 The WiFiManager configuration portal also uses `2.0.0.1` and is indicated by
 the amber status-LED pattern described below.

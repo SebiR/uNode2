@@ -57,6 +57,13 @@ Build versioned firmware and LittleFS release artifacts:
 .\tools\build_release.ps1
 ```
 
+Development/production-test firmware with the isolated Wi-Fi test harness is
+built only by explicit request:
+
+```powershell
+.\tools\build_release.ps1 -IncludeTestHarness
+```
+
 The release script builds both supported hardware profiles and writes artifacts
 without a build timestamp in the file name:
 
@@ -65,6 +72,9 @@ without a build timestamp in the file name:
 - `uNode-<version>_legacy-firmware.bin`
 - `uNode-<version>_legacy-littlefs.bin`
 - `uNode-<version>-manifest.json`
+
+The opt-in command additionally creates `_test` and `_legacy_test` firmware.
+These binaries define `ENABLE_TEST_HARNESS_API=1`; regular artifacts do not.
 
 Flash a generated release over UART:
 

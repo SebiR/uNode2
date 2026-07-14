@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "config.h"
 
 /** @brief Initializes the configured Wi-Fi mode and mDNS service. */
 bool initNetwork();
@@ -25,12 +26,31 @@ bool hasStoredWifiCredentials();
 /** @brief Erases stored station credentials from SDK flash. */
 bool forgetStoredWifiCredentials();
 
+#if ENABLE_TEST_HARNESS_API
 /**
  * @brief Schedules a controlled station disconnect followed by normal retry logic.
  * @param outageMillis Minimum time before the first reconnect attempt.
  * @return True when a connected Client/AP+Client interface accepted the request.
  */
 bool requestClientReconnect(uint32_t outageMillis);
+
+/**
+ * @brief Schedules a non-persistent Client connection for the test fixture.
+ * @param ssid Temporary access-point SSID (1..32 bytes).
+ * @param password Empty for an open network or 8..63 bytes for WPA2.
+ * @param switchDelayMillis Delay that lets the HTTP response reach the caller.
+ * @param connectTimeoutMillis Time before restoring the configured AP mode.
+ * @return True when the temporary request was accepted.
+ */
+bool requestTemporaryTestClient(
+  const char* ssid,
+  const char* password,
+  uint32_t switchDelayMillis,
+  uint32_t connectTimeoutMillis);
+
+/** @return True while temporary test credentials own the station interface. */
+bool isTemporaryTestClientActive();
+#endif
 
 /** @return True when the active interface or IP configuration changed. */
 bool updateNetwork();

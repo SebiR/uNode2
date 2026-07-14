@@ -8,8 +8,8 @@
 // -----------------------------------------------------------------------------
 
 #define FW_VERSION_MAJOR 0
-#define FW_VERSION_MINOR 23
-#define FW_VERSION_PATCH 26
+#define FW_VERSION_MINOR 24
+#define FW_VERSION_PATCH 0
 
 #define FW_STRINGIFY_IMPL(value) #value
 #define FW_STRINGIFY(value) FW_STRINGIFY_IMPL(value)
@@ -43,6 +43,14 @@
 
 #ifndef ENABLE_DEBUG
 #define ENABLE_DEBUG 0
+#endif
+
+// Development/production-test harness. This deliberately compiles out all
+// endpoints that can inject temporary Wi-Fi credentials or force a controlled
+// disconnect. Release firmware must leave this at zero; build_release.ps1 can
+// create explicitly suffixed test artifacts on request.
+#ifndef ENABLE_TEST_HARNESS_API
+#define ENABLE_TEST_HARNESS_API 0
 #endif
 
 // Serial logging is disabled by default. When enabled, logs use UART1 TX

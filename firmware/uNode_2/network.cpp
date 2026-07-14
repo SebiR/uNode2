@@ -25,18 +25,39 @@ static uint32_t reconnectAttemptCounter = 0;
 static uint32_t reconnectSuccessCounter = 0;
 static uint32_t lastReconnectDurationMillis = 0;
 static bool reconnectCycleActive = false;
+#if ENABLE_TEST_HARNESS_API
 static bool reconnectRequestPending = false;
 static uint32_t reconnectRequestAtMillis = 0;
 static uint32_t reconnectHoldMillis = 0;
 static uint32_t reconnectHoldUntilMillis = 0;
+#endif
 static uint32_t lastNetworkPollMillis = 0;
+
+#if ENABLE_TEST_HARNESS_API
+static char temporaryTestSSID[33] = {};
+static char temporaryTestPassword[64] = {};
+static bool temporaryTestClientPending = false;
+static bool temporaryTestClientActive = false;
+static bool temporaryTestClientConnected = false;
+static uint32_t temporaryTestSwitchAtMillis = 0;
+static uint32_t temporaryTestDeadlineMillis = 0;
+static uint32_t temporaryTestConnectTimeoutMillis = 0;
+#endif
 
 static const uint32_t RECONNECT_DELAY_MIN_MS = 1000;
 static const uint32_t RECONNECT_DELAY_MAX_MS = 60000;
 static const uint32_t NETWORK_STATUS_POLL_INTERVAL_MS = 250;
+#if ENABLE_TEST_HARNESS_API
 static const uint32_t RECONNECT_REQUEST_DELAY_MS = 250;
 static const uint32_t RECONNECT_OUTAGE_MIN_MS = 1000;
 static const uint32_t RECONNECT_OUTAGE_MAX_MS = 15000;
+static const uint32_t TEST_CLIENT_SWITCH_DELAY_MIN_MS = 500;
+static const uint32_t TEST_CLIENT_SWITCH_DELAY_MAX_MS = 15000;
+static const uint32_t TEST_CLIENT_TIMEOUT_MIN_MS = 10000;
+static const uint32_t TEST_CLIENT_TIMEOUT_MAX_MS = 120000;
+#endif
+
+static void stopMDNS();
 
 /** @brief Advances LED animation while WiFiManager owns the main loop. */
 static void updateConfigPortalLED() {
@@ -69,6 +90,46 @@ static bool hasAccessPoint() {
     const WiFiMode_t mode = WiFi.getMode();
     return mode == WIFI_AP || mode == WIFI_AP_STA;
 }
+
+/** @return True when normal or test-harness Client reconnects are managed. */
+static bool managesStationInterface() {
+#if ENABLE_TEST_HARNESS_API
+    if (temporaryTestClientPending
+        || temporaryTestClientActive) {
+        return true;
+    }
+#endif
+    return config.wifiMode != WIFI_MODE_AP;
+}
+
+#if ENABLE_TEST_HARNESS_API
+/** @brief Restores the configured standalone AP after test-client failure. */
+static void restoreConfiguredTestFallback() {
+    const IPAddress apIP(2, 0, 0, 1);
+    const IPAddress apMask(255, 255, 255, 0);
+    const String apSSID = getDefaultAPSSID();
+    const String apPassword = getDefaultAPPassword();
+
+    stopMDNS();
+    WiFi.disconnect(false, false);
+    WiFi.mode(WIFI_AP);
+    WiFi.softAPConfig(apIP, apIP, apMask);
+    WiFi.softAP(apSSID.c_str(), apPassword.c_str());
+
+    temporaryTestClientPending = false;
+    temporaryTestClientActive = false;
+    temporaryTestClientConnected = false;
+    temporaryTestSSID[0] = '\0';
+    temporaryTestPassword[0] = '\0';
+    reconnectCycleActive = false;
+    reconnectRequestPending = false;
+    disconnectedSince = 0;
+    reconnectAttempts = 0;
+    reconnectHoldUntilMillis = 0;
+
+    LOG_WARN("Temporary test Client timed out; configured AP restored");
+}
+#endif
 
 /** @return IP address of the currently preferred reachable interface. */
 static IPAddress getActiveIP(wl_status_t status) {
@@ -244,9 +305,10 @@ bool forgetStoredWifiCredentials()
     return disconnected || WiFi.SSID().length() == 0;
 }
 
+#if ENABLE_TEST_HARNESS_API
 bool requestClientReconnect(uint32_t outageMillis)
 {
-    if (config.wifiMode == WIFI_MODE_AP
+    if (!managesStationInterface()
         || WiFi.status() != WL_CONNECTED
         || reconnectRequestPending) {
         return false;
@@ -266,6 +328,51 @@ bool requestClientReconnect(uint32_t outageMillis)
 
     return true;
 }
+
+bool requestTemporaryTestClient(
+    const char* ssid,
+    const char* password,
+    uint32_t switchDelayMillis,
+    uint32_t connectTimeoutMillis)
+{
+    if (!ssid
+        || !password
+        || config.wifiMode != WIFI_MODE_AP
+        || ssid[0] == '\0'
+        || strlen(ssid) > 32
+        || strlen(password) > 63
+        || (password[0] != '\0' && strlen(password) < 8)
+        || temporaryTestClientPending
+        || temporaryTestClientActive) {
+        return false;
+    }
+
+    strlcpy(
+        temporaryTestSSID,
+        ssid,
+        sizeof(temporaryTestSSID));
+    strlcpy(
+        temporaryTestPassword,
+        password,
+        sizeof(temporaryTestPassword));
+    temporaryTestSwitchAtMillis = millis() + constrain(
+        switchDelayMillis,
+        TEST_CLIENT_SWITCH_DELAY_MIN_MS,
+        TEST_CLIENT_SWITCH_DELAY_MAX_MS);
+    temporaryTestConnectTimeoutMillis = constrain(
+        connectTimeoutMillis,
+        TEST_CLIENT_TIMEOUT_MIN_MS,
+        TEST_CLIENT_TIMEOUT_MAX_MS);
+    temporaryTestClientPending = true;
+
+    LOG_WARN("Temporary non-persistent test Client scheduled");
+    return true;
+}
+
+bool isTemporaryTestClientActive() {
+    return temporaryTestClientActive;
+}
+#endif
 
 String getIPAddress()
 {
@@ -472,6 +579,43 @@ bool updateNetwork()
 
     lastNetworkPollMillis = now;
 
+#if ENABLE_TEST_HARNESS_API
+    if (temporaryTestClientPending
+        && (int32_t)(now - temporaryTestSwitchAtMillis) >= 0) {
+        temporaryTestClientPending = false;
+        temporaryTestClientActive = true;
+        temporaryTestClientConnected = false;
+        temporaryTestDeadlineMillis =
+            now + temporaryTestConnectTimeoutMillis;
+        disconnectedSince = now;
+        nextReconnectMillis = now + RECONNECT_DELAY_MIN_MS;
+        reconnectDelayMillis = RECONNECT_DELAY_MIN_MS;
+        reconnectAttempts = 0;
+        reconnectCycleActive = true;
+
+        stopMDNS();
+
+        // Suppress SDK flash writes: these credentials belong only to the
+        // active fixture session and disappear on reset/power loss.
+        WiFi.persistent(false);
+        WiFi.disconnect(false, false);
+        WiFi.mode(WIFI_STA);
+        WiFi.hostname(config.hostname);
+        WiFi.begin(
+            temporaryTestSSID,
+            temporaryTestPassword);
+
+        LOG_WARN("Switching to temporary non-persistent test Client");
+    }
+
+    if (temporaryTestClientActive
+        && !temporaryTestClientConnected
+        && (int32_t)(now - temporaryTestDeadlineMillis) >= 0) {
+        restoreConfiguredTestFallback();
+    }
+#endif
+
+#if ENABLE_TEST_HARNESS_API
     if (reconnectRequestPending
         && (int32_t)(now - reconnectRequestAtMillis) >= 0) {
         reconnectRequestPending = false;
@@ -490,14 +634,21 @@ bool updateNetwork()
 
         LOG_WARN("Controlled WiFi disconnect started");
     }
+#endif
 
     const wl_status_t status = WiFi.status();
     bool networkChanged = false;
 
-    if (config.wifiMode != WIFI_MODE_AP) {
+    if (managesStationInterface()) {
         if (status == WL_CONNECTED) {
             if (lastWifiStatus != WL_CONNECTED) {
                 LOG_INFO("WiFi connected");
+
+#if ENABLE_TEST_HARNESS_API
+                if (temporaryTestClientActive) {
+                    temporaryTestClientConnected = true;
+                }
+#endif
 
                 if (reconnectCycleActive) {
                     reconnectSuccessCounter++;
@@ -511,7 +662,9 @@ bool updateNetwork()
                 reconnectAttempts = 0;
                 reconnectDelayMillis = RECONNECT_DELAY_MIN_MS;
                 disconnectedSince = 0;
+#if ENABLE_TEST_HARNESS_API
                 reconnectHoldUntilMillis = 0;
+#endif
             }
         } else {
             if (lastWifiStatus == WL_CONNECTED) {
@@ -520,11 +673,15 @@ bool updateNetwork()
                 reconnectCycleActive = true;
                 reconnectAttempts = 0;
                 reconnectDelayMillis = RECONNECT_DELAY_MIN_MS;
+#if ENABLE_TEST_HARNESS_API
                 nextReconnectMillis =
                     reconnectHoldUntilMillis
                     && (int32_t)(reconnectHoldUntilMillis - now) > 0
                         ? reconnectHoldUntilMillis
                         : now + reconnectDelayMillis;
+#else
+                nextReconnectMillis = now + reconnectDelayMillis;
+#endif
                 stopMDNS();
             } else if (!disconnectedSince) {
                 disconnectedSince = now;

@@ -41,11 +41,14 @@ status logic. Capability data from `/api/status` disables the controls for
 Legacy hardware, Recovery Mode, and older firmware that does not provide the
 RGB API.
 
-The same page provides a guarded **Client Reconnection Test**. On a node in
-Client or AP+Client mode it requests a three-second station outage, then checks
-that the API, ArtPollReply, sACN multicast membership, and live packet handling
-recover without increasing the boot counter. It uses the same fixture lock and
-live pytest log as regression and soak jobs.
+The same page provides a guarded **Client Reconnection Test**. A firmware built
+with `ENABLE_TEST_HARNESS_API=1` may start in pure AP mode: the backend passes
+RAM-only credentials, changes `wlan0` into an isolated fixture hotspot, finds
+the node's DHCP address, and then requests a three-second station outage. It
+checks that the API, ArtPollReply, sACN multicast membership, and live packet
+handling recover without increasing the boot counter. Cleanup restarts the
+node and restores the Pi's previous Wi-Fi connection. The job uses the same
+fixture lock and live pytest log as regression and soak jobs.
 
 Normal-mode LittleFS updates archive the complete configuration under
 `artifacts/node_backups/` and restore it after the image restart. Recovery mode

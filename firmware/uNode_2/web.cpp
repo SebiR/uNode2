@@ -50,7 +50,10 @@ static const size_t MAX_CONFIG_JSON_SIZE = 4096;
 static const size_t MAX_CONFIG_UPLOAD_SIZE = 8192;
 static const size_t MAX_BRIGHTNESS_JSON_SIZE = 64;
 static const size_t MAX_LED_OVERRIDE_JSON_SIZE = 192;
+#if ENABLE_TEST_HARNESS_API
 static const size_t MAX_NETWORK_ACTION_JSON_SIZE = 64;
+static const size_t MAX_TEST_NETWORK_JSON_SIZE = 256;
+#endif
 static const size_t MAX_DMX_JSON_SIZE = 3072;
 static const uint32_t RTC_DIAGNOSTICS_OFFSET = 32;
 static const uint32_t RTC_DIAGNOSTICS_MAGIC = 0x554E4F44UL;
@@ -1206,6 +1209,12 @@ static void handleStatus() {
     getNetworkReconnectSuccessCount();
   networkDiagnostics["lastReconnectDuration"] =
     getLastNetworkReconnectDuration();
+  networkDiagnostics["testHarnessApiEnabled"] =
+    ENABLE_TEST_HARNESS_API != 0;
+#if ENABLE_TEST_HARNESS_API
+  networkDiagnostics["temporaryTestClientActive"] =
+    isTemporaryTestClientActive();
+#endif
 
   doc["uptime"] = millis();
 
@@ -1607,6 +1616,7 @@ static void handleRestart() {
   scheduleRestart();
 }
 
+#if ENABLE_TEST_HARNESS_API
 /** @brief Starts a controlled Client-mode Wi-Fi reconnect cycle. */
 static void handleNetworkReconnect() {
   if (!requireAuth()) {
@@ -1671,6 +1681,85 @@ static void handleNetworkReconnect() {
     "application/json",
     json);
 }
+
+/** @brief Switches once to volatile fixture Wi-Fi credentials after replying. */
+static void handleTemporaryTestClient() {
+  if (!requireAuth()) {
+    return;
+  }
+
+  if (!requirePlainBodyLimit(
+        MAX_TEST_NETWORK_JSON_SIZE,
+        "Temporary test Client")) {
+    return;
+  }
+
+  JsonDocument request;
+  const DeserializationError parseResult =
+    deserializeJson(
+      request,
+      server.arg("plain"));
+
+  if (parseResult
+      || !request["ssid"].is<const char*>()) {
+    server.send(
+      400,
+      "text/plain",
+      "ssid is required");
+    return;
+  }
+
+  const char* ssid = request["ssid"];
+  const char* password = request["password"] | "";
+  const uint32_t switchDelayMillis =
+    request["switchDelayMs"] | 3000UL;
+  const uint32_t connectTimeoutMillis =
+    request["connectTimeoutMs"] | 45000UL;
+  const size_t ssidLength = strlen(ssid);
+  const size_t passwordLength = strlen(password);
+
+  if (ssidLength < 1
+      || ssidLength > 32
+      || passwordLength > 63
+      || (passwordLength > 0 && passwordLength < 8)
+      || switchDelayMillis < 500UL
+      || switchDelayMillis > 15000UL
+      || connectTimeoutMillis < 10000UL
+      || connectTimeoutMillis > 120000UL) {
+    server.send(
+      400,
+      "text/plain",
+      "Invalid temporary Client parameters");
+    return;
+  }
+
+  if (!requestTemporaryTestClient(
+        ssid,
+        password,
+        switchDelayMillis,
+        connectTimeoutMillis)) {
+    server.send(
+      409,
+      "text/plain",
+      "A temporary Client request is already active");
+    return;
+  }
+
+  logEvent(
+    "test_wifi_client",
+    "Temporary fixture Wi-Fi Client requested");
+
+  JsonDocument response;
+  response["scheduled"] = true;
+  response["switchDelayMs"] = switchDelayMillis;
+  response["connectTimeoutMs"] = connectTimeoutMillis;
+  response["persistent"] = false;
+
+  String json;
+  serializeJson(response, json);
+  server.send(202, "application/json", json);
+}
+#endif
 
 /** @brief Erases stored station credentials and restarts into configured mode. */
 static void handleForgetWifiCredentials() {
@@ -2642,10 +2731,17 @@ bool initWeb() {
     HTTP_POST,
     handleRestart);
 
+#if ENABLE_TEST_HARNESS_API
   server.on(
     "/api/network/reconnect",
     HTTP_POST,
     handleNetworkReconnect);
+
+  server.on(
+    "/api/test/network/client",
+    HTTP_POST,
+    handleTemporaryTestClient);
+#endif
 
   server.on(
     "/api/wifi/forget",

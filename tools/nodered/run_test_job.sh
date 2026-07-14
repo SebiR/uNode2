@@ -233,7 +233,7 @@ case "$PROFILE" in
             bash tools/test.sh
             --integration
             --reconnection
-            --path tests/integration/test_network_reconnection.py
+            --fixture-hotspot
         )
         ;;
 esac

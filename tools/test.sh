@@ -17,6 +17,7 @@ TEST_PATH=""
 OTA=0
 DESTRUCTIVE_OTA=0
 RECONNECTION=0
+FIXTURE_HOTSPOT=0
 OTA_PROFILE="normal"
 OTA_ARTIFACTS_DIR=""
 PYTEST_EXTRA=()
@@ -33,6 +34,7 @@ Usage: tools/test.sh [options] [-- pytest-args]
   --button-gpio PIN             RP2040 GPIO wired to the uNode button
   --reset-gpio PIN              RP2040 GPIO wired to the uNode reset input
   --reconnection                Run the controlled Client Wi-Fi outage test
+  --fixture-hotspot             Temporarily make Pi wlan0 the test Client AP
   --ota                          Run safe OTA validation/reinstall tests
   --destructive-ota              Run opt-in OTA interruption/recovery tests
   --ota-profile PROFILE          Release profile: normal or legacy
@@ -67,6 +69,7 @@ while [[ $# -gt 0 ]]; do
         --button-gpio) require_value "$@"; export UNODE_BUTTON_GPIO_PIN="$2"; shift 2 ;;
         --reset-gpio) require_value "$@"; export UNODE_RESET_GPIO_PIN="$2"; shift 2 ;;
         --reconnection) RECONNECTION=1; export UNODE_RUN_RECONNECTION=1; INTEGRATION=1; shift ;;
+        --fixture-hotspot) FIXTURE_HOTSPOT=1; shift ;;
         --ota) OTA=1; INTEGRATION=1; shift ;;
         --destructive-ota) DESTRUCTIVE_OTA=1; INTEGRATION=1; shift ;;
         --ota-profile) require_value "$@"; OTA_PROFILE="$2"; shift 2 ;;
@@ -90,6 +93,15 @@ if [[ ! -x "$PYTHON" ]]; then
 fi
 
 cd "$PROJECT_ROOT"
+
+if [[ "$RECONNECTION" -eq 1 && "$FIXTURE_HOTSPOT" -eq 1 ]]; then
+    FIXTURE_ARGS=(
+        --base-url "${BASE_URL:-http://${NODE_IP:-2.0.0.1}}"
+        --interface "${UNODE_FIXTURE_WIFI_INTERFACE:-wlan0}"
+    )
+    [[ -n "$PASSWORD" ]] && FIXTURE_ARGS+=(--password "$PASSWORD")
+    exec "$PYTHON" tools/fixture_reconnection.py "${FIXTURE_ARGS[@]}"
+fi
 
 if [[ "$INTEGRATION" -eq 1 ]]; then
     if [[ -z "$NODE_IP" && -z "$BASE_URL" ]]; then

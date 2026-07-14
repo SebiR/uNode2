@@ -13,11 +13,13 @@ explicitly in each release entry.
 
 ### Changed
 
-- Added an authenticated controlled Client-mode Wi-Fi reconnect action plus
-  cumulative retry/success/duration diagnostics. A new opt-in Raspberry Pi
-  integration profile verifies recovery of HTTP, ArtPollReply, sACN multicast
-  membership, and live packets without rebooting; the Hardware Test dashboard
-  can launch the profile directly.
+- Added a compile-time isolated production-test Wi-Fi harness. Explicit
+  `ENABLE_TEST_HARNESS_API=1` builds can accept RAM-only fixture credentials,
+  switch from the node AP to a Raspberry Pi hotspot, force a controlled Client
+  outage, and verify recovery of HTTP, ArtPollReply, sACN multicast membership,
+  and live packets without rebooting. Normal and Legacy release firmware omit
+  both test endpoints and all temporary-credential state. The Pi test runner
+  restores the node AP and its previous Wi-Fi connection automatically.
 - Limited the direct RGB LED API to WS2812 hardware and exposed an explicit
   capability flag for external tools. Legacy builds no longer register the
   RGB endpoints instead of approximating arbitrary colors as simple on/off.

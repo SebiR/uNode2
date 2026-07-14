@@ -74,10 +74,24 @@ def test_api_write_endpoints_require_auth_when_password_is_enabled(
             ("/api/artnet/poll", None),
             ("/api/dmx/release", None),
             ("/api/led-mute", {"toggle": True}),
-            ("/api/network/reconnect", {"outageMs": 1000}),
             ("/api/failsafe/record", None),
             ("/api/auth/password", {"password": "should-not-apply"}),
         ]
+
+        network_diagnostics = status.get("networkDiagnostics", {})
+        if network_diagnostics.get("testHarnessApiEnabled", False):
+            protected_requests.extend(
+                [
+                    ("/api/network/reconnect", {"outageMs": 1000}),
+                    (
+                        "/api/test/network/client",
+                        {
+                            "ssid": "uNode-Fixture",
+                            "password": "uNodeFixture24",
+                        },
+                    ),
+                ]
+            )
 
         if status.get("ledColorOverrideSupported", False):
             protected_requests.extend(

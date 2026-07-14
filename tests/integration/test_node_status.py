@@ -39,6 +39,12 @@ def test_status_endpoint_reports_expected_basics(unode_client: UNodeClient) -> N
     assert network_diagnostics["reconnectSuccesses"] >= 0
     assert isinstance(network_diagnostics["lastReconnectDuration"], int)
     assert network_diagnostics["lastReconnectDuration"] >= 0
+    assert isinstance(network_diagnostics["testHarnessApiEnabled"], bool)
+    if network_diagnostics["testHarnessApiEnabled"]:
+        assert isinstance(
+            network_diagnostics["temporaryTestClientActive"],
+            bool,
+        )
 
     for key in (
         "multicastJoined",

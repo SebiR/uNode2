@@ -57,7 +57,13 @@ def test_node_red_flow_exposes_controlled_reconnection_test() -> None:
     test_job = TEST_JOB_PATH.read_text(encoding="utf-8")
     assert "reconnect)" in test_job
     assert "--reconnection" in test_job
-    assert "test_network_reconnection.py" in test_job
+    assert "--fixture-hotspot" in test_job
+
+    fixture_runner = (
+        PROJECT_ROOT / "tools" / "fixture_reconnection.py"
+    ).read_text(encoding="utf-8")
+    assert "ENABLE_TEST_HARNESS_API=1" in fixture_runner
+    assert "test_network_reconnection.py" in fixture_runner
 
 
 def test_split_nmcli_fields_preserves_escaped_colons_and_backslashes() -> None:

@@ -63,13 +63,23 @@ bash tools/test.sh --integration --reconnection \
   --path tests/integration/test_network_reconnection.py
 ```
 
+On the Raspberry Pi, a test-harness build can start from pure AP mode. The
+runner temporarily turns `wlan0` into an isolated hotspot, discovers the node's
+new DHCP address, runs the same test, restarts the node, and restores the
+previous Pi Wi-Fi connection:
+
+```bash
+bash tools/test.sh --integration --reconnection --fixture-hotspot
+```
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 `
   -Integration -Reconnection `
   -Path tests/integration/test_network_reconnection.py
 ```
 
-The profile requires Client or AP+Client mode and firmware `0.23.26` or newer.
+The profile requires firmware built with `ENABLE_TEST_HARNESS_API=1`. Without
+`--fixture-hotspot`, the node must already use Client or AP+Client mode.
 Set `UNODE_RECONNECT_OUTAGE_MS` to a value from 1000 to 15000 to override the
 default three-second outage.
 

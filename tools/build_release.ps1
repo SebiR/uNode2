@@ -1,6 +1,7 @@
 param(
     [string]$Fqbn = "esp8266:esp8266:generic:eesz=4M1M",
-    [string]$OutputDir = ""
+    [string]$OutputDir = "",
+    [switch]$IncludeTestHarness
 )
 
 $ErrorActionPreference = "Stop"
@@ -199,6 +200,27 @@ $legacyFirmwareArtifact =
             "compiler.cpp.extra_flags=-DUSE_LEGACY_HARDWARE=1"
         )
 
+$testFirmwareArtifact = $null
+$legacyTestFirmwareArtifact = $null
+
+if ($IncludeTestHarness) {
+    $testFirmwareArtifact =
+        Build-FirmwareArtifact `
+            -Profile "test" `
+            -Suffix "_test" `
+            -BuildProperties @(
+                "compiler.cpp.extra_flags=-DENABLE_TEST_HARNESS_API=1"
+            )
+
+    $legacyTestFirmwareArtifact =
+        Build-FirmwareArtifact `
+            -Profile "legacy-test" `
+            -Suffix "_legacy_test" `
+            -BuildProperties @(
+                "compiler.cpp.extra_flags=-DUSE_LEGACY_HARDWARE=1 -DENABLE_TEST_HARNESS_API=1"
+            )
+}
+
 $firmwareElfArtifact =
     Join-Path $OutputDir "uNode-$version-firmware.elf"
 $firmwareMapArtifact =
@@ -207,6 +229,14 @@ $legacyFirmwareElfArtifact =
     Join-Path $OutputDir "uNode-$version`_legacy-firmware.elf"
 $legacyFirmwareMapArtifact =
     Join-Path $OutputDir "uNode-$version`_legacy-firmware.map"
+$testFirmwareElfArtifact =
+    Join-Path $OutputDir "uNode-$version`_test-firmware.elf"
+$testFirmwareMapArtifact =
+    Join-Path $OutputDir "uNode-$version`_test-firmware.map"
+$legacyTestFirmwareElfArtifact =
+    Join-Path $OutputDir "uNode-$version`_legacy_test-firmware.elf"
+$legacyTestFirmwareMapArtifact =
+    Join-Path $OutputDir "uNode-$version`_legacy_test-firmware.map"
 
 $mklittlefs =
     Get-ChildItem `
@@ -300,6 +330,21 @@ $legacyFilesystemHash =
         -Algorithm SHA256 `
         -LiteralPath $legacyFilesystemArtifact
 
+if ($IncludeTestHarness) {
+    $testFirmwareHash =
+        Get-FileHash -Algorithm SHA256 -LiteralPath $testFirmwareArtifact
+    $legacyTestFirmwareHash =
+        Get-FileHash -Algorithm SHA256 -LiteralPath $legacyTestFirmwareArtifact
+    $testFirmwareElfHash =
+        Get-FileHash -Algorithm SHA256 -LiteralPath $testFirmwareElfArtifact
+    $testFirmwareMapHash =
+        Get-FileHash -Algorithm SHA256 -LiteralPath $testFirmwareMapArtifact
+    $legacyTestFirmwareElfHash =
+        Get-FileHash -Algorithm SHA256 -LiteralPath $legacyTestFirmwareElfArtifact
+    $legacyTestFirmwareMapHash =
+        Get-FileHash -Algorithm SHA256 -LiteralPath $legacyTestFirmwareMapArtifact
+}
+
 $manifest = [ordered]@{
     project = "uNode"
     version = $version
@@ -368,6 +413,60 @@ $manifest = [ordered]@{
     }
 }
 
+if ($IncludeTestHarness) {
+    $manifest["profiles"]["test"] = [ordered]@{
+        hardwareProfile = "normal"
+        testHarnessApi = $true
+        buildProperties = @(
+            "compiler.cpp.extra_flags=-DENABLE_TEST_HARNESS_API=1"
+        )
+        firmware = [ordered]@{
+            file = (Split-Path $testFirmwareArtifact -Leaf)
+            size = (Get-Item $testFirmwareArtifact).Length
+            sha256 = $testFirmwareHash.Hash
+        }
+        debug = [ordered]@{
+            elf = [ordered]@{
+                file = (Split-Path $testFirmwareElfArtifact -Leaf)
+                size = (Get-Item $testFirmwareElfArtifact).Length
+                sha256 = $testFirmwareElfHash.Hash
+            }
+            map = [ordered]@{
+                file = (Split-Path $testFirmwareMapArtifact -Leaf)
+                size = (Get-Item $testFirmwareMapArtifact).Length
+                sha256 = $testFirmwareMapHash.Hash
+            }
+        }
+        littleFs = $manifest["profiles"]["normal"]["littleFs"]
+    }
+
+    $manifest["profiles"]["legacyTest"] = [ordered]@{
+        hardwareProfile = "legacy"
+        testHarnessApi = $true
+        buildProperties = @(
+            "compiler.cpp.extra_flags=-DUSE_LEGACY_HARDWARE=1 -DENABLE_TEST_HARNESS_API=1"
+        )
+        firmware = [ordered]@{
+            file = (Split-Path $legacyTestFirmwareArtifact -Leaf)
+            size = (Get-Item $legacyTestFirmwareArtifact).Length
+            sha256 = $legacyTestFirmwareHash.Hash
+        }
+        debug = [ordered]@{
+            elf = [ordered]@{
+                file = (Split-Path $legacyTestFirmwareElfArtifact -Leaf)
+                size = (Get-Item $legacyTestFirmwareElfArtifact).Length
+                sha256 = $legacyTestFirmwareElfHash.Hash
+            }
+            map = [ordered]@{
+                file = (Split-Path $legacyTestFirmwareMapArtifact -Leaf)
+                size = (Get-Item $legacyTestFirmwareMapArtifact).Length
+                sha256 = $legacyTestFirmwareMapHash.Hash
+            }
+        }
+        littleFs = $manifest["profiles"]["legacy"]["littleFs"]
+    }
+}
+
 $manifestPath =
     Join-Path $OutputDir "uNode-$version-manifest.json"
 
@@ -387,4 +486,8 @@ Write-Host "LittleFS normal : $filesystemArtifact"
 Write-Host "Firmware legacy : $legacyFirmwareArtifact"
 Write-Host "Debug legacy    : $legacyFirmwareElfArtifact / $legacyFirmwareMapArtifact"
 Write-Host "LittleFS legacy : $legacyFilesystemArtifact"
+if ($IncludeTestHarness) {
+    Write-Host "Firmware test   : $testFirmwareArtifact"
+    Write-Host "Firmware legacy test: $legacyTestFirmwareArtifact"
+}
 Write-Host "Manifest        : $manifestPath"

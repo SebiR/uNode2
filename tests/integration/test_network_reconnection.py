@@ -56,10 +56,14 @@ def test_client_reconnect_restores_http_artnet_and_sacn(
     request: pytest.FixtureRequest,
 ) -> None:
     initial_status = unode_client.get_json("/api/status")
+    diagnostics = initial_status.get("networkDiagnostics", {})
+    if not diagnostics.get("testHarnessApiEnabled", False):
+        pytest.fail(
+            "Controlled reconnect requires an ENABLE_TEST_HARNESS_API=1 build"
+        )
     if not initial_status.get("wifiConnected", False):
         pytest.fail("Controlled reconnect requires Client or AP+Client mode")
 
-    diagnostics = initial_status.get("networkDiagnostics", {})
     required_metrics = {
         "reconnectAttemptsTotal",
         "reconnectSuccesses",

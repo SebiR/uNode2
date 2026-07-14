@@ -225,6 +225,9 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [ ] Expose Art-Net socket bind retries and network recovery state clearly.
 - [x] Add a controlled Client-mode reconnection test covering HTTP, ArtPoll,
       sACN multicast rebind, reconnect timing, and reboot detection.
+- [x] Allow the Raspberry Pi fixture to move an AP-mode node temporarily into
+      Client mode with RAM-only credentials. Compile the required APIs only
+      into explicitly suffixed test-harness firmware artifacts.
 - [x] Expose raw ESP8266 reset information in diagnostics so exception resets
       include decoder-friendly details such as EPC and exception address.
 - [x] Expose SoftAP health diagnostics, including active state, SoftAP IP, and
