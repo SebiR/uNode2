@@ -19,6 +19,25 @@ RP2040 DMX/HIL, button GPIO 8, reset GPIO 7, one-minute soak, and safe OTA
 coverage. The OTA hardware profile is selectable when OTA coverage is enabled.
 Destructive OTA recovery tests deliberately remain command-line only.
 
+The separate **Node Updater** page is intended for completed devices. It scans
+`wlan0` for factory-style `uNode_XXXXXX` access points, briefly connects to each
+one, and reports firmware, web-asset, normal/recovery, signal, and inferred
+hardware-profile information. A selected node can then receive firmware,
+LittleFS, or both from a size- and SHA-256-verified release manifest. The
+newest complete local release is selected by default, while older releases
+remain available for deliberate downgrade/recovery work.
+
+Normal-mode LittleFS updates archive the complete configuration under
+`artifacts/node_backups/` and restore it after the image restart. Recovery mode
+has no configuration-download endpoint; firmware-only recovery is therefore
+non-destructive, while a recovery LittleFS update explicitly installs release
+defaults. The updater derives the factory AP credential from the validated
+chip-ID SSID and accepts an optional GUI password for access-controlled nodes.
+
+Updater jobs and regression/soak jobs share the same fixture lock. A scan or
+update is rejected while a test is running, and a test cannot start while an
+update owns `wlan0`.
+
 An active job can be cancelled from the dashboard. The wrapper sends `SIGINT`
 to the isolated pytest process group, allowing test fixtures to restore the
 saved node configuration before the job is marked `cancelled`. Soak and
@@ -35,6 +54,16 @@ Open `http://printer.local:1880/unode/status`. The installer uses Node-RED's
 single-flow Admin API and therefore leaves unrelated flows untouched. The
 dashboard also tails `artifacts/test_reports/latest-run.log`, which is updated
 live by `tools/test.sh` while pytest is running.
+
+The updater is available at `http://printer.local:1880/unode/updater`. Its
+progress log is stored as `artifacts/test_reports/latest-updater.log`.
+
+The backend can also be inspected from a shell without touching Wi-Fi:
+
+```bash
+.venv/bin/python tools/nodered/node_updater.py status
+.venv/bin/python tools/nodered/node_updater.py releases
+```
 
 The same guarded entry point can be used from a shell:
 

@@ -1,0 +1,835 @@
+#!/usr/bin/env python3
+"""Discover uNode access points and install verified release artifacts.
+
+The helper is designed for the Raspberry Pi production/test fixture. Ethernet
+keeps Node-RED reachable while ``wlan0`` is temporarily connected to one uNode
+access point at a time. Commands are deliberately narrow and every SSID,
+release version, hardware profile, and update component is validated before it
+is passed to NetworkManager or the OTA client.
+"""
+
+from __future__ import annotations
+
+import base64
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+try:
+    import fcntl
+except ModuleNotFoundError:  # pragma: no cover - updater jobs run on Linux.
+    fcntl = None  # type: ignore[assignment]
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+TESTS_ROOT = PROJECT_ROOT / "tests"
+sys.path.insert(0, str(TESTS_ROOT))
+
+from ota_helpers import resolve_release_artifacts, upload_file  # noqa: E402
+from unode_client import UNodeClient  # noqa: E402
+
+
+ARTIFACTS_DIR = Path(
+    os.environ.get(
+        "UNODE_UPDATER_ARTIFACTS_DIR",
+        PROJECT_ROOT / "artifacts" / "release",
+    )
+)
+BACKUP_DIR = Path(
+    os.environ.get(
+        "UNODE_UPDATER_BACKUP_DIR",
+        PROJECT_ROOT / "artifacts" / "node_backups",
+    )
+)
+STATUS_FILE = Path(
+    os.environ.get("UNODE_UPDATER_STATUS_FILE", "/tmp/unode-updater-status.json")
+)
+LOCK_FILE = Path(
+    os.environ.get("UNODE_UPDATER_LOCK_FILE", "/tmp/unode-updater.lock")
+)
+TEST_JOB_LOCK_FILE = Path(
+    os.environ.get("UNODE_TEST_JOB_LOCK_FILE", "/tmp/unode-test-job.lock")
+)
+LOG_FILE = Path(
+    os.environ.get(
+        "UNODE_UPDATER_LOG_FILE",
+        PROJECT_ROOT / "artifacts" / "test_reports" / "latest-updater.log",
+    )
+)
+WIFI_INTERFACE = os.environ.get("UNODE_UPDATER_WIFI_INTERFACE", "wlan0")
+NODE_IP = os.environ.get("UNODE_UPDATER_NODE_IP", "2.0.0.1")
+BASE_URL = f"http://{NODE_IP}"
+
+SSID_PATTERN = re.compile(r"^uNode_([0-9A-Fa-f]{6})$")
+VERSION_PATTERN = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+ALLOWED_PROFILES = {"normal", "legacy"}
+ALLOWED_COMPONENTS = {"firmware", "littlefs", "both"}
+
+
+def utc_now() -> str:
+    """Return an ISO-8601 UTC timestamp suitable for status files."""
+
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def atomic_json_write(path: Path, payload: dict[str, Any]) -> None:
+    """Atomically replace one JSON status file."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(
+        json.dumps(payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    temporary.replace(path)
+
+
+def split_nmcli_fields(line: str) -> list[str]:
+    """Split one escaped ``nmcli -t`` record without losing literal colons."""
+
+    fields: list[str] = []
+    current: list[str] = []
+    escaped = False
+
+    for character in line.rstrip("\r\n"):
+        if escaped:
+            current.append(character)
+            escaped = False
+        elif character == "\\":
+            escaped = True
+        elif character == ":":
+            fields.append("".join(current))
+            current = []
+        else:
+            current.append(character)
+
+    if escaped:
+        current.append("\\")
+    fields.append("".join(current))
+    return fields
+
+
+def version_key(version: str) -> tuple[int, int, int]:
+    """Return a sortable semantic-version tuple for supported releases."""
+
+    match = VERSION_PATTERN.fullmatch(version)
+    if not match:
+        raise ValueError(f"Invalid release version: {version}")
+    return tuple(int(value) for value in match.groups())
+
+
+def available_releases(root: Path = ARTIFACTS_DIR) -> list[dict[str, Any]]:
+    """Return complete release profiles newest first.
+
+    This lightweight listing is generated on every dashboard status poll and
+    therefore verifies manifest sizes without repeatedly hashing megabytes of
+    artifacts. ``resolve_release_artifacts()`` performs the full SHA-256 check
+    immediately before any update is written.
+    """
+
+    releases: list[dict[str, Any]] = []
+    for manifest_path in root.glob("uNode-*-manifest.json"):
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+            version = str(manifest["version"])
+            version_key(version)
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            continue
+
+        profiles: list[str] = []
+        for profile in sorted(ALLOWED_PROFILES):
+            profile_data = manifest.get("profiles", {}).get(profile, {})
+            firmware_data = profile_data.get("firmware", {})
+            littlefs_data = profile_data.get("littleFs", {})
+            firmware = root / str(firmware_data.get("file", ""))
+            littlefs = root / str(littlefs_data.get("file", ""))
+
+            try:
+                valid = (
+                    firmware.is_file()
+                    and littlefs.is_file()
+                    and firmware.stat().st_size == int(firmware_data["size"])
+                    and littlefs.stat().st_size == int(littlefs_data["size"])
+                    and bool(str(firmware_data["sha256"]))
+                    and bool(str(littlefs_data["sha256"]))
+                )
+            except (KeyError, TypeError, ValueError, OSError):
+                valid = False
+
+            if valid:
+                profiles.append(profile)
+
+        if profiles:
+            releases.append(
+                {
+                    "version": version,
+                    "profiles": profiles,
+                    "generatedAt": str(manifest.get("generatedAt", "")),
+                }
+            )
+
+    releases.sort(key=lambda item: version_key(item["version"]), reverse=True)
+    return releases
+
+
+class JobStatus:
+    """Persist updater state and mirror progress into a plain-text log."""
+
+    def __init__(self, request: dict[str, Any]) -> None:
+        self.data: dict[str, Any] = {
+            "running": True,
+            "state": "starting",
+            "message": "Starting uNode updater",
+            "startedAt": utc_now(),
+            "finishedAt": "",
+            "request": {
+                key: value
+                for key, value in request.items()
+                if key != "password"
+            },
+            "nodes": [],
+            "releases": available_releases(),
+            "progress": 0,
+        }
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        LOG_FILE.write_text("", encoding="utf-8")
+        self.write()
+
+    def write(self) -> None:
+        atomic_json_write(STATUS_FILE, self.data)
+
+    def progress(self, message: str, *, percent: int | None = None) -> None:
+        line = f"[{datetime.now().astimezone().isoformat(timespec='seconds')}] {message}"
+        print(line, flush=True)
+        with LOG_FILE.open("a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+        self.data["message"] = message
+        if percent is not None:
+            self.data["progress"] = max(0, min(100, int(percent)))
+        self.write()
+
+    def finish(self, state: str, message: str, **values: Any) -> None:
+        self.data.update(values)
+        self.data.update(
+            {
+                "running": False,
+                "state": state,
+                "message": message,
+                "finishedAt": utc_now(),
+                "progress": 100 if state in {"ready", "updated"} else self.data["progress"],
+            }
+        )
+        self.progress(message)
+
+
+def run_nmcli(*arguments: str, timeout: float = 30.0) -> str:
+    """Run one bounded NetworkManager command and return stdout."""
+
+    result = subprocess.run(
+        ["nmcli", *arguments],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip()
+        raise RuntimeError(f"nmcli {' '.join(arguments)} failed: {detail}")
+    return result.stdout
+
+
+def current_connection() -> str:
+    """Return the active NetworkManager connection on the updater interface."""
+
+    output = run_nmcli("-g", "GENERAL.CONNECTION", "device", "show", WIFI_INTERFACE)
+    return output.strip()
+
+
+def scan_access_points() -> list[dict[str, Any]]:
+    """Scan and return the strongest advertisement for every uNode AP."""
+
+    output = run_nmcli(
+        "-t",
+        "--escape",
+        "yes",
+        "-f",
+        "IN-USE,SSID,SIGNAL,SECURITY",
+        "device",
+        "wifi",
+        "list",
+        "ifname",
+        WIFI_INTERFACE,
+        "--rescan",
+        "yes",
+        timeout=45.0,
+    )
+    nodes: dict[str, dict[str, Any]] = {}
+    for line in output.splitlines():
+        fields = split_nmcli_fields(line)
+        if len(fields) < 4:
+            continue
+        active, ssid, signal, security = fields[:4]
+        match = SSID_PATTERN.fullmatch(ssid)
+        if not match:
+            continue
+        try:
+            strength = int(signal)
+        except ValueError:
+            strength = 0
+        candidate = {
+            "ssid": ssid,
+            "chipId": match.group(1).upper(),
+            "signal": strength,
+            "security": security or "Open",
+            "active": active == "*",
+        }
+        previous = nodes.get(ssid)
+        if previous is None or strength > int(previous["signal"]):
+            nodes[ssid] = candidate
+
+    return sorted(nodes.values(), key=lambda item: (-int(item["signal"]), item["ssid"]))
+
+
+def validate_ssid(ssid: str) -> re.Match[str]:
+    """Validate a selected node AP and return its chip-ID match."""
+
+    match = SSID_PATTERN.fullmatch(ssid)
+    if not match:
+        raise ValueError("Selected SSID is not a uNode access point")
+    return match
+
+
+def connect_node(ssid: str) -> None:
+    """Connect ``wlan0`` to a uNode AP using its deterministic credential."""
+
+    match = validate_ssid(ssid)
+    if current_connection() == ssid:
+        return
+
+    # Prefer an existing connection profile because it may contain deliberate
+    # local NetworkManager settings. Fall back to the factory AP credential.
+    existing = subprocess.run(
+        ["nmcli", "connection", "show", "id", ssid],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10.0,
+    )
+    if existing.returncode == 0:
+        try:
+            run_nmcli(
+                "--wait",
+                "20",
+                "connection",
+                "up",
+                "id",
+                ssid,
+                "ifname",
+                WIFI_INTERFACE,
+            )
+            return
+        except RuntimeError:
+            # A saved profile may contain an obsolete credential. Remove only
+            # that uNode profile, then recreate it with the deterministic AP
+            # credential instead of making the node appear unreachable.
+            run_nmcli("connection", "delete", "id", ssid)
+
+    password = "artnode" + match.group(1).upper()
+    run_nmcli(
+        "--wait",
+        "20",
+        "device",
+        "wifi",
+        "connect",
+        ssid,
+        "password",
+        password,
+        "ifname",
+        WIFI_INTERFACE,
+        timeout=30.0,
+    )
+
+
+def get_json(path: str, timeout: float = 2.5) -> dict[str, Any]:
+    """Read one public normal/recovery JSON endpoint without authentication."""
+
+    request = urllib.request.Request(BASE_URL + path, method="GET")
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def probe_node(timeout: float = 20.0) -> dict[str, Any]:
+    """Detect normal or recovery firmware and return normalized identity."""
+
+    deadline = time.monotonic() + timeout
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            status = get_json("/api/status")
+            legacy = not bool(status.get("rs485SplitControlSupported", True))
+            return {
+                "reachable": True,
+                "mode": "normal",
+                "name": str(status.get("name", "uNode")),
+                "chipId": str(status.get("chipId", "")).upper(),
+                "firmware": str(status.get("firmware", "unknown")),
+                "webAssets": str(status.get("webAssetVersion", "unknown")),
+                "webAssetsMatch": bool(status.get("webAssetVersionMatch", False)),
+                "inferredProfile": "legacy" if legacy else "normal",
+                "recoveryMode": False,
+            }
+        except Exception as error:  # noqa: BLE001 - normal endpoint may not exist in recovery.
+            last_error = error
+
+        try:
+            status = get_json("/api/recovery/status")
+            return {
+                "reachable": True,
+                "mode": "recovery",
+                "name": "uNode Recovery",
+                "chipId": str(status.get("chipId", "")).upper(),
+                "firmware": str(status.get("firmware", "unknown")),
+                "webAssets": "unavailable",
+                "webAssetsMatch": False,
+                "inferredProfile": "normal",
+                "recoveryMode": True,
+                "fsMounted": bool(status.get("fsMounted", False)),
+            }
+        except Exception as error:  # noqa: BLE001 - AP may still be associating.
+            last_error = error
+
+        time.sleep(0.5)
+
+    raise RuntimeError(f"uNode API did not become reachable: {last_error!r}")
+
+
+def restore_connection(name: str) -> None:
+    """Restore the Wi-Fi connection active before an inventory scan."""
+
+    if not name or name == "--" or current_connection() == name:
+        return
+    run_nmcli("--wait", "20", "connection", "up", "id", name, "ifname", WIFI_INTERFACE)
+
+
+def inventory(job: JobStatus) -> list[dict[str, Any]]:
+    """Scan, briefly query every uNode AP, then restore the prior Wi-Fi link."""
+
+    job.data["state"] = "scanning"
+    job.progress("Scanning for uNode access points", percent=5)
+    original = current_connection()
+    access_points = scan_access_points()
+    nodes: list[dict[str, Any]] = []
+
+    try:
+        total = max(1, len(access_points))
+        for index, access_point in enumerate(access_points):
+            ssid = str(access_point["ssid"])
+            job.progress(
+                f"Connecting to {ssid} ({index + 1}/{len(access_points)})",
+                percent=10 + int(75 * index / total),
+            )
+            node = dict(access_point)
+            try:
+                connect_node(ssid)
+                node.update(probe_node())
+                expected_chip = validate_ssid(ssid).group(1).upper()
+                node["identityMatch"] = node.get("chipId") == expected_chip
+                job.progress(
+                    f"Found {node.get('name')} {node.get('chipId')} "
+                    f"(FW {node.get('firmware')}, {node.get('mode')})"
+                )
+            except Exception as error:  # noqa: BLE001 - retain unreachable AP in inventory.
+                node.update(
+                    {
+                        "reachable": False,
+                        "mode": "unreachable",
+                        "firmware": "unknown",
+                        "error": str(error),
+                    }
+                )
+                job.progress(f"Could not query {ssid}: {error}")
+            nodes.append(node)
+            job.data["nodes"] = nodes
+            job.write()
+    finally:
+        job.progress(f"Restoring Wi-Fi connection {original or 'none'}", percent=90)
+        restore_connection(original)
+
+    return nodes
+
+
+def wait_for_normal_node(
+    ssid: str,
+    *,
+    firmware: str | None = None,
+    web_assets: str | None = None,
+    previous_boot_count: int | None = None,
+    timeout: float = 50.0,
+) -> dict[str, Any]:
+    """Reconnect after OTA and wait for expected normal-mode versions."""
+
+    deadline = time.monotonic() + timeout
+    last_error: Exception | None = None
+    next_connect = 0.0
+    while time.monotonic() < deadline:
+        now = time.monotonic()
+        if now >= next_connect:
+            try:
+                connect_node(ssid)
+            except Exception as error:  # noqa: BLE001 - AP may still be restarting.
+                last_error = error
+            next_connect = now + 4.0
+
+        try:
+            status = get_json("/api/status", timeout=2.0)
+            if (
+                previous_boot_count is not None
+                and int(status.get("bootCount", -1)) <= previous_boot_count
+            ):
+                time.sleep(0.4)
+                continue
+            if firmware is not None and str(status.get("firmware")) != firmware:
+                time.sleep(0.4)
+                continue
+            if web_assets is not None and str(status.get("webAssetVersion")) != web_assets:
+                time.sleep(0.4)
+                continue
+            return status
+        except Exception as error:  # noqa: BLE001 - reboot polling tolerates link loss.
+            last_error = error
+        time.sleep(0.4)
+
+    raise RuntimeError(f"Updated node did not return in normal mode: {last_error!r}")
+
+
+def backup_config(client: UNodeClient, chip_id: str, target_version: str) -> tuple[dict[str, Any], Path]:
+    """Download and archive the complete configuration before LittleFS OTA."""
+
+    config = client.get_config()
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
+    path = BACKUP_DIR / f"unode-{chip_id}-config-before-{target_version}-{timestamp}.json"
+    path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    return config, path
+
+
+def restore_config(config: dict[str, Any]) -> None:
+    """Restore configuration after a complete LittleFS image replacement."""
+
+    client = UNodeClient(BASE_URL)
+    client.save_config(config)
+    restored = client.get_config()
+    for key, expected in config.items():
+        if restored.get(key) != expected:
+            raise RuntimeError(f"Configuration restore mismatch for {key}")
+
+
+def perform_update(job: JobStatus, request: dict[str, Any]) -> dict[str, Any]:
+    """Connect to one selected AP and apply verified release artifacts."""
+
+    ssid = str(request.get("ssid", ""))
+    version = str(request.get("version", ""))
+    profile = str(request.get("profile", ""))
+    components = str(request.get("components", ""))
+    password = str(request.get("password", "")) or None
+
+    validate_ssid(ssid)
+    version_key(version)
+    if profile not in ALLOWED_PROFILES:
+        raise ValueError("Hardware profile must be normal or legacy")
+    if components not in ALLOWED_COMPONENTS:
+        raise ValueError("Update components must be firmware, littlefs, or both")
+
+    artifacts = resolve_release_artifacts(
+        version,
+        profile=profile,
+        artifacts_dir=ARTIFACTS_DIR,
+    )
+    job.data["state"] = "updating"
+    job.progress(f"Connecting to selected node {ssid}", percent=5)
+    connect_node(ssid)
+    node = probe_node()
+    expected_chip = validate_ssid(ssid).group(1).upper()
+    if node.get("chipId") != expected_chip:
+        raise RuntimeError(
+            f"Node identity mismatch: SSID {expected_chip}, API {node.get('chipId')}"
+        )
+
+    job.progress(
+        f"Verified {node.get('name')} {node.get('chipId')} "
+        f"running {node.get('firmware')} in {node.get('mode')} mode",
+        percent=10,
+    )
+
+    config: dict[str, Any] | None = None
+    backup_path: Path | None = None
+    recovery_mode = bool(node.get("recoveryMode"))
+
+    if not recovery_mode:
+        client = UNodeClient(BASE_URL, password=password)
+        client.ensure_authenticated()
+        current_status = client.get_json("/api/status")
+        if components in {"littlefs", "both"}:
+            config, backup_path = backup_config(client, expected_chip, version)
+            job.progress(f"Configuration archived as {backup_path.name}", percent=15)
+
+        if components in {"firmware", "both"}:
+            previous_boot_count = int(current_status["bootCount"])
+            job.progress(f"Uploading firmware {artifacts.firmware.name}", percent=25)
+            response = upload_file(
+                BASE_URL,
+                "/api/update/firmware",
+                artifacts.firmware,
+                token=client.token,
+            )
+            if response.status != 200:
+                raise RuntimeError(
+                    f"Firmware upload failed with HTTP {response.status}: "
+                    + response.body.decode(errors="replace")
+                )
+            current_status = wait_for_normal_node(
+                ssid,
+                firmware=version,
+                previous_boot_count=previous_boot_count,
+            )
+            job.progress("Firmware restarted successfully", percent=50)
+            client = UNodeClient(BASE_URL, password=password)
+            client.ensure_authenticated()
+
+        if components in {"littlefs", "both"}:
+            previous_boot_count = int(current_status["bootCount"])
+            job.progress(f"Uploading LittleFS {artifacts.littlefs.name}", percent=60)
+            response = upload_file(
+                BASE_URL,
+                "/api/update/fs",
+                artifacts.littlefs,
+                token=client.token,
+                timeout=120.0,
+            )
+            if response.status != 200:
+                raise RuntimeError(
+                    f"LittleFS upload failed with HTTP {response.status}: "
+                    + response.body.decode(errors="replace")
+                )
+            current_status = wait_for_normal_node(
+                ssid,
+                web_assets=version,
+                previous_boot_count=previous_boot_count,
+            )
+            if config is not None:
+                job.progress("Restoring archived configuration", percent=85)
+                restore_config(config)
+    else:
+        # Recovery exposes no configuration-download API. Installing LittleFS
+        # therefore intentionally restores the release image defaults. Do it
+        # before firmware so the following reboot exposes the normal API.
+        if components in {"littlefs", "both"}:
+            job.progress(
+                "Recovery mode: uploading LittleFS; existing configuration cannot be preserved",
+                percent=25,
+            )
+            response = upload_file(
+                BASE_URL,
+                "/api/update/fs",
+                artifacts.littlefs,
+                timeout=120.0,
+            )
+            if response.status != 200:
+                raise RuntimeError(
+                    f"Recovery LittleFS upload failed with HTTP {response.status}: "
+                    + response.body.decode(errors="replace")
+                )
+            current_status = wait_for_normal_node(ssid, web_assets=version)
+            job.progress("LittleFS recovered and normal mode returned", percent=60)
+
+        if components in {"firmware", "both"}:
+            previous_boot_count = (
+                int(current_status["bootCount"])
+                if components == "both"
+                else None
+            )
+            job.progress(f"Uploading firmware {artifacts.firmware.name}", percent=70)
+            # After a recovery LittleFS upload the node is in normal mode with
+            # release defaults; firmware-only recovery remains unauthenticated.
+            response = upload_file(
+                BASE_URL,
+                "/api/update/firmware",
+                artifacts.firmware,
+                timeout=90.0,
+            )
+            if response.status != 200:
+                raise RuntimeError(
+                    f"Recovery firmware upload failed with HTTP {response.status}: "
+                    + response.body.decode(errors="replace")
+                )
+            wait_for_normal_node(
+                ssid,
+                firmware=version,
+                previous_boot_count=previous_boot_count,
+            )
+
+    final = probe_node()
+    job.progress(
+        f"Update verified: firmware {final.get('firmware')}, "
+        f"web assets {final.get('webAssets')}",
+        percent=95,
+    )
+    return {
+        "ssid": ssid,
+        "chipId": expected_chip,
+        "version": version,
+        "profile": profile,
+        "components": components,
+        "backup": str(backup_path) if backup_path else "",
+        "recoveryUpdate": recovery_mode,
+        "node": final,
+    }
+
+
+def decode_request(encoded: str) -> dict[str, Any]:
+    """Decode one URL-safe base64 JSON request from the Node-RED flow."""
+
+    if not encoded or len(encoded) > 4096:
+        raise ValueError("Updater request is missing or too large")
+    padding = "=" * (-len(encoded) % 4)
+    payload = base64.urlsafe_b64decode(encoded + padding)
+    request = json.loads(payload.decode("utf-8"))
+    if not isinstance(request, dict):
+        raise ValueError("Updater request must be a JSON object")
+    return request
+
+
+def fixture_is_busy() -> bool:
+    """Report whether a regression, soak, or updater job owns the fixture."""
+
+    if fcntl is None:
+        return False
+
+    TEST_JOB_LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with TEST_JOB_LOCK_FILE.open("a+", encoding="utf-8") as fixture_lock:
+        try:
+            fcntl.flock(fixture_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(fixture_lock, fcntl.LOCK_UN)
+    return False
+
+
+def idle_status() -> dict[str, Any]:
+    """Return persisted state or a fresh idle response."""
+
+    fixture_busy = fixture_is_busy()
+    if STATUS_FILE.is_file():
+        try:
+            status = json.loads(STATUS_FILE.read_text(encoding="utf-8"))
+            if isinstance(status, dict):
+                status["releases"] = available_releases()
+                status["fixtureBusy"] = fixture_busy
+                if (
+                    not fixture_busy
+                    and not status.get("running")
+                    and status.get("message")
+                    == "The uNode test fixture is busy with a regression or soak job"
+                ):
+                    status.update(
+                        {
+                            "state": "idle",
+                            "message": "Ready to scan for uNode access points",
+                            "progress": 0,
+                        }
+                    )
+                return status
+        except (OSError, json.JSONDecodeError):
+            pass
+    return {
+        "running": False,
+        "state": "idle",
+        "message": "Ready to scan for uNode access points",
+        "startedAt": "",
+        "finishedAt": "",
+        "nodes": [],
+        "releases": available_releases(),
+        "progress": 0,
+        "fixtureBusy": fixture_busy,
+    }
+
+
+def run_request(encoded: str) -> int:
+    """Execute one locked scan or update request."""
+
+    if fcntl is None:
+        raise RuntimeError("uNode updater jobs require Linux file locking")
+
+    request = decode_request(encoded)
+    LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    TEST_JOB_LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with LOCK_FILE.open("w", encoding="utf-8") as lock, TEST_JOB_LOCK_FILE.open(
+        "w", encoding="utf-8"
+    ) as fixture_lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError("Another uNode updater job is already running")
+
+        try:
+            fcntl.flock(fixture_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            job = JobStatus(request)
+            job.finish(
+                "error",
+                "The uNode test fixture is busy with a regression or soak job",
+            )
+            return 75
+
+        job = JobStatus(request)
+        try:
+            action = request.get("action")
+            if action == "scan":
+                nodes = inventory(job)
+                message = (
+                    f"Scan complete: {len(nodes)} uNode access point(s) found"
+                )
+                job.finish("ready", message, nodes=nodes)
+            elif action == "update":
+                result = perform_update(job, request)
+                job.finish(
+                    "updated",
+                    f"uNode {result['chipId']} updated to {result['version']}",
+                    result=result,
+                )
+            else:
+                raise ValueError("Updater action must be scan or update")
+        except Exception as error:  # noqa: BLE001 - surface complete failure in dashboard.
+            job.finish("error", str(error))
+            return 1
+    return 0
+
+
+def main() -> int:
+    """Command-line entry point used by Node-RED and unit tests."""
+
+    if len(sys.argv) < 2:
+        raise SystemExit("Usage: node_updater.py status | releases | request BASE64JSON")
+
+    command = sys.argv[1]
+    if command == "status":
+        print(json.dumps(idle_status()))
+        return 0
+    if command == "releases":
+        print(json.dumps(available_releases()))
+        return 0
+    if command == "request" and len(sys.argv) == 3:
+        return run_request(sys.argv[2])
+    raise SystemExit("Usage: node_updater.py status | releases | request BASE64JSON")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -13,6 +13,11 @@ explicitly in each release entry.
 
 ### Changed
 
+- Added a Node-RED production updater page that discovers uNode access points,
+  inventories normal and Recovery Mode firmware, and installs verified local
+  firmware/LittleFS release artifacts. Normal-mode LittleFS updates archive
+  and restore the node configuration; updater, regression, and soak jobs share
+  an exclusive hardware-fixture lock.
 - Hardened oversized UDP handling for Art-Net and sACN. The portable Art-Net
   library now uses a bounded discard state machine for unknown UDP transports
   and supports an explicit constant-time discard capability for transports
