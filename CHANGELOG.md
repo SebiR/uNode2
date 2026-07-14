@@ -11,6 +11,12 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+### Fixed
+
+- Quiesce the runtime-created fixture station interface before restarting a
+  test-harness build. This prevents the ESP8266 SDK teardown from falling into
+  the hardware watchdog after an otherwise successful reconnection test.
+
 ### Changed
 
 - Added a compile-time isolated production-test Wi-Fi harness. Explicit

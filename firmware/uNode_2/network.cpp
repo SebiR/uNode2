@@ -119,8 +119,8 @@ static void restoreConfiguredTestFallback() {
     temporaryTestClientPending = false;
     temporaryTestClientActive = false;
     temporaryTestClientConnected = false;
-    temporaryTestSSID[0] = '\0';
-    temporaryTestPassword[0] = '\0';
+    memset(temporaryTestSSID, 0, sizeof(temporaryTestSSID));
+    memset(temporaryTestPassword, 0, sizeof(temporaryTestPassword));
     reconnectCycleActive = false;
     reconnectRequestPending = false;
     disconnectedSince = 0;
@@ -371,6 +371,26 @@ bool requestTemporaryTestClient(
 
 bool isTemporaryTestClientActive() {
     return temporaryTestClientActive;
+}
+
+void prepareTemporaryTestClientRestart() {
+    if (!temporaryTestClientActive
+        && !temporaryTestClientPending) {
+        return;
+    }
+
+    stopMDNS();
+    temporaryTestClientPending = false;
+    temporaryTestClientActive = false;
+    temporaryTestClientConnected = false;
+    memset(temporaryTestSSID, 0, sizeof(temporaryTestSSID));
+    memset(temporaryTestPassword, 0, sizeof(temporaryTestPassword));
+
+    // ESP.restart() can otherwise stall in the SDK while a runtime-created
+    // station association is still active. Turn the radio off without erasing
+    // the original SDK credentials, then yield so lwIP can finish teardown.
+    WiFi.disconnect(true, false);
+    delay(100);
 }
 #endif
 

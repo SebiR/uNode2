@@ -50,6 +50,9 @@ bool requestTemporaryTestClient(
 
 /** @return True while temporary test credentials own the station interface. */
 bool isTemporaryTestClientActive();
+
+/** @brief Quiesces the volatile station interface before ESP.restart(). */
+void prepareTemporaryTestClientRestart();
 #endif
 
 /** @return True when the active interface or IP configuration changed. */

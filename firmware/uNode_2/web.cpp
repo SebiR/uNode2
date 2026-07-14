@@ -2940,6 +2940,9 @@ void updateWeb() {
   if (restartScheduled
       && (int32_t)(millis() - restartAtMillis) >= 0) {
     LOG_INFO("Restarting now");
+#if ENABLE_TEST_HARNESS_API
+    prepareTemporaryTestClientRestart();
+#endif
     ESP.restart();
   }
 }
