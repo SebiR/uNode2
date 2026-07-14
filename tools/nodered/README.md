@@ -33,12 +33,13 @@ only the currently associated ESP8266 AP. The previous connection is restored
 after inventory; if Wi-Fi was originally idle, it is returned to idle instead
 of remaining connected to the final node.
 
-The updater page also contains a **Status LED Test** card. It uses the stored
-node inventory, connects the Pi to the selected AP, and exposes separate color
-pickers for the network and Art-Net/DMX WS2812 pixels. Apply creates a volatile
-override; Release returns control to firmware status logic. Capability data
-from `/api/status` disables the controls for Legacy hardware, Recovery Mode,
-and older firmware that does not provide the RGB API.
+The separate **Hardware Test** page contains a **Status LED Test** card. It uses
+the stored node inventory from the updater, connects the Pi to the selected AP,
+and exposes separate color pickers for the network and Art-Net/DMX WS2812
+pixels. Apply creates a volatile override; Release returns control to firmware
+status logic. Capability data from `/api/status` disables the controls for
+Legacy hardware, Recovery Mode, and older firmware that does not provide the
+RGB API.
 
 Normal-mode LittleFS updates archive the complete configuration under
 `artifacts/node_backups/` and restore it after the image restart. Recovery mode

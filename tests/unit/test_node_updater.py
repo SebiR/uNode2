@@ -21,14 +21,20 @@ SPEC.loader.exec_module(node_updater)
 def test_node_red_flow_contains_capability_aware_led_controls() -> None:
     flow = json.loads(FLOW_PATH.read_text(encoding="utf-8"))
     nodes = {node["id"]: node for node in flow["nodes"]}
+    configs = {config["id"]: config for config in flow["configs"]}
 
     template = nodes["a11e000000000129"]
     validator = nodes["a11e000000000130"]
+    led_group = configs["a11e000000000212"]
+    hardware_page = configs["a11e000000000213"]
     assert template["name"] == "WS2812 LED control"
     assert "ledColorOverrideSupported" in template["format"]
     assert "Legacy hardware" in template["format"]
     assert "led-set" in validator["func"]
     assert "led-release" in validator["func"]
+    assert hardware_page["name"] == "Hardware Test"
+    assert hardware_page["path"] == "/hardware-test"
+    assert led_group["page"] == hardware_page["id"]
 
 
 def test_split_nmcli_fields_preserves_escaped_colons_and_backslashes() -> None:

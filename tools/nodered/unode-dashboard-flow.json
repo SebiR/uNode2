@@ -816,7 +816,7 @@
       "page": "a11e000000000208",
       "width": 12,
       "height": 7,
-      "order": 4,
+      "order": 3,
       "showTitle": true,
       "className": "",
       "visible": true,
@@ -824,13 +824,32 @@
       "groupType": "default"
     },
     {
+      "id": "a11e000000000213",
+      "type": "ui-page",
+      "name": "Hardware Test",
+      "ui": "a11e000000000201",
+      "path": "/hardware-test",
+      "icon": "lightbulb",
+      "layout": "grid",
+      "theme": "a11e000000000202",
+      "breakpoints": [
+        {"name": "Default", "px": 0, "cols": 3},
+        {"name": "Tablet", "px": 576, "cols": 6},
+        {"name": "Desktop", "px": 1024, "cols": 12}
+      ],
+      "order": 3,
+      "className": "",
+      "visible": "true",
+      "disabled": "false"
+    },
+    {
       "id": "a11e000000000212",
       "type": "ui-group",
       "name": "Status LED Test",
-      "page": "a11e000000000208",
+      "page": "a11e000000000213",
       "width": 12,
       "height": 5,
-      "order": 3,
+      "order": 1,
       "showTitle": true,
       "className": "",
       "visible": true,
