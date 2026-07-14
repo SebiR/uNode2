@@ -48,6 +48,18 @@ uint8_t getSacnActiveSourceCount();
 uint8_t getSacnWinningPriority();
 /** @return Number of sACN source-loss timeouts. */
 uint32_t getSacnSourceTimeoutCount();
+/** @return True while the configured sACN multicast group is joined. */
+bool isSacnMulticastJoined();
+/** @return Number of successful sACN multicast joins since boot. */
+uint32_t getSacnMulticastJoinCount();
+/** @return Number of successful sACN multicast leaves since boot. */
+uint32_t getSacnMulticastLeaveCount();
+/** @return Number of failed sACN multicast joins since boot. */
+uint32_t getSacnMulticastJoinFailureCount();
+/** @return Number of failed sACN multicast leaves since boot. */
+uint32_t getSacnMulticastLeaveFailureCount();
+/** @return Number of sACN UDP socket bind attempts since boot. */
+uint32_t getSacnSocketRebindCount();
 
 /** @return True when the current frame was sent as sACN multicast. */
 bool sendSacnFrame();

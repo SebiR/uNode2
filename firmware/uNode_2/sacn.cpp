@@ -8,6 +8,7 @@
 
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
+#include <lwip/igmp.h>
 
 #undef LOG_MODULE
 #define LOG_MODULE "SACN"
@@ -43,6 +44,14 @@ static uint32_t streamTerminatedCounter = 0;
 static uint32_t sourceTimeoutCounter = 0;
 static uint8_t outgoingSequence = 1;
 static uint8_t packetBuffer[SACN_MAX_PACKET_SIZE];
+static bool sacnMulticastJoined = false;
+static IPAddress sacnMulticastInterface;
+static IPAddress sacnMulticastGroup;
+static uint32_t sacnMulticastJoinCounter = 0;
+static uint32_t sacnMulticastLeaveCounter = 0;
+static uint32_t sacnMulticastJoinFailureCounter = 0;
+static uint32_t sacnMulticastLeaveFailureCounter = 0;
+static uint32_t sacnSocketRebindCounter = 0;
 
 struct SacnSourceState {
   uint8_t cid[16];
@@ -331,9 +340,46 @@ static void applySacnFailsafe() {
     "sACN output failsafe active");
 }
 
+/** @brief Closes the socket and releases its explicit IGMP membership. */
+static void closeSacnSocket() {
+  sacnUdp.stop();
+
+  if (!sacnMulticastJoined) {
+    return;
+  }
+
+  err_t leaveResult =
+    igmp_leavegroup(
+      sacnMulticastInterface,
+      sacnMulticastGroup);
+
+  // The previously used interface address can already be gone when Wi-Fi
+  // changes between station and AP mode. In that case ask lwIP to remove the
+  // membership from every interface so the finite IGMP group pool is still
+  // released.
+  if (leaveResult != ERR_OK) {
+    leaveResult =
+      igmp_leavegroup(
+        IPAddress(),
+        sacnMulticastGroup);
+  }
+
+  if (leaveResult == ERR_OK) {
+    sacnMulticastLeaveCounter++;
+  } else {
+    sacnMulticastLeaveFailureCounter++;
+    LOG_WARN("sACN multicast leave failed");
+  }
+
+  sacnMulticastJoined = false;
+  sacnMulticastInterface = IPAddress();
+  sacnMulticastGroup = IPAddress();
+}
+
 /** @brief Opens the sACN socket and joins the configured multicast group. */
 static bool bindSacnSocket() {
-  sacnUdp.stop();
+  closeSacnSocket();
+  sacnSocketRebindCounter++;
 
   const uint16_t universe =
     getSacnUniverse();
@@ -346,10 +392,26 @@ static bool bindSacnSocket() {
   bool ok = false;
 
   if (localIP != IPAddress()) {
-    ok = sacnUdp.beginMulticast(
-      localIP,
-      multicastIP,
-      SACN_PORT);
+    const err_t joinResult =
+      igmp_joingroup(
+        localIP,
+        multicastIP);
+
+    if (joinResult == ERR_OK) {
+      sacnMulticastJoined = true;
+      sacnMulticastInterface = localIP;
+      sacnMulticastGroup = multicastIP;
+      sacnMulticastJoinCounter++;
+
+      ok = sacnUdp.begin(SACN_PORT);
+
+      if (!ok) {
+        closeSacnSocket();
+      }
+    } else {
+      sacnMulticastJoinFailureCounter++;
+      LOG_WARN("sACN multicast join failed");
+    }
   }
 
   if (!ok) {
@@ -797,4 +859,28 @@ uint8_t getSacnWinningPriority() {
 
 uint32_t getSacnSourceTimeoutCount() {
   return sourceTimeoutCounter;
+}
+
+bool isSacnMulticastJoined() {
+  return sacnMulticastJoined;
+}
+
+uint32_t getSacnMulticastJoinCount() {
+  return sacnMulticastJoinCounter;
+}
+
+uint32_t getSacnMulticastLeaveCount() {
+  return sacnMulticastLeaveCounter;
+}
+
+uint32_t getSacnMulticastJoinFailureCount() {
+  return sacnMulticastJoinFailureCounter;
+}
+
+uint32_t getSacnMulticastLeaveFailureCount() {
+  return sacnMulticastLeaveFailureCounter;
+}
+
+uint32_t getSacnSocketRebindCount() {
+  return sacnSocketRebindCounter;
 }

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import random
 import socket
+import threading
 import time
 from dataclasses import dataclass, field
 
@@ -50,6 +51,16 @@ class HostSoakProfile:
     live_protocol: int
 
 
+@dataclass
+class SoakStreamState:
+    universe: int
+    sacn_universe: int
+    sent: int = 0
+    error: BaseException | None = None
+    stop: threading.Event = field(default_factory=threading.Event)
+    lock: threading.Lock = field(default_factory=threading.Lock)
+
+
 def _soak_duration_seconds() -> float:
     return max(5.0, float(os.environ.get("UNODE_SOAK_SECONDS", "60")))
 
@@ -60,6 +71,72 @@ def _soak_interval_seconds() -> float:
 
 def _reachability_grace_seconds() -> float:
     return max(1.0, float(os.environ.get("UNODE_SOAK_REACHABILITY_GRACE", "8.0")))
+
+
+def _stream_fps() -> float:
+    return min(44.0, max(1.0, float(os.environ.get("UNODE_SOAK_STREAM_FPS", "40"))))
+
+
+def _run_network_stream(
+    unode_ip: str,
+    profile: HostSoakProfile,
+    state: SoakStreamState,
+    fps: float,
+) -> None:
+    """Send realistic continuous live data independently of control checks."""
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sequence = 1
+    next_packet = time.monotonic()
+    lengths = (2, 4, 6, 24, 64, 128, 512)
+
+    try:
+        while not state.stop.is_set():
+            now = time.monotonic()
+            if now < next_packet:
+                state.stop.wait(min(0.002, next_packet - now))
+                continue
+
+            with state.lock:
+                universe = state.universe
+                sacn_universe = state.sacn_universe
+                sent = state.sent
+
+            length = lengths[sent % len(lengths)]
+            values = bytes((sent * 17 + index * 29) & 0xFF for index in range(length))
+
+            if profile.live_protocol == 0:
+                packet = make_artdmx(
+                    universe,
+                    values,
+                    sequence=sequence,
+                )
+                target = (unode_ip, ARTNET_PORT)
+            else:
+                packet = make_sacn_dmx(
+                    universe=sacn_universe,
+                    values=values,
+                    sequence=sequence,
+                )
+                target = (unode_ip, SACN_PORT)
+
+            sock.sendto(packet, target)
+
+            with state.lock:
+                state.sent += 1
+
+            sequence = (sequence + 1) & 0xFF
+            if sequence == 0:
+                sequence = 1
+
+            next_packet += 1.0 / fps
+            if next_packet < now - 0.1:
+                next_packet = now
+    except BaseException as error:  # noqa: BLE001 - propagated to the test thread.
+        state.error = error
+        state.stop.set()
+    finally:
+        sock.close()
 
 
 def _opcode_bytes(opcode: int) -> bytes:
@@ -202,6 +279,7 @@ def test_host_soak_network_output_and_runtime_stability(
 
     duration = _soak_duration_seconds()
     interval = _soak_interval_seconds()
+    stream_fps = _stream_fps()
     grace = _reachability_grace_seconds()
     rng = random.Random(0xA27E7)
     original_config = unode_client.get_config()
@@ -212,11 +290,14 @@ def test_host_soak_network_output_and_runtime_stability(
     sacn_universe = max(1, universe)
     deadline = time.monotonic() + duration
     stats = SoakStats()
+    stream_state: SoakStreamState | None = None
+    stream_thread: threading.Thread | None = None
 
     step(
         "Starting host-only network-output soak: "
         f"profile={profile.name} "
         f"duration={duration:.1f}s interval={interval:.2f}s "
+        f"stream={stream_fps:.1f}fps "
         f"grace={grace:.1f}s artnetUniverse={universe} "
         f"sacnUniverse={sacn_universe}"
     )
@@ -235,9 +316,26 @@ def test_host_soak_network_output_and_runtime_stability(
         stats.max_heap_fragmentation = int(initial_status.get("heapFragmentation", 0))
         stats.last_status = initial_status
 
+        stream_state = SoakStreamState(
+            universe=universe,
+            sacn_universe=sacn_universe,
+        )
+        stream_thread = threading.Thread(
+            target=_run_network_stream,
+            args=(unode_ip, profile, stream_state, stream_fps),
+            name=f"uNode-{profile.name}-stream",
+            daemon=True,
+        )
+        stream_thread.start()
+
         iteration = 0
         while time.monotonic() < deadline:
             iteration += 1
+
+            if stream_state.error is not None:
+                raise AssertionError(
+                    f"{profile.name} stream sender failed: {stream_state.error!r}"
+                ) from stream_state.error
 
             try:
                 status, failures = _read_status_with_grace(
@@ -301,30 +399,6 @@ def test_host_soak_network_output_and_runtime_stability(
                     f"last_status={stats.last_status}, cause={error}"
                 ) from error
 
-            payload_length = rng.choice([2, 4, 6, 24, 64, 128, 512])
-            values = [rng.randrange(256) for _ in range(payload_length)]
-
-            if profile.live_protocol == 0:
-                send_artnet_packet(
-                    unode_ip,
-                    make_artdmx(
-                        universe,
-                        values,
-                        sequence=0,
-                    ),
-                )
-                stats.artdmx_packets += 1
-            else:
-                _send_sacn_udp(
-                    unode_ip,
-                    make_sacn_dmx(
-                        universe=sacn_universe,
-                        values=values,
-                        sequence=(iteration % 255) or 1,
-                    ),
-                )
-                stats.sacn_packets += 1
-
             if iteration % 5 == 0:
                 send_artnet_packet(unode_ip, make_artpoll())
                 stats.artpoll_packets += 1
@@ -359,11 +433,24 @@ def test_host_soak_network_output_and_runtime_stability(
                 unode_client.save_config(config)
                 universe = configured_port_address(config)
                 sacn_universe = max(1, universe)
+                with stream_state.lock:
+                    stream_state.universe = universe
+                    stream_state.sacn_universe = sacn_universe
                 stats.config_changes += 1
 
             time.sleep(interval)
 
     finally:
+        if stream_state is not None:
+            stream_state.stop.set()
+        if stream_thread is not None:
+            stream_thread.join(timeout=3.0)
+        if stream_state is not None:
+            if profile.live_protocol == 0:
+                stats.artdmx_packets = stream_state.sent
+            else:
+                stats.sacn_packets = stream_state.sent
+
         step("Restoring original config after soak")
         try:
             unode_client.save_config(original_config)

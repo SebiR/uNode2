@@ -263,6 +263,18 @@ void broadcastStatus() {
     getSacnWinningPriority();
   sacnDiagnostics["sourceTimeouts"] =
     getSacnSourceTimeoutCount();
+  sacnDiagnostics["multicastJoined"] =
+    isSacnMulticastJoined();
+  sacnDiagnostics["multicastJoins"] =
+    getSacnMulticastJoinCount();
+  sacnDiagnostics["multicastLeaves"] =
+    getSacnMulticastLeaveCount();
+  sacnDiagnostics["multicastJoinFailures"] =
+    getSacnMulticastJoinFailureCount();
+  sacnDiagnostics["multicastLeaveFailures"] =
+    getSacnMulticastLeaveFailureCount();
+  sacnDiagnostics["socketRebinds"] =
+    getSacnSocketRebindCount();
 
   doc["artSyncs"] =
     getArtSyncCounter();

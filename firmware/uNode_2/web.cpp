@@ -909,6 +909,7 @@ static void handleUpdateUpload(
   } else if (
     upload.status == UPLOAD_FILE_WRITE) {
     if (updateUploadError.length() > 0) {
+      esp_yield();
       return;
     }
 
@@ -971,6 +972,10 @@ static void handleUpdateUpload(
   }
 
   updateLEDs();
+  // ESP8266WebServer can process several upload chunks inside one
+  // handleClient() call. Yield here, like the core HTTP update server does,
+  // so a fast firmware or LittleFS upload cannot starve Wi-Fi and the WDT.
+  esp_yield();
 }
 
 /** @brief Sends the final response after an OTA upload transaction. */
@@ -1353,6 +1358,18 @@ static void handleStatus() {
     getSacnWinningPriority();
   sacnDiagnostics["sourceTimeouts"] =
     getSacnSourceTimeoutCount();
+  sacnDiagnostics["multicastJoined"] =
+    isSacnMulticastJoined();
+  sacnDiagnostics["multicastJoins"] =
+    getSacnMulticastJoinCount();
+  sacnDiagnostics["multicastLeaves"] =
+    getSacnMulticastLeaveCount();
+  sacnDiagnostics["multicastJoinFailures"] =
+    getSacnMulticastJoinFailureCount();
+  sacnDiagnostics["multicastLeaveFailures"] =
+    getSacnMulticastLeaveFailureCount();
+  sacnDiagnostics["socketRebinds"] =
+    getSacnSocketRebindCount();
 
   doc["failsafeMode"] =
     config.failsafeMode;

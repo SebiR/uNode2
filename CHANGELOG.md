@@ -13,6 +13,20 @@ explicitly in each release entry.
 
 ### Changed
 
+- Added an explicit ESP8266 scheduler/Wi-Fi yield after every OTA upload
+  block, matching the core HTTP update server and preventing fast full-size
+  LittleFS uploads from starving the hardware watchdog.
+- Fixed an sACN multicast-membership leak exposed by long SoftAP soak testing.
+  The ESP8266 `WiFiUDP` implementation joins IGMP groups in
+  `beginMulticast()` but does not leave them in `stop()`. uNode now owns the
+  join/leave lifecycle explicitly on every socket rebind and reports multicast
+  join, leave, failure, and rebind counters in diagnostics.
+- Added regression coverage that cycles through more multicast Universes than
+  the eight-entry lwIP IGMP pool, plus sustained 40 FPS sACN input while the
+  HTTP API remains responsive.
+- Host network-output soaks now drive Art-Net and sACN continuously at 40 FPS
+  in a dedicated sender thread while control-plane, parser, and API checks run
+  independently at their configured interval.
 - Hardened long-running SoftAP operation after a host soak exposed a hardware
   watchdog reset followed by an unresponsive Wi-Fi stack. Wi-Fi status, RSSI,
   and SoftAP station-count queries are now rate-limited, while sACN receive

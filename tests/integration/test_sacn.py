@@ -99,6 +99,113 @@ def test_sacn_live_protocol_accepts_data_packet(
     assert int(status["sacnUniverse"]) == universe
 
 
+def test_sacn_sustained_40fps_stream_remains_reachable(
+    unode_client: UNodeClient,
+    unode_ip: str,
+    preserved_config: dict,
+) -> None:
+    """Exercise a short controller-rate stream instead of isolated packets."""
+
+    _config, universe = _configure_sacn_output(unode_client, preserved_config)
+    before = unode_client.get_json("/api/status")
+    before_packets = int(before.get("sacnPackets", 0))
+    initial_boot_count = int(before["bootCount"])
+    duration = 5.0
+    interval = 1.0 / 40.0
+    deadline = time.monotonic() + duration
+    next_packet = time.monotonic()
+    sequence = 1
+    sent = 0
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    step("Streaming sACN at 40 FPS for 5 seconds while checking HTTP liveness")
+    try:
+        while time.monotonic() < deadline:
+            now = time.monotonic()
+            if now < next_packet:
+                time.sleep(min(0.002, next_packet - now))
+                continue
+
+            sock.sendto(
+                make_sacn_dmx(
+                    universe=universe,
+                    sequence=sequence,
+                    cid=CID_A,
+                    values=[sent & 0xFF, (sent * 17) & 0xFF],
+                ),
+                (unode_ip, SACN_PORT),
+            )
+            sent += 1
+            sequence = (sequence + 1) & 0xFF
+            if sequence == 0:
+                sequence = 1
+            next_packet += interval
+
+            if sent % 40 == 0:
+                status = unode_client.get_json("/api/status", timeout=2.0)
+                assert int(status["bootCount"]) == initial_boot_count
+    finally:
+        sock.close()
+
+    status = wait_for_status(
+        unode_client,
+        lambda data: int(data.get("sacnPackets", 0)) > before_packets,
+        timeout=3.0,
+    )
+    accepted = int(status["sacnPackets"]) - before_packets
+    step(f"Sustained sACN stream: sent={sent}, accepted={accepted}")
+    assert accepted >= int(sent * 0.9)
+
+
+def test_sacn_multicast_membership_is_released_on_universe_rebind(
+    unode_client: UNodeClient,
+    preserved_config: dict,
+) -> None:
+    config, _universe = _configure_sacn_output(unode_client, preserved_config)
+    before = unode_client.get_json("/api/status")["sacnDiagnostics"]
+
+    # The ESP8266 lwIP build has only eight IGMP group slots. Walking through
+    # more than eight distinct multicast groups makes a missing leave operation
+    # fail deterministically instead of merely increasing an invisible refcount.
+    changed_configs = []
+    original_universe = int(config.get("universe", 0))
+    for offset in range(1, 11):
+        changed = config.copy()
+        changed["universe"] = (original_universe + offset) % 16
+        changed_configs.append(changed)
+
+    step(
+        "Cycling through ten sACN Universes and restoring the original "
+        "to exercise IGMP cleanup beyond the eight-group lwIP pool"
+    )
+    for changed in changed_configs:
+        unode_client.save_config(changed)
+    unode_client.save_config(config)
+    expected_rebinds = len(changed_configs) + 1
+    status = wait_for_status(
+        unode_client,
+        lambda data: int(
+            data.get("sacnDiagnostics", {}).get("socketRebinds", 0)
+        )
+        >= int(before.get("socketRebinds", 0)) + expected_rebinds,
+    )
+    diagnostics = status["sacnDiagnostics"]
+
+    assert diagnostics["multicastJoined"] is True
+    assert int(diagnostics["multicastJoins"]) >= (
+        int(before["multicastJoins"]) + expected_rebinds
+    )
+    assert int(diagnostics["multicastLeaves"]) >= (
+        int(before["multicastLeaves"]) + expected_rebinds
+    )
+    assert int(diagnostics["multicastJoinFailures"]) == int(
+        before["multicastJoinFailures"]
+    )
+    assert int(diagnostics["multicastLeaveFailures"]) == int(
+        before["multicastLeaveFailures"]
+    )
+
+
 def test_sacn_source_name_and_priority_are_configurable(
     unode_client: UNodeClient,
     preserved_config: dict,

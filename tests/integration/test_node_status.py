@@ -19,6 +19,17 @@ def test_status_endpoint_reports_expected_basics(unode_client: UNodeClient) -> N
     assert isinstance(status["uptime"], int)
     assert isinstance(status["artNetDiagnostics"], dict)
     assert isinstance(status["artNetSources"], list)
+    assert isinstance(status["sacnDiagnostics"], dict)
+
+    for key in (
+        "multicastJoined",
+        "multicastJoins",
+        "multicastLeaves",
+        "multicastJoinFailures",
+        "multicastLeaveFailures",
+        "socketRebinds",
+    ):
+        assert key in status["sacnDiagnostics"]
 
     for source in status["artNetSources"]:
         assert isinstance(source["ip"], str)
