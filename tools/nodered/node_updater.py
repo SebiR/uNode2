@@ -82,7 +82,7 @@ FLASH_BAUD = 512_000
 FIRMWARE_ADDRESS = 0x000000
 LITTLEFS_ADDRESS = 0x300000
 EXPECTED_FLASH_BYTES = 4 * 1024 * 1024
-CH340_VID_PID = (0x1A86, 0x7523)
+CP210X_DEFAULT_VID_PID = (0x10C4, 0xEA60)
 
 
 def utc_now() -> str:
@@ -198,8 +198,8 @@ def serial_programmers(
     """Return attached USB serial devices with stable Linux paths.
 
     RP2040 CDC devices remain visible for diagnostics but are deliberately not
-    selectable as ESP programmers. A CH340 is marked as recommended because
-    that is the DTR/RTS-capable adapter used by the production fixture.
+    selectable as ESP programmers. CP210x adapters are preferred for the
+    production fixture while the CH340 remains a fully compatible bench tool.
     """
 
     stable_paths: dict[str, str] = {}
@@ -224,7 +224,10 @@ def serial_programmers(
         manufacturer = str(port.manufacturer or "")
         is_rp2040 = vid == 0x2E8A or "RP2040" in product.upper()
         stable_path = stable_paths.get(resolved_device, device)
-        recommended = (vid, pid) == CH340_VID_PID
+        recommended = (
+            (vid, pid) == CP210X_DEFAULT_VID_PID
+            or "CP210" in product.upper()
+        )
         supported = (
             not is_rp2040
             and vid is not None

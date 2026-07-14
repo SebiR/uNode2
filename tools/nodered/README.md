@@ -39,9 +39,10 @@ update is rejected while a test is running, and a test cannot start while an
 update owns `wlan0`.
 
 The same page also provides **Initial USB Flash** for blank or reworked nodes.
-It enumerates stable `/dev/serial/by-id/` devices, recommends the CH340 fixture
-adapter, and excludes the RP2040 test tool. Espressif `esptool` uses the
-adapter's DTR/RTS wiring to enter the ESP8266 ROM bootloader automatically. The
+It enumerates stable `/dev/serial/by-id/` devices, prefers the CP210x production
+adapter, retains CH340 compatibility for the current bench setup, and excludes
+the RP2040 test tool. Espressif `esptool` uses the adapter's DTR/RTS wiring to
+enter the ESP8266 ROM bootloader automatically. The
 backend reads the chip ID and flash ID first, requires the 4MB layout, then
 writes and verifies firmware at `0x000000` plus the complete LittleFS image at
 `0x300000` in one operation. A successful factory flash is only reported after

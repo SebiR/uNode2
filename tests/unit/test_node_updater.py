@@ -122,14 +122,25 @@ def test_idle_status_reports_fixture_lock_and_clears_stale_busy_error(
     assert idle["message"] == "Ready to scan for uNode access points"
 
 
-def test_serial_programmers_recommends_ch340_and_excludes_rp2040(
+def test_serial_programmers_prefers_cp210x_and_excludes_rp2040(
     tmp_path: Path,
 ) -> None:
+    cp2102 = tmp_path / "ttyUSB1"
     ch340 = tmp_path / "ttyUSB0"
     rp2040 = tmp_path / "ttyACM0"
+    cp2102.touch()
     ch340.touch()
     rp2040.touch()
     ports = [
+        SimpleNamespace(
+            device=str(cp2102),
+            vid=0x10C4,
+            pid=0xEA60,
+            product="CP2102 USB to UART Bridge Controller",
+            description="CP2102",
+            manufacturer="Silicon Labs",
+            serial_number="PRODUCTION",
+        ),
         SimpleNamespace(
             device=str(ch340),
             vid=0x1A86,
@@ -152,12 +163,15 @@ def test_serial_programmers_recommends_ch340_and_excludes_rp2040(
 
     devices = node_updater.serial_programmers(tmp_path / "missing", ports)
 
-    assert devices[0]["device"] == str(ch340)
+    assert devices[0]["device"] == str(cp2102)
     assert devices[0]["recommended"] is True
     assert devices[0]["supported"] is True
-    assert devices[0]["vidPid"] == "1A86:7523"
-    assert devices[1]["isRp2040"] is True
-    assert devices[1]["supported"] is False
+    assert devices[0]["vidPid"] == "10C4:EA60"
+    assert devices[1]["device"] == str(ch340)
+    assert devices[1]["recommended"] is False
+    assert devices[1]["supported"] is True
+    assert devices[2]["isRp2040"] is True
+    assert devices[2]["supported"] is False
 
 
 def test_esptool_output_parsers_read_chip_id_mac_and_flash_capacity() -> None:
