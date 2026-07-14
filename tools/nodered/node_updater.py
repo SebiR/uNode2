@@ -653,6 +653,7 @@ def wait_for_normal_node(
     firmware: str | None = None,
     web_assets: str | None = None,
     previous_boot_count: int | None = None,
+    password: str | None = None,
     timeout: float = 50.0,
 ) -> dict[str, Any]:
     """Reconnect after OTA and wait for expected normal-mode versions."""
@@ -660,6 +661,7 @@ def wait_for_normal_node(
     deadline = time.monotonic() + timeout
     last_error: Exception | None = None
     next_connect = 0.0
+    client = UNodeClient(BASE_URL, password=password)
     while time.monotonic() < deadline:
         now = time.monotonic()
         if now >= next_connect:
@@ -670,7 +672,8 @@ def wait_for_normal_node(
             next_connect = now + 4.0
 
         try:
-            status = get_json("/api/status", timeout=2.0)
+            client.ensure_authenticated()
+            status = client.get_json("/api/status", timeout=2.0)
             if (
                 previous_boot_count is not None
                 and int(status.get("bootCount", -1)) <= previous_boot_count
@@ -1096,6 +1099,7 @@ def perform_update(job: JobStatus, request: dict[str, Any]) -> dict[str, Any]:
                 ssid,
                 firmware=version,
                 previous_boot_count=previous_boot_count,
+                password=password,
             )
             job.progress("Firmware restarted successfully", percent=50)
             client = UNodeClient(BASE_URL, password=password)
@@ -1120,6 +1124,7 @@ def perform_update(job: JobStatus, request: dict[str, Any]) -> dict[str, Any]:
                 ssid,
                 web_assets=version,
                 previous_boot_count=previous_boot_count,
+                password=password,
             )
             if config is not None:
                 job.progress("Restoring archived configuration", percent=85)
@@ -1144,7 +1149,11 @@ def perform_update(job: JobStatus, request: dict[str, Any]) -> dict[str, Any]:
                     f"Recovery LittleFS upload failed with HTTP {response.status}: "
                     + response.body.decode(errors="replace")
                 )
-            current_status = wait_for_normal_node(ssid, web_assets=version)
+            current_status = wait_for_normal_node(
+                ssid,
+                web_assets=version,
+                password=password,
+            )
             job.progress("LittleFS recovered and normal mode returned", percent=60)
 
         if components in {"firmware", "both"}:
@@ -1171,6 +1180,7 @@ def perform_update(job: JobStatus, request: dict[str, Any]) -> dict[str, Any]:
                 ssid,
                 firmware=version,
                 previous_boot_count=previous_boot_count,
+                password=password,
             )
 
     final = probe_node()

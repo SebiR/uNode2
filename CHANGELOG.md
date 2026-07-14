@@ -20,6 +20,9 @@ explicitly in each release entry.
 
 ### Fixed
 
+- Kept the Raspberry Pi production updater compatible with protected status
+  details. Its post-OTA reboot check now authenticates before reading Boot Count
+  instead of waiting for a field intentionally removed from public status.
 - Quiesce the runtime-created fixture station interface before restarting a
   test-harness build. This prevents the ESP8266 SDK teardown from falling into
   the hardware watchdog after an otherwise successful reconnection test.

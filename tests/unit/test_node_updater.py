@@ -558,6 +558,48 @@ def test_initial_flash_uses_verified_release_offsets_and_factory_ap(
     ]
 
 
+def test_ota_reconnect_uses_authenticated_diagnostics_for_boot_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[tuple] = []
+
+    class FakeClient:
+        def ensure_authenticated(self) -> None:
+            events.append(("authenticate",))
+
+        def get_json(self, path: str, *, timeout: float = 5.0) -> dict:
+            events.append(("get", path, timeout))
+            return {
+                "bootCount": 8,
+                "firmware": "0.25.0",
+                "webAssetVersion": "0.25.0",
+            }
+
+    def make_client(base_url: str, *, password: str | None = None) -> FakeClient:
+        events.append(("client", base_url, password))
+        return FakeClient()
+
+    monkeypatch.setattr(node_updater, "UNodeClient", make_client)
+    monkeypatch.setattr(
+        node_updater,
+        "connect_node",
+        lambda ssid: events.append(("connect", ssid)),
+    )
+
+    status = node_updater.wait_for_normal_node(
+        "uNode_ABC123",
+        firmware="0.25.0",
+        web_assets="0.25.0",
+        previous_boot_count=7,
+        password="fixture-password",
+        timeout=1.0,
+    )
+
+    assert status["bootCount"] == 8
+    assert ("client", node_updater.BASE_URL, "fixture-password") in events
+    assert ("get", "/api/status", 2.0) in events
+
+
 @pytest.mark.parametrize("version", ["v0.23.23", "0.23", "0.23.23-beta", "../../x"])
 def test_version_key_rejects_non_release_strings(version: str) -> None:
     with pytest.raises(ValueError):
