@@ -121,11 +121,11 @@ case "$PROFILE" in
             exit 2
         fi
         ;;
-    regression)
+    regression|reconnect)
         OPTIONS="${VALUE:-none}"
         ;;
     *)
-        echo "Profile must be 'host', 'dmx', or 'regression'" >&2
+        echo "Profile must be 'host', 'dmx', 'regression', or 'reconnect'" >&2
         exit 2
         ;;
 esac
@@ -227,6 +227,14 @@ case "$PROFILE" in
         if [[ "${#PYTEST_EXTRA[@]}" -gt 0 ]]; then
             CMD+=(-- "${PYTEST_EXTRA[@]}")
         fi
+        ;;
+    reconnect)
+        CMD=(
+            bash tools/test.sh
+            --integration
+            --reconnection
+            --path tests/integration/test_network_reconnection.py
+        )
         ;;
 esac
 

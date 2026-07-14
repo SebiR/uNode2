@@ -50,6 +50,7 @@ static const size_t MAX_CONFIG_JSON_SIZE = 4096;
 static const size_t MAX_CONFIG_UPLOAD_SIZE = 8192;
 static const size_t MAX_BRIGHTNESS_JSON_SIZE = 64;
 static const size_t MAX_LED_OVERRIDE_JSON_SIZE = 192;
+static const size_t MAX_NETWORK_ACTION_JSON_SIZE = 64;
 static const size_t MAX_DMX_JSON_SIZE = 3072;
 static const uint32_t RTC_DIAGNOSTICS_OFFSET = 32;
 static const uint32_t RTC_DIAGNOSTICS_MAGIC = 0x554E4F44UL;
@@ -1199,6 +1200,12 @@ static void handleStatus() {
     getDroppedIpv4FragmentCount();
   networkDiagnostics["ipv4FragmentedTxRejected"] =
     getRejectedIpv4FragmentedTxCount();
+  networkDiagnostics["reconnectAttemptsTotal"] =
+    getNetworkReconnectAttemptCount();
+  networkDiagnostics["reconnectSuccesses"] =
+    getNetworkReconnectSuccessCount();
+  networkDiagnostics["lastReconnectDuration"] =
+    getLastNetworkReconnectDuration();
 
   doc["uptime"] = millis();
 
@@ -1598,6 +1605,71 @@ static void handleRestart() {
     "Restarting");
 
   scheduleRestart();
+}
+
+/** @brief Starts a controlled Client-mode Wi-Fi reconnect cycle. */
+static void handleNetworkReconnect() {
+  if (!requireAuth()) {
+    return;
+  }
+
+  if (!requirePlainBodyLimit(
+        MAX_NETWORK_ACTION_JSON_SIZE,
+        "Network reconnect")) {
+    return;
+  }
+
+  JsonDocument request;
+  const DeserializationError parseResult =
+    deserializeJson(
+      request,
+      server.arg("plain"));
+
+  if (parseResult) {
+    server.send(
+      400,
+      "text/plain",
+      "Invalid reconnect request");
+    return;
+  }
+
+  const uint32_t outageMillis =
+    request["outageMs"] | 3000UL;
+
+  if (outageMillis < 1000UL
+      || outageMillis > 15000UL) {
+    server.send(
+      400,
+      "text/plain",
+      "outageMs must be between 1000 and 15000");
+    return;
+  }
+
+  if (!requestClientReconnect(outageMillis)) {
+    server.send(
+      409,
+      "text/plain",
+      "A connected Client interface is required");
+    return;
+  }
+
+  logEvent(
+    "wifi_reconnect",
+    "Controlled Wi-Fi reconnect requested");
+
+  JsonDocument response;
+  response["scheduled"] = true;
+  response["outageMs"] = outageMillis;
+
+  String json;
+  serializeJson(
+    response,
+    json);
+
+  server.send(
+    202,
+    "application/json",
+    json);
 }
 
 /** @brief Erases stored station credentials and restarts into configured mode. */
@@ -2569,6 +2641,11 @@ bool initWeb() {
     "/api/restart",
     HTTP_POST,
     handleRestart);
+
+  server.on(
+    "/api/network/reconnect",
+    HTTP_POST,
+    handleNetworkReconnect);
 
   server.on(
     "/api/wifi/forget",

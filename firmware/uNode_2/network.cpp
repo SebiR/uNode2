@@ -21,11 +21,22 @@ static uint32_t disconnectedSince = 0;
 static uint32_t nextReconnectMillis = 0;
 static uint32_t reconnectDelayMillis = 1000;
 static uint8_t reconnectAttempts = 0;
+static uint32_t reconnectAttemptCounter = 0;
+static uint32_t reconnectSuccessCounter = 0;
+static uint32_t lastReconnectDurationMillis = 0;
+static bool reconnectCycleActive = false;
+static bool reconnectRequestPending = false;
+static uint32_t reconnectRequestAtMillis = 0;
+static uint32_t reconnectHoldMillis = 0;
+static uint32_t reconnectHoldUntilMillis = 0;
 static uint32_t lastNetworkPollMillis = 0;
 
 static const uint32_t RECONNECT_DELAY_MIN_MS = 1000;
 static const uint32_t RECONNECT_DELAY_MAX_MS = 60000;
 static const uint32_t NETWORK_STATUS_POLL_INTERVAL_MS = 250;
+static const uint32_t RECONNECT_REQUEST_DELAY_MS = 250;
+static const uint32_t RECONNECT_OUTAGE_MIN_MS = 1000;
+static const uint32_t RECONNECT_OUTAGE_MAX_MS = 15000;
 
 /** @brief Advances LED animation while WiFiManager owns the main loop. */
 static void updateConfigPortalLED() {
@@ -233,6 +244,29 @@ bool forgetStoredWifiCredentials()
     return disconnected || WiFi.SSID().length() == 0;
 }
 
+bool requestClientReconnect(uint32_t outageMillis)
+{
+    if (config.wifiMode == WIFI_MODE_AP
+        || WiFi.status() != WL_CONNECTED
+        || reconnectRequestPending) {
+        return false;
+    }
+
+    reconnectHoldMillis = constrain(
+        outageMillis,
+        RECONNECT_OUTAGE_MIN_MS,
+        RECONNECT_OUTAGE_MAX_MS);
+    reconnectRequestAtMillis =
+        millis() + RECONNECT_REQUEST_DELAY_MS;
+    reconnectRequestPending = true;
+
+    LOG_INFO_PRINT("Controlled WiFi reconnect scheduled; outage ");
+    LOG_PRINT(LOG_LEVEL_INFO, reconnectHoldMillis);
+    LOG_PRINTLN(LOG_LEVEL_INFO, " ms");
+
+    return true;
+}
+
 String getIPAddress()
 {
     if (WiFi.status() == WL_CONNECTED)
@@ -437,6 +471,26 @@ bool updateNetwork()
     }
 
     lastNetworkPollMillis = now;
+
+    if (reconnectRequestPending
+        && (int32_t)(now - reconnectRequestAtMillis) >= 0) {
+        reconnectRequestPending = false;
+        reconnectCycleActive = true;
+        disconnectedSince = now;
+        reconnectAttempts = 0;
+        reconnectDelayMillis = RECONNECT_DELAY_MIN_MS;
+        reconnectHoldUntilMillis =
+            now + reconnectHoldMillis;
+        nextReconnectMillis = reconnectHoldUntilMillis;
+
+        stopMDNS();
+        WiFi.disconnect(
+            false,
+            false);
+
+        LOG_WARN("Controlled WiFi disconnect started");
+    }
+
     const wl_status_t status = WiFi.status();
     bool networkChanged = false;
 
@@ -445,17 +499,32 @@ bool updateNetwork()
             if (lastWifiStatus != WL_CONNECTED) {
                 LOG_INFO("WiFi connected");
 
+                if (reconnectCycleActive) {
+                    reconnectSuccessCounter++;
+                    lastReconnectDurationMillis =
+                        disconnectedSince
+                            ? now - disconnectedSince
+                            : 0;
+                    reconnectCycleActive = false;
+                }
+
                 reconnectAttempts = 0;
                 reconnectDelayMillis = RECONNECT_DELAY_MIN_MS;
                 disconnectedSince = 0;
+                reconnectHoldUntilMillis = 0;
             }
         } else {
             if (lastWifiStatus == WL_CONNECTED) {
                 LOG_WARN("WiFi connection lost");
                 disconnectedSince = now;
+                reconnectCycleActive = true;
                 reconnectAttempts = 0;
                 reconnectDelayMillis = RECONNECT_DELAY_MIN_MS;
-                nextReconnectMillis = now + reconnectDelayMillis;
+                nextReconnectMillis =
+                    reconnectHoldUntilMillis
+                    && (int32_t)(reconnectHoldUntilMillis - now) > 0
+                        ? reconnectHoldUntilMillis
+                        : now + reconnectDelayMillis;
                 stopMDNS();
             } else if (!disconnectedSince) {
                 disconnectedSince = now;
@@ -465,6 +534,7 @@ bool updateNetwork()
                 if (reconnectAttempts < UINT8_MAX) {
                     reconnectAttempts++;
                 }
+                reconnectAttemptCounter++;
 
                 LOG_INFO_PRINT("WiFi reconnect attempt ");
                 LOG_PRINTLN(LOG_LEVEL_INFO, reconnectAttempts);
@@ -526,4 +596,16 @@ uint32_t getNetworkDisconnectedAge() {
     return disconnectedSince
         ? millis() - disconnectedSince
         : 0;
+}
+
+uint32_t getNetworkReconnectAttemptCount() {
+    return reconnectAttemptCounter;
+}
+
+uint32_t getNetworkReconnectSuccessCount() {
+    return reconnectSuccessCounter;
+}
+
+uint32_t getLastNetworkReconnectDuration() {
+    return lastReconnectDurationMillis;
 }

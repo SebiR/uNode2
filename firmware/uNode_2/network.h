@@ -25,6 +25,13 @@ bool hasStoredWifiCredentials();
 /** @brief Erases stored station credentials from SDK flash. */
 bool forgetStoredWifiCredentials();
 
+/**
+ * @brief Schedules a controlled station disconnect followed by normal retry logic.
+ * @param outageMillis Minimum time before the first reconnect attempt.
+ * @return True when a connected Client/AP+Client interface accepted the request.
+ */
+bool requestClientReconnect(uint32_t outageMillis);
+
 /** @return True when the active interface or IP configuration changed. */
 bool updateNetwork();
 
@@ -40,3 +47,9 @@ String getSoftAPIPAddress();
 uint8_t getNetworkRetryCount();
 /** @return Milliseconds since Wi-Fi connectivity was lost, or zero. */
 uint32_t getNetworkDisconnectedAge();
+/** @return Total station reconnect attempts since boot. */
+uint32_t getNetworkReconnectAttemptCount();
+/** @return Successfully completed reconnect cycles since boot. */
+uint32_t getNetworkReconnectSuccessCount();
+/** @return Duration of the most recently completed reconnect cycle. */
+uint32_t getLastNetworkReconnectDuration();

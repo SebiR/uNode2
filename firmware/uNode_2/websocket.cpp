@@ -216,6 +216,12 @@ void broadcastStatus() {
     getDroppedIpv4FragmentCount();
   networkDiagnostics["ipv4FragmentedTxRejected"] =
     getRejectedIpv4FragmentedTxCount();
+  networkDiagnostics["reconnectAttemptsTotal"] =
+    getNetworkReconnectAttemptCount();
+  networkDiagnostics["reconnectSuccesses"] =
+    getNetworkReconnectSuccessCount();
+  networkDiagnostics["lastReconnectDuration"] =
+    getLastNetworkReconnectDuration();
 
   doc["artnetPackets"] =
     getArtDmxCounter();

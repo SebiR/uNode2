@@ -41,6 +41,12 @@ status logic. Capability data from `/api/status` disables the controls for
 Legacy hardware, Recovery Mode, and older firmware that does not provide the
 RGB API.
 
+The same page provides a guarded **Client Reconnection Test**. On a node in
+Client or AP+Client mode it requests a three-second station outage, then checks
+that the API, ArtPollReply, sACN multicast membership, and live packet handling
+recover without increasing the boot counter. It uses the same fixture lock and
+live pytest log as regression and soak jobs.
+
 Normal-mode LittleFS updates archive the complete configuration under
 `artifacts/node_backups/` and restore it after the image restart. Recovery mode
 has no configuration-download endpoint; firmware-only recovery is therefore

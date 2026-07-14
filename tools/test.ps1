@@ -2,6 +2,7 @@ param(
     [switch]$Integration,
     [switch]$Ota,
     [switch]$DestructiveOta,
+    [switch]$Reconnection,
     [string]$NodeIp = "",
     [string]$BaseUrl = "",
     [string]$Password = "",
@@ -35,7 +36,7 @@ $projectRoot =
 
 Set-Location $projectRoot
 
-if ($Ota -or $DestructiveOta)
+if ($Ota -or $DestructiveOta -or $Reconnection)
 {
     $Integration = $true
 }
@@ -85,6 +86,15 @@ if ($Integration)
     $env:UNODE_RUN_INTEGRATION = "1"
     $env:UNODE_IP = $NodeIp
     $env:UNODE_BASE_URL = $BaseUrl
+
+    if ($Reconnection)
+    {
+        $env:UNODE_RUN_RECONNECTION = "1"
+    }
+    else
+    {
+        Remove-Item Env:\UNODE_RUN_RECONNECTION -ErrorAction SilentlyContinue
+    }
 
     if ($Password.Length -gt 0)
     {
@@ -218,6 +228,10 @@ if ($Integration)
         {
             $Path = "tests/ota/test_ota_safe.py"
         }
+        elseif ($Reconnection)
+        {
+            $Path = "tests/integration/test_network_reconnection.py"
+        }
         else
         {
             $Path = "tests/integration"
@@ -240,6 +254,10 @@ if ($Integration)
     if ($DestructiveOta)
     {
         Write-Host "OTA     : DESTRUCTIVE recovery ($env:UNODE_OTA_PROFILE)" -ForegroundColor Red
+    }
+    if ($Reconnection)
+    {
+        Write-Host "Reconnect: controlled Client Wi-Fi outage" -ForegroundColor Cyan
     }
     if ($env:UNODE_SOAK_SECONDS)
     {
@@ -265,6 +283,7 @@ if ($Integration)
 else
 {
     Remove-Item Env:\UNODE_RUN_INTEGRATION -ErrorAction SilentlyContinue
+    Remove-Item Env:\UNODE_RUN_RECONNECTION -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_SOAK_SECONDS -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_DMX_SOAK_SECONDS -ErrorAction SilentlyContinue
     Remove-Item Env:\UNODE_LATENCY_SAMPLES -ErrorAction SilentlyContinue

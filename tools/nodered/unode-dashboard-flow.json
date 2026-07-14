@@ -163,7 +163,8 @@
         ],
         [
           "a11e000000000109",
-          "a11e000000000117"
+          "a11e000000000117",
+          "a11e000000000132"
         ]
       ]
     },
@@ -328,6 +329,44 @@
           "a11e000000000110"
         ]
       ]
+    },
+    {
+      "id": "a11e000000000132",
+      "type": "ui-template",
+      "z": "a11e000000000001",
+      "group": "a11e000000000214",
+      "page": "",
+      "ui": "",
+      "name": "Client reconnection test",
+      "order": 1,
+      "width": 12,
+      "height": 0,
+      "head": "",
+      "format": "<template>\n  <div class=\"unode-reconnect\">\n    <div><strong>Client Reconnection Test</strong><p>Temporarily disconnects the node from its current Wi-Fi, then verifies HTTP, ArtPoll, and sACN multicast recovery without rebooting.</p></div>\n    <button @click=\"start\" :disabled=\"running\">{{ running && state.profile === 'reconnect' ? 'Test running...' : 'Start Reconnection Test' }}</button>\n  </div>\n</template>\n<script>\nexport default {\n  computed: {\n    state() { return this.msg && this.msg.payload && typeof this.msg.payload === 'object' ? this.msg.payload : {} },\n    running() { return Boolean(this.state.running) }\n  },\n  methods: { start() { if (!this.running) this.send({payload:{action:'start-reconnect'}}) } }\n}\n</script>\n<style>\n.unode-reconnect{padding:4px;display:flex;align-items:center;justify-content:space-between;gap:20px}.unode-reconnect strong{display:block;margin-bottom:5px}.unode-reconnect p{margin:0;color:rgba(var(--v-theme-on-surface),.62);font-size:.82rem}.unode-reconnect button{min-height:38px;padding:8px 14px;border:1px solid #315f85;border-radius:5px;background:#315f85;color:#fff;font-weight:700;white-space:nowrap;cursor:pointer}.unode-reconnect button:disabled{opacity:.5;cursor:not-allowed}@media(max-width:700px){.unode-reconnect{align-items:stretch;flex-direction:column}}\n</style>",
+      "storeOutMessages": true,
+      "passthru": false,
+      "resendOnRefresh": true,
+      "templateScope": "local",
+      "className": "",
+      "x": 250,
+      "y": 480,
+      "wires": [["a11e000000000133"]]
+    },
+    {
+      "id": "a11e000000000133",
+      "type": "function",
+      "z": "a11e000000000001",
+      "name": "Validate reconnect request",
+      "func": "const request = msg.payload && typeof msg.payload === 'object' ? msg.payload : {};\nif (request.action !== 'start-reconnect') return null;\nmsg.payload = 'reconnect';\nmsg.topic = 'start-test';\nreturn msg;",
+      "outputs": 1,
+      "timeout": 0,
+      "noerr": 0,
+      "initialize": "",
+      "finalize": "",
+      "libs": [],
+      "x": 540,
+      "y": 480,
+      "wires": [["a11e000000000111"]]
     },
     {
       "id": "a11e000000000106",
@@ -850,6 +889,20 @@
       "width": 12,
       "height": 5,
       "order": 1,
+      "showTitle": true,
+      "className": "",
+      "visible": true,
+      "disabled": false,
+      "groupType": "default"
+    },
+    {
+      "id": "a11e000000000214",
+      "type": "ui-group",
+      "name": "Network Recovery Test",
+      "page": "a11e000000000213",
+      "width": 12,
+      "height": 3,
+      "order": 2,
       "showTitle": true,
       "className": "",
       "visible": true,

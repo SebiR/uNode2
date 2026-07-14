@@ -268,5 +268,10 @@
     "group": "OTA Recovery HIL",
     "title": "Interrupted LittleFS recovery",
     "description": "Corrupts LittleFS during upload and restores it through the firmware-embedded recovery API."
+  },
+  "tests/integration/test_network_reconnection.py::test_client_reconnect_restores_http_artnet_and_sacn": {
+    "group": "Network Recovery",
+    "title": "Client reconnect and socket recovery",
+    "description": "Forces a bounded Wi-Fi outage and verifies reconnection without reboot plus HTTP, ArtPoll, and sACN multicast recovery."
   }
 }

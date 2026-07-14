@@ -13,6 +13,11 @@ explicitly in each release entry.
 
 ### Changed
 
+- Added an authenticated controlled Client-mode Wi-Fi reconnect action plus
+  cumulative retry/success/duration diagnostics. A new opt-in Raspberry Pi
+  integration profile verifies recovery of HTTP, ArtPollReply, sACN multicast
+  membership, and live packets without rebooting; the Hardware Test dashboard
+  can launch the profile directly.
 - Limited the direct RGB LED API to WS2812 hardware and exposed an explicit
   capability flag for external tools. Legacy builds no longer register the
   RGB endpoints instead of approximating arbitrary colors as simple on/off.

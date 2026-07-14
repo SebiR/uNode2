@@ -16,6 +16,7 @@ RP2040_PORT=""
 TEST_PATH=""
 OTA=0
 DESTRUCTIVE_OTA=0
+RECONNECTION=0
 OTA_PROFILE="normal"
 OTA_ARTIFACTS_DIR=""
 PYTEST_EXTRA=()
@@ -31,6 +32,7 @@ Usage: tools/test.sh [options] [-- pytest-args]
   --rp2040-port PORT            Serial device or "auto"
   --button-gpio PIN             RP2040 GPIO wired to the uNode button
   --reset-gpio PIN              RP2040 GPIO wired to the uNode reset input
+  --reconnection                Run the controlled Client Wi-Fi outage test
   --ota                          Run safe OTA validation/reinstall tests
   --destructive-ota              Run opt-in OTA interruption/recovery tests
   --ota-profile PROFILE          Release profile: normal or legacy
@@ -64,6 +66,7 @@ while [[ $# -gt 0 ]]; do
         --rp2040-port) require_value "$@"; RP2040_PORT="$2"; shift 2 ;;
         --button-gpio) require_value "$@"; export UNODE_BUTTON_GPIO_PIN="$2"; shift 2 ;;
         --reset-gpio) require_value "$@"; export UNODE_RESET_GPIO_PIN="$2"; shift 2 ;;
+        --reconnection) RECONNECTION=1; export UNODE_RUN_RECONNECTION=1; INTEGRATION=1; shift ;;
         --ota) OTA=1; INTEGRATION=1; shift ;;
         --destructive-ota) DESTRUCTIVE_OTA=1; INTEGRATION=1; shift ;;
         --ota-profile) require_value "$@"; OTA_PROFILE="$2"; shift 2 ;;
@@ -122,6 +125,8 @@ if [[ "$INTEGRATION" -eq 1 ]]; then
     elif [[ "$OTA" -eq 1 ]]; then
         export UNODE_RUN_OTA=1
         TEST_PATH="${TEST_PATH:-tests/ota/test_ota_safe.py}"
+    elif [[ "$RECONNECTION" -eq 1 ]]; then
+        TEST_PATH="${TEST_PATH:-tests/integration/test_network_reconnection.py}"
     else
         TEST_PATH="${TEST_PATH:-tests/integration}"
     fi

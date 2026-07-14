@@ -33,6 +33,12 @@ def test_status_endpoint_reports_expected_basics(unode_client: UNodeClient) -> N
     assert network_diagnostics["ipv4FragmentsDropped"] >= 0
     assert isinstance(network_diagnostics["ipv4FragmentedTxRejected"], int)
     assert network_diagnostics["ipv4FragmentedTxRejected"] >= 0
+    assert isinstance(network_diagnostics["reconnectAttemptsTotal"], int)
+    assert network_diagnostics["reconnectAttemptsTotal"] >= 0
+    assert isinstance(network_diagnostics["reconnectSuccesses"], int)
+    assert network_diagnostics["reconnectSuccesses"] >= 0
+    assert isinstance(network_diagnostics["lastReconnectDuration"], int)
+    assert network_diagnostics["lastReconnectDuration"] >= 0
 
     for key in (
         "multicastJoined",

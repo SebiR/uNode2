@@ -223,6 +223,8 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
       remainder of the frame buffer.
 - [x] Return a proper error when the root web asset is missing.
 - [ ] Expose Art-Net socket bind retries and network recovery state clearly.
+- [x] Add a controlled Client-mode reconnection test covering HTTP, ArtPoll,
+      sACN multicast rebind, reconnect timing, and reboot detection.
 - [x] Expose raw ESP8266 reset information in diagnostics so exception resets
       include decoder-friendly details such as EPC and exception address.
 - [x] Expose SoftAP health diagnostics, including active state, SoftAP IP, and

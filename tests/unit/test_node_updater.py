@@ -37,6 +37,23 @@ def test_node_red_flow_contains_capability_aware_led_controls() -> None:
     assert led_group["page"] == hardware_page["id"]
 
 
+def test_node_red_flow_exposes_controlled_reconnection_test() -> None:
+    flow = json.loads(FLOW_PATH.read_text(encoding="utf-8"))
+    nodes = {node["id"]: node for node in flow["nodes"]}
+    configs = {config["id"]: config for config in flow["configs"]}
+
+    template = nodes["a11e000000000132"]
+    validator = nodes["a11e000000000133"]
+    group = configs["a11e000000000214"]
+    hardware_page = configs["a11e000000000213"]
+
+    assert template["group"] == group["id"]
+    assert group["page"] == hardware_page["id"]
+    assert "Start Reconnection Test" in template["format"]
+    assert "start-reconnect" in validator["func"]
+    assert validator["wires"] == [["a11e000000000111"]]
+
+
 def test_split_nmcli_fields_preserves_escaped_colons_and_backslashes() -> None:
     fields = node_updater.split_nmcli_fields(
         r"*:uNode_ABC123:87:WPA2\:WPA3\\Personal"

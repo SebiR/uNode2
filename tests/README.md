@@ -53,6 +53,26 @@ Linux/Raspberry Pi, including RP2040 auto-detection:
 bash tools/test.sh --integration --rp2040-port auto
 ```
 
+Run the controlled Client-mode Wi-Fi reconnection profile separately. It
+briefly disconnects the station interface, waits for the normal retry/backoff
+logic, and then verifies recovery of HTTP, ArtPollReply, sACN multicast, socket
+membership, and an unchanged boot counter:
+
+```bash
+bash tools/test.sh --integration --reconnection \
+  --path tests/integration/test_network_reconnection.py
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 `
+  -Integration -Reconnection `
+  -Path tests/integration/test_network_reconnection.py
+```
+
+The profile requires Client or AP+Client mode and firmware `0.23.26` or newer.
+Set `UNODE_RECONNECT_OUTAGE_MS` to a value from 1000 to 15000 to override the
+default three-second outage.
+
 The production fixture can expose the uNode button and reset input through the
 RP2040 AUX GPIOs. For example, with reset wired to GPIO7:
 

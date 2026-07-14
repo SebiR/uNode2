@@ -266,6 +266,12 @@ http://<hostname>.local
 - Recovery access is intentionally only available when the hardware recovery
   button is held during power-on or reset.
 - In AP + Client mode, the access point intentionally remains active.
+- The authenticated `POST /api/network/reconnect` endpoint can schedule a
+  controlled station disconnect without erasing credentials. Its JSON body
+  accepts `outageMs` from `1000` to `15000`; the normal retry logic resumes
+  afterwards.
+- `/api/status` reports total reconnect attempts, successful reconnect cycles,
+  and the last reconnect duration under `networkDiagnostics`.
 
 The WiFiManager configuration portal also uses `2.0.0.1` and is indicated by
 the amber status-LED pattern described below.
