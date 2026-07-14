@@ -12,6 +12,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MODULE_PATH = PROJECT_ROOT / "tools" / "nodered" / "node_updater.py"
 FLOW_PATH = PROJECT_ROOT / "tools" / "nodered" / "unode-dashboard-flow.json"
+TEST_JOB_PATH = PROJECT_ROOT / "tools" / "nodered" / "run_test_job.sh"
 SPEC = importlib.util.spec_from_file_location("unode_node_updater", MODULE_PATH)
 assert SPEC is not None and SPEC.loader is not None
 node_updater = importlib.util.module_from_spec(SPEC)
@@ -52,6 +53,11 @@ def test_node_red_flow_exposes_controlled_reconnection_test() -> None:
     assert "Start Reconnection Test" in template["format"]
     assert "start-reconnect" in validator["func"]
     assert validator["wires"] == [["a11e000000000111"]]
+
+    test_job = TEST_JOB_PATH.read_text(encoding="utf-8")
+    assert "reconnect)" in test_job
+    assert "--reconnection" in test_job
+    assert "test_network_reconnection.py" in test_job
 
 
 def test_split_nmcli_fields_preserves_escaped_colons_and_backslashes() -> None:

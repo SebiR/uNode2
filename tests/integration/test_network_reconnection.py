@@ -57,7 +57,7 @@ def test_client_reconnect_restores_http_artnet_and_sacn(
 ) -> None:
     initial_status = unode_client.get_json("/api/status")
     if not initial_status.get("wifiConnected", False):
-        pytest.skip("Controlled reconnect requires a connected Client interface")
+        pytest.fail("Controlled reconnect requires Client or AP+Client mode")
 
     diagnostics = initial_status.get("networkDiagnostics", {})
     required_metrics = {
@@ -66,7 +66,7 @@ def test_client_reconnect_restores_http_artnet_and_sacn(
         "lastReconnectDuration",
     }
     if not required_metrics.issubset(diagnostics):
-        pytest.skip("Controlled reconnect requires firmware 0.23.26 or newer")
+        pytest.fail("Controlled reconnect requires firmware 0.23.26 or newer")
 
     config = preserved_config.copy()
     config["direction"] = 0
