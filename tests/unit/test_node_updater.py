@@ -93,6 +93,44 @@ def test_restore_connection_returns_initially_idle_wifi_to_idle(
     assert calls == [("device", "disconnect", node_updater.WIFI_INTERFACE)]
 
 
+def test_connect_node_creates_private_user_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, ...]] = []
+    monkeypatch.setattr(node_updater, "current_connection", lambda: "--")
+    monkeypatch.setattr(
+        node_updater.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=1),
+    )
+    monkeypatch.setattr(
+        node_updater,
+        "run_nmcli",
+        lambda *arguments, **_kwargs: calls.append(arguments) or "",
+    )
+
+    node_updater.connect_node("uNode_ABC123")
+
+    assert calls == [
+        (
+            "--wait",
+            "20",
+            "device",
+            "wifi",
+            "connect",
+            "uNode_ABC123",
+            "password",
+            "artnodeABC123",
+            "ifname",
+            node_updater.WIFI_INTERFACE,
+            "name",
+            "uNode_ABC123",
+            "private",
+            "yes",
+        )
+    ]
+
+
 def test_decode_request_accepts_urlsafe_json_and_rejects_non_objects() -> None:
     request = {
         "action": "update",

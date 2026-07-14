@@ -71,8 +71,15 @@ Install or update the flow locally on the Node-RED host:
 
 ```bash
 cd ~/uNode2
+sudo bash tools/nodered/install_networkmanager_policy.sh pi
 .venv/bin/python tools/nodered/install_dashboard.py
 ```
+
+The Polkit rule grants only the named local production user permission to scan
+Wi-Fi and activate/manage NetworkManager profiles. It is required because the
+Node-RED system service has no interactive desktop session in which to answer
+NetworkManager authorization prompts. Newly discovered uNode APs are stored as
+user-private connection profiles.
 
 Open `http://printer.local:1880/unode/status`. The installer uses Node-RED's
 single-flow Admin API and therefore leaves unrelated flows untouched. The

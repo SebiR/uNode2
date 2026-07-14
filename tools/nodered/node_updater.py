@@ -497,6 +497,10 @@ def connect_node(ssid: str) -> None:
         password,
         "ifname",
         WIFI_INTERFACE,
+        "name",
+        ssid,
+        "private",
+        "yes",
         timeout=30.0,
     )
 
