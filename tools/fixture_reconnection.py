@@ -151,6 +151,46 @@ def _restore_connection(interface: str, previous: str, timeout: float = 75.0) ->
     raise TimeoutError(f"Could not restore Pi Wi-Fi connection {previous!r}")
 
 
+def _verify_restored_node(
+    initial: UNodeClient,
+    chip_id: str,
+    stored_ssid: str,
+    stored_configured: bool,
+    timeout: float = 60.0,
+) -> None:
+    """Wait for the original AP API and prove that cleanup was non-persistent."""
+
+    deadline = time.monotonic() + timeout
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            initial.ensure_authenticated()
+            status = initial.get_json("/api/status", timeout=2.0)
+        except Exception as error:  # noqa: BLE001 - boot convergence is expected.
+            last_error = error
+            time.sleep(1.0)
+            continue
+
+        if str(status.get("chipId", "")).upper() != chip_id.upper():
+            raise RuntimeError("A different node answered on the original address")
+        if status.get("networkDiagnostics", {}).get(
+            "temporaryTestClientActive", False
+        ):
+            raise RuntimeError("Temporary test Client remained active after restart")
+        if str(status.get("storedWifiSSID", "")) != stored_ssid or bool(
+            status.get("storedWifiConfigured", False)
+        ) != stored_configured:
+            raise RuntimeError("Fixture credentials changed persistent Wi-Fi state")
+        if "Software" not in str(status.get("resetReason", "")):
+            raise RuntimeError(
+                "Fixture cleanup did not produce a clean software restart: "
+                f"{status.get('resetReason')}"
+            )
+        print("[fixture] Original node AP and persistent Wi-Fi state verified")
+        return
+    raise TimeoutError(f"Original node API did not recover cleanly: {last_error}")
+
+
 def _run_pytest(client: UNodeClient) -> int:
     node_ip = client.base_url.rsplit("/", 1)[-1]
     environment = os.environ.copy()
@@ -210,6 +250,8 @@ def main() -> int:
         raise RuntimeError("Node status did not provide a chip ID")
 
     previous = _current_connection(args.interface)
+    stored_ssid = str(initial_status.get("storedWifiSSID", ""))
+    stored_configured = bool(initial_status.get("storedWifiConfigured", False))
     fixture_client: UNodeClient | None = None
     result = 1
 
@@ -260,13 +302,23 @@ def main() -> int:
             try:
                 print("[fixture] Restarting node to discard volatile credentials")
                 fixture_client.post_json("/api/restart", timeout=3.0)
-                time.sleep(0.5)
+                # Firmware schedules ESP.restart() 700 ms after replying. Keep
+                # the hotspot alive beyond that boundary; tearing the AP down
+                # earlier can starve the ESP8266 Wi-Fi task before restart.
+                time.sleep(2.0)
             except Exception as error:  # noqa: BLE001 - cleanup must continue.
                 print(f"[fixture] Node restart request warning: {error}", file=sys.stderr)
 
         _nmcli("connection", "down", "id", args.connection, check=False)
         _delete_connection(args.connection)
         _restore_connection(args.interface, previous)
+        if fixture_client is not None:
+            _verify_restored_node(
+                initial,
+                chip_id,
+                stored_ssid,
+                stored_configured,
+            )
 
     return result
 

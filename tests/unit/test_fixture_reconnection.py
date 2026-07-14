@@ -62,3 +62,26 @@ def test_pytest_child_receives_discovered_ip_and_auth_password(monkeypatch) -> N
     assert environment["UNODE_BASE_URL"] == "http://10.42.0.23"
     assert environment["UNODE_PASSWORD"] == "fixture-admin"
     assert "tests/integration/test_network_reconnection.py" in captured["command"]
+
+
+def test_restored_node_must_keep_credentials_and_report_software_restart(
+    monkeypatch,
+) -> None:
+    client = SimpleNamespace(
+        ensure_authenticated=lambda: None,
+        get_json=lambda _path, timeout: {
+            "chipId": "ABC123",
+            "storedWifiSSID": "",
+            "storedWifiConfigured": False,
+            "resetReason": "Software/System restart",
+            "networkDiagnostics": {"temporaryTestClientActive": False},
+        },
+    )
+
+    fixture_reconnection._verify_restored_node(
+        client,
+        "ABC123",
+        "",
+        False,
+        timeout=0.1,
+    )
