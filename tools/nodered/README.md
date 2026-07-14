@@ -93,10 +93,11 @@ sudo bash tools/nodered/install_networkmanager_policy.sh pi
 ```
 
 The Polkit rule grants only the named local production user permission to scan
-Wi-Fi and activate/manage NetworkManager profiles. It is required because the
-Node-RED system service has no interactive desktop session in which to answer
-NetworkManager authorization prompts. Newly discovered uNode APs are stored as
-user-private connection profiles.
+Wi-Fi, activate/manage NetworkManager profiles, and create the isolated
+open/protected fixture hotspot used by the reconnection test. It is required
+because the Node-RED system service has no interactive desktop session in
+which to answer NetworkManager authorization prompts. Newly discovered uNode
+APs are stored as user-private connection profiles.
 
 Open `http://printer.local:1880/unode/status`. The installer uses Node-RED's
 single-flow Admin API and therefore leaves unrelated flows untouched. The

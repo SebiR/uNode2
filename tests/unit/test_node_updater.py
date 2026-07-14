@@ -65,6 +65,11 @@ def test_node_red_flow_exposes_controlled_reconnection_test() -> None:
     assert "ENABLE_TEST_HARNESS_API=1" in fixture_runner
     assert "test_network_reconnection.py" in fixture_runner
 
+    policy = (
+        PROJECT_ROOT / "tools" / "nodered" / "install_networkmanager_policy.sh"
+    ).read_text(encoding="utf-8")
+    assert "org.freedesktop.NetworkManager.wifi.share.protected" in policy
+
 
 def test_split_nmcli_fields_preserves_escaped_colons_and_backslashes() -> None:
     fields = node_updater.split_nmcli_fields(

@@ -28,7 +28,9 @@ printf '%s\n' \
     '        "org.freedesktop.NetworkManager.network-control",' \
     '        "org.freedesktop.NetworkManager.settings.modify.own",' \
     '        "org.freedesktop.NetworkManager.settings.modify.system",' \
-    '        "org.freedesktop.NetworkManager.wifi.scan"' \
+    '        "org.freedesktop.NetworkManager.wifi.scan",' \
+    '        "org.freedesktop.NetworkManager.wifi.share.open",' \
+    '        "org.freedesktop.NetworkManager.wifi.share.protected"' \
     '    ];' \
     '' \
     '    if (allowed.indexOf(action.id) >= 0) {' \
