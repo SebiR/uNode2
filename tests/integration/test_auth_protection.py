@@ -74,14 +74,20 @@ def test_api_write_endpoints_require_auth_when_password_is_enabled(
             ("/api/artnet/poll", None),
             ("/api/dmx/release", None),
             ("/api/led-mute", {"toggle": True}),
-            (
-                "/api/leds",
-                {"network": "#112233", "activity": "#445566"},
-            ),
-            ("/api/leds/release", None),
             ("/api/failsafe/record", None),
             ("/api/auth/password", {"password": "should-not-apply"}),
         ]
+
+        if status.get("ledColorOverrideSupported", False):
+            protected_requests.extend(
+                [
+                    (
+                        "/api/leds",
+                        {"network": "#112233", "activity": "#445566"},
+                    ),
+                    ("/api/leds/release", None),
+                ]
+            )
 
         for path, payload in protected_requests:
             step(f"Checking unauthenticated write protection on {path}")

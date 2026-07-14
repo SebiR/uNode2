@@ -11,10 +11,24 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MODULE_PATH = PROJECT_ROOT / "tools" / "nodered" / "node_updater.py"
+FLOW_PATH = PROJECT_ROOT / "tools" / "nodered" / "unode-dashboard-flow.json"
 SPEC = importlib.util.spec_from_file_location("unode_node_updater", MODULE_PATH)
 assert SPEC is not None and SPEC.loader is not None
 node_updater = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(node_updater)
+
+
+def test_node_red_flow_contains_capability_aware_led_controls() -> None:
+    flow = json.loads(FLOW_PATH.read_text(encoding="utf-8"))
+    nodes = {node["id"]: node for node in flow["nodes"]}
+
+    template = nodes["a11e000000000129"]
+    validator = nodes["a11e000000000130"]
+    assert template["name"] == "WS2812 LED control"
+    assert "ledColorOverrideSupported" in template["format"]
+    assert "Legacy hardware" in template["format"]
+    assert "led-set" in validator["func"]
+    assert "led-release" in validator["func"]
 
 
 def test_split_nmcli_fields_preserves_escaped_colons_and_backslashes() -> None:
@@ -129,6 +143,132 @@ def test_connect_node_creates_private_user_profile(
             "yes",
         )
     ]
+
+
+def test_led_control_applies_colors_and_restores_previous_connection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[tuple] = []
+
+    class FakeJob:
+        def __init__(self) -> None:
+            self.data = {
+                "nodes": [
+                    {
+                        "ssid": "uNode_ABC123",
+                        "ledOverrideActive": False,
+                    }
+                ]
+            }
+
+        def progress(self, message: str, *, percent: int | None = None) -> None:
+            events.append(("progress", message, percent))
+
+    class FakeClient:
+        token = ""
+
+        def ensure_authenticated(self) -> None:
+            events.append(("authenticate",))
+
+        def post_json(self, path: str, payload: dict | None = None) -> tuple[int, bytes]:
+            events.append(("post", path, payload))
+            return (
+                200,
+                json.dumps(
+                    {
+                        "overrideActive": True,
+                        "network": {"hex": "#123456"},
+                        "activity": {"hex": "#ABCDEF"},
+                    }
+                ).encode(),
+            )
+
+    monkeypatch.setattr(node_updater, "current_connection", lambda: "IllumiNet")
+    monkeypatch.setattr(
+        node_updater,
+        "connect_node",
+        lambda ssid: events.append(("connect", ssid)),
+    )
+    monkeypatch.setattr(
+        node_updater,
+        "probe_node",
+        lambda: {
+            "chipId": "ABC123",
+            "recoveryMode": False,
+            "inferredProfile": "normal",
+            "ledColorOverrideSupported": True,
+        },
+    )
+    monkeypatch.setattr(node_updater, "UNodeClient", lambda *_args, **_kwargs: FakeClient())
+    monkeypatch.setattr(
+        node_updater,
+        "restore_connection",
+        lambda name: events.append(("restore", name)),
+    )
+
+    job = FakeJob()
+    result = node_updater.perform_led_control(
+        job,
+        {
+            "action": "led-set",
+            "ssid": "uNode_ABC123",
+            "network": "#123456",
+            "activity": "#abcdef",
+        },
+    )
+
+    assert result["action"] == "led-set"
+    assert (
+        "post",
+        "/api/leds",
+        {"network": "#123456", "activity": "#ABCDEF"},
+    ) in events
+    assert events[-1] == ("restore", "IllumiNet")
+    assert job.data["nodes"][0]["ledOverrideActive"] is True
+
+
+def test_led_control_rejects_legacy_hardware_and_restores_connection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    restored: list[str] = []
+
+    class FakeJob:
+        data = {"nodes": []}
+
+        def progress(self, _message: str, *, percent: int | None = None) -> None:
+            del percent
+
+    monkeypatch.setattr(node_updater, "current_connection", lambda: "IllumiNet")
+    monkeypatch.setattr(node_updater, "connect_node", lambda _ssid: None)
+    monkeypatch.setattr(
+        node_updater,
+        "probe_node",
+        lambda: {
+            "chipId": "ABC123",
+            "recoveryMode": False,
+            "inferredProfile": "legacy",
+            "ledColorOverrideSupported": False,
+        },
+    )
+    monkeypatch.setattr(
+        node_updater,
+        "restore_connection",
+        lambda name: restored.append(name),
+    )
+
+    with pytest.raises(RuntimeError, match="Legacy hardware"):
+        node_updater.perform_led_control(
+            FakeJob(),
+            {"action": "led-release", "ssid": "uNode_ABC123"},
+        )
+
+    assert restored == ["IllumiNet"]
+
+
+@pytest.mark.parametrize("value", ["123456", "#12345", "#GG0000", "#1234567"])
+def test_normalize_rgb_color_rejects_invalid_values(value: str) -> None:
+    with pytest.raises(ValueError, match="#RRGGBB"):
+        node_updater.normalize_rgb_color(value, "LED color")
 
 
 def test_decode_request_accepts_urlsafe_json_and_rejects_non_objects() -> None:

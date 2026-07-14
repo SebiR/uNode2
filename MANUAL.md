@@ -440,7 +440,9 @@ physical LEDs.
 
 External tools can temporarily take control of both indicators without
 changing the saved configuration. The override is held only in RAM and is
-automatically cleared by a reboot.
+automatically cleared by a reboot. This API is available only on current
+WS2812 hardware. Legacy builds report `ledColorOverrideSupported: false` in
+`/api/status` and do not register the RGB endpoints.
 
 Read the current rendered colors and override state:
 
@@ -468,10 +470,8 @@ POST /api/leds/release
 
 The two POST endpoints require the normal `X-uNode-Auth` session token when
 web access control is enabled. The configured global LED brightness still
-applies. On Legacy hardware, black switches an LED off and every non-black RGB
-value switches it on because the fitted indicators cannot reproduce colors.
-Firmware-update and Recovery Mode patterns always have priority over a direct
-API override.
+applies. Firmware-update and Recovery Mode patterns always have priority over
+a direct API override.
 
 ## Hardware Controls
 

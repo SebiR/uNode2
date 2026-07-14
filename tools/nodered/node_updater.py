@@ -83,6 +83,7 @@ FIRMWARE_ADDRESS = 0x000000
 LITTLEFS_ADDRESS = 0x300000
 EXPECTED_FLASH_BYTES = 4 * 1024 * 1024
 CP210X_DEFAULT_VID_PID = (0x10C4, 0xEA60)
+RGB_COLOR_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
 def utc_now() -> str:
@@ -101,6 +102,21 @@ def atomic_json_write(path: Path, payload: dict[str, Any]) -> None:
         encoding="utf-8",
     )
     temporary.replace(path)
+
+
+def persisted_node_inventory() -> list[dict[str, Any]]:
+    """Return the most recent node list without trusting malformed state."""
+
+    if not STATUS_FILE.is_file():
+        return []
+    try:
+        status = json.loads(STATUS_FILE.read_text(encoding="utf-8"))
+        nodes = status.get("nodes", []) if isinstance(status, dict) else []
+        if isinstance(nodes, list) and all(isinstance(node, dict) for node in nodes):
+            return nodes
+    except (OSError, json.JSONDecodeError):
+        pass
+    return []
 
 
 def split_nmcli_fields(line: str) -> list[str]:
@@ -307,7 +323,7 @@ class JobStatus:
                 for key, value in request.items()
                 if key != "password"
             },
-            "nodes": [],
+            "nodes": persisted_node_inventory(),
             "releases": available_releases(),
             "serialProgrammers": serial_programmers(),
             "progress": 0,
@@ -531,6 +547,10 @@ def probe_node(timeout: float = 20.0) -> dict[str, Any]:
                 "webAssets": str(status.get("webAssetVersion", "unknown")),
                 "webAssetsMatch": bool(status.get("webAssetVersionMatch", False)),
                 "inferredProfile": "legacy" if legacy else "normal",
+                "ledColorOverrideSupported": bool(
+                    status.get("ledColorOverrideSupported", False)
+                ),
+                "ledOverrideActive": bool(status.get("ledOverrideActive", False)),
                 "recoveryMode": False,
             }
         except Exception as error:  # noqa: BLE001 - normal endpoint may not exist in recovery.
@@ -547,6 +567,8 @@ def probe_node(timeout: float = 20.0) -> dict[str, Any]:
                 "webAssets": "unavailable",
                 "webAssetsMatch": False,
                 "inferredProfile": "normal",
+                "ledColorOverrideSupported": False,
+                "ledOverrideActive": False,
                 "recoveryMode": True,
                 "fsMounted": bool(status.get("fsMounted", False)),
             }
@@ -916,6 +938,97 @@ def perform_initial_flash(job: JobStatus, request: dict[str, Any]) -> dict[str, 
     }
 
 
+def normalize_rgb_color(value: Any, label: str) -> str:
+    """Validate one dashboard color and normalize it to uppercase #RRGGBB."""
+
+    color = str(value or "")
+    if not RGB_COLOR_PATTERN.fullmatch(color):
+        raise ValueError(f"{label} must use #RRGGBB format")
+    return color.upper()
+
+
+def perform_led_control(job: JobStatus, request: dict[str, Any]) -> dict[str, Any]:
+    """Apply or release volatile WS2812 colors on one selected node."""
+
+    action = str(request.get("action", ""))
+    ssid = str(request.get("ssid", ""))
+    password = str(request.get("password", "")) or None
+    validate_ssid(ssid)
+
+    network_color = ""
+    activity_color = ""
+    if action == "led-set":
+        network_color = normalize_rgb_color(
+            request.get("network"),
+            "Network LED color",
+        )
+        activity_color = normalize_rgb_color(
+            request.get("activity"),
+            "Activity LED color",
+        )
+    elif action != "led-release":
+        raise ValueError("LED action must be led-set or led-release")
+
+    original = current_connection()
+    job.data["state"] = "controlling"
+
+    try:
+        job.progress(f"Connecting to selected node {ssid}", percent=10)
+        connect_node(ssid)
+        node = probe_node()
+        expected_chip = validate_ssid(ssid).group(1).upper()
+        if node.get("chipId") != expected_chip:
+            raise RuntimeError(
+                f"Node identity mismatch: SSID {expected_chip}, API {node.get('chipId')}"
+            )
+        if node.get("recoveryMode"):
+            raise RuntimeError("Direct LED control is unavailable in Recovery Mode")
+        if not node.get("ledColorOverrideSupported"):
+            if node.get("inferredProfile") == "legacy":
+                raise RuntimeError("Direct RGB LED control is unavailable on Legacy hardware")
+            raise RuntimeError(
+                "Direct RGB LED control requires firmware 0.23.25 or newer"
+            )
+
+        client = UNodeClient(BASE_URL, password=password)
+        client.ensure_authenticated()
+        endpoint = "/api/leds" if action == "led-set" else "/api/leds/release"
+        payload = (
+            {"network": network_color, "activity": activity_color}
+            if action == "led-set"
+            else None
+        )
+        status, body = client.post_json(endpoint, payload)
+        if status != 200:
+            raise RuntimeError(
+                f"LED API failed with HTTP {status}: "
+                + body.decode(errors="replace")
+            )
+        response = json.loads(body.decode("utf-8"))
+
+        for inventoried_node in job.data.get("nodes", []):
+            if inventoried_node.get("ssid") == ssid:
+                inventoried_node["ledOverrideActive"] = bool(
+                    response.get("overrideActive", False)
+                )
+
+        message = (
+            f"Applied LED colors to uNode {expected_chip}"
+            if action == "led-set"
+            else f"Released LED override on uNode {expected_chip}"
+        )
+        job.progress(message, percent=85)
+        return {
+            "ssid": ssid,
+            "chipId": expected_chip,
+            "action": action,
+            "leds": response,
+        }
+    finally:
+        job.progress(f"Restoring Wi-Fi connection {original or 'none'}", percent=90)
+        restore_connection(original)
+
+
 def perform_update(job: JobStatus, request: dict[str, Any]) -> dict[str, Any]:
     """Connect to one selected AP and apply verified release artifacts."""
 
@@ -1200,9 +1313,21 @@ def run_request(encoded: str) -> int:
                     f"uNode {result['chipId']} initially flashed to {result['version']}",
                     result=result,
                 )
+            elif action in {"led-set", "led-release"}:
+                result = perform_led_control(job, request)
+                job.finish(
+                    "ready",
+                    (
+                        f"LED colors applied to uNode {result['chipId']}"
+                        if action == "led-set"
+                        else f"LED override released on uNode {result['chipId']}"
+                    ),
+                    result=result,
+                )
             else:
                 raise ValueError(
-                    "Updater action must be scan, update, or initial-flash"
+                    "Updater action must be scan, update, initial-flash, "
+                    "led-set, or led-release"
                 )
         except Exception as error:  # noqa: BLE001 - surface complete failure in dashboard.
             job.finish("error", str(error))

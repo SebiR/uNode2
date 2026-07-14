@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from helpers import step
 from unode_client import UNodeClient
 
@@ -13,6 +15,10 @@ def _decode(body: bytes) -> dict:
 def test_led_api_applies_and_releases_volatile_rgb_override(
     unode_client: UNodeClient,
 ) -> None:
+    initial_status = unode_client.get_json("/api/status")
+    if not initial_status.get("ledColorOverrideSupported", False):
+        pytest.skip("Direct RGB LED override is unavailable on Legacy hardware")
+
     step("Releasing any LED override left by an interrupted earlier test")
     status, body = unode_client.post_json("/api/leds/release")
     assert status == 200, body.decode(errors="replace")

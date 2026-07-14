@@ -1463,6 +1463,8 @@ static void handleStatus() {
 
   doc["ledOverrideActive"] =
     isLedColorOverrideActive();
+  doc["ledColorOverrideSupported"] =
+    USE_WS2812 != 0;
 
   doc["terminationEnabled"] =
     isTerminationEnabled();
@@ -1888,6 +1890,8 @@ static void handleLedMute() {
     json);
 }
 
+#if USE_WS2812
+
 /** @return Numeric value of one hexadecimal digit or -1 when invalid. */
 static int8_t parseHexDigit(char value) {
   if (value >= '0' && value <= '9') {
@@ -2094,6 +2098,8 @@ static void handleReleaseLedColors() {
   updateLEDs();
   sendLedColorState();
 }
+
+#endif
 
 /** @brief Receives one firmware binary through multipart upload. */
 static void handleFirmwareUpdateUpload() {
@@ -2584,6 +2590,7 @@ bool initWeb() {
     HTTP_POST,
     handleLedMute);
 
+#if USE_WS2812
   server.on(
     "/api/leds",
     HTTP_GET,
@@ -2598,6 +2605,7 @@ bool initWeb() {
     "/api/leds/release",
     HTTP_POST,
     handleReleaseLedColors);
+#endif
 
   server.on(
     "/api/config/upload",

@@ -13,6 +13,9 @@ explicitly in each release entry.
 
 ### Changed
 
+- Limited the direct RGB LED API to WS2812 hardware and exposed an explicit
+  capability flag for external tools. Legacy builds no longer register the
+  RGB endpoints instead of approximating arbitrary colors as simple on/off.
 - Fixed Node-RED production discovery when the Pi is already connected to one
   uNode AP. The updater now scans from a temporarily disconnected Wi-Fi state,
   discovers nodes across all channels, restores the previous connection, and
@@ -20,9 +23,8 @@ explicitly in each release entry.
   installer enables the non-interactive Node-RED service to switch APs, while
   newly discovered uNode networks use user-private connection profiles.
 - Added an authenticated, volatile status LED API. Arbitrary RGB colors can
-  temporarily override both WS2812 indicators until explicitly released;
-  Legacy hardware maps non-black colors to its two single-color LEDs. Critical
-  firmware-update and Recovery Mode patterns retain priority.
+  temporarily override both WS2812 indicators until explicitly released.
+  Critical firmware-update and Recovery Mode patterns retain priority.
 - Added a Node-RED production updater page that discovers uNode access points,
   inventories normal and Recovery Mode firmware, and installs verified local
   firmware/LittleFS release artifacts. Normal-mode LittleFS updates archive
