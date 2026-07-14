@@ -25,6 +25,74 @@ def test_split_nmcli_fields_preserves_escaped_colons_and_backslashes() -> None:
     assert fields == ["*", "uNode_ABC123", "87", "WPA2:WPA3\\Personal"]
 
 
+def test_inventory_disconnects_active_unode_before_scanning_and_restores_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[tuple] = []
+
+    class FakeJob:
+        def __init__(self) -> None:
+            self.data = {}
+
+        def progress(self, message: str, *, percent: int | None = None) -> None:
+            events.append(("progress", message, percent))
+
+        def write(self) -> None:
+            events.append(("write",))
+
+    monkeypatch.setattr(
+        node_updater,
+        "current_connection",
+        lambda: "uNode_ABC123",
+    )
+    monkeypatch.setattr(
+        node_updater,
+        "run_nmcli",
+        lambda *arguments, **_kwargs: events.append(("nmcli", *arguments)) or "",
+    )
+    monkeypatch.setattr(node_updater.time, "sleep", lambda _seconds: None)
+
+    def scan() -> list[dict]:
+        events.append(("scan",))
+        return []
+
+    monkeypatch.setattr(node_updater, "scan_access_points", scan)
+    monkeypatch.setattr(
+        node_updater,
+        "restore_connection",
+        lambda name: events.append(("restore", name)),
+    )
+
+    assert node_updater.inventory(FakeJob()) == []
+
+    disconnect_index = events.index(
+        ("nmcli", "--wait", "20", "connection", "down", "id", "uNode_ABC123")
+    )
+    scan_index = events.index(("scan",))
+    restore_index = events.index(("restore", "uNode_ABC123"))
+    assert disconnect_index < scan_index < restore_index
+
+
+def test_restore_connection_returns_initially_idle_wifi_to_idle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, ...]] = []
+    monkeypatch.setattr(
+        node_updater,
+        "current_connection",
+        lambda: "uNode_ABC123",
+    )
+    monkeypatch.setattr(
+        node_updater,
+        "run_nmcli",
+        lambda *arguments, **_kwargs: calls.append(arguments) or "",
+    )
+
+    node_updater.restore_connection("")
+
+    assert calls == [("device", "disconnect", node_updater.WIFI_INTERFACE)]
+
+
 def test_decode_request_accepts_urlsafe_json_and_rejects_non_objects() -> None:
     request = {
         "action": "update",

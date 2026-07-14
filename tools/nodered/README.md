@@ -27,6 +27,12 @@ LittleFS, or both from a size- and SHA-256-verified release manifest. The
 newest complete local release is selected by default, while older releases
 remain available for deliberate downgrade/recovery work.
 
+If `wlan0` is already associated with a uNode AP, discovery briefly
+disconnects it before scanning. This avoids adapter/driver scans that expose
+only the currently associated ESP8266 AP. The previous connection is restored
+after inventory; if Wi-Fi was originally idle, it is returned to idle instead
+of remaining connected to the final node.
+
 Normal-mode LittleFS updates archive the complete configuration under
 `artifacts/node_backups/` and restore it after the image restart. Recovery mode
 has no configuration-download endpoint; firmware-only recovery is therefore

@@ -379,6 +379,23 @@ def current_connection() -> str:
     return output.strip()
 
 
+def disconnect_unode_for_scan(name: str) -> bool:
+    """Disconnect an active uNode AP so NetworkManager scans every channel.
+
+    Some Wi-Fi adapters return only their current ESP8266 AP while associated
+    with it. Router/client connections are left alone because they normally
+    permit a complete background scan and may provide intentional management
+    connectivity.
+    """
+
+    if not SSID_PATTERN.fullmatch(name):
+        return False
+
+    run_nmcli("--wait", "20", "connection", "down", "id", name)
+    time.sleep(1.0)
+    return True
+
+
 def scan_access_points() -> list[dict[str, Any]]:
     """Scan and return the strongest advertisement for every uNode AP."""
 
@@ -540,7 +557,14 @@ def probe_node(timeout: float = 20.0) -> dict[str, Any]:
 def restore_connection(name: str) -> None:
     """Restore the Wi-Fi connection active before an inventory scan."""
 
-    if not name or name == "--" or current_connection() == name:
+    active = current_connection()
+
+    if not name or name == "--":
+        if active and active != "--":
+            run_nmcli("device", "disconnect", WIFI_INTERFACE)
+        return
+
+    if active == name:
         return
     run_nmcli("--wait", "20", "connection", "up", "id", name, "ifname", WIFI_INTERFACE)
 
@@ -551,10 +575,15 @@ def inventory(job: JobStatus) -> list[dict[str, Any]]:
     job.data["state"] = "scanning"
     job.progress("Scanning for uNode access points", percent=5)
     original = current_connection()
-    access_points = scan_access_points()
     nodes: list[dict[str, Any]] = []
 
     try:
+        if disconnect_unode_for_scan(original):
+            job.progress(
+                f"Temporarily disconnected {original} for a complete Wi-Fi scan"
+            )
+
+        access_points = scan_access_points()
         total = max(1, len(access_points))
         for index, access_point in enumerate(access_points):
             ssid = str(access_point["ssid"])
