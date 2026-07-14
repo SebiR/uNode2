@@ -58,9 +58,33 @@ def test_api_write_endpoints_require_auth_when_password_is_enabled(
         step("Checking that read-only status endpoints remain readable")
         status = anonymous.get_json("/api/status")
         assert status["firmware"]
+        assert status["detailed"] is False
+        for private_field in (
+            "networkDiagnostics",
+            "artNetDiagnostics",
+            "sacnDiagnostics",
+            "freeHeap",
+            "resetInfo",
+        ):
+            assert private_field not in status
+
         auth_status = anonymous.get_json("/api/auth/status")
         assert auth_status["enabled"] is True
         assert auth_status["authenticated"] is False
+        assert auth_status["sessionTimeoutSeconds"] == 30 * 60
+
+        step("Checking that detailed diagnostics require authentication")
+        diagnostics_status, _content_type, diagnostics_body = anonymous._request(
+            "GET",
+            "/api/diagnostics",
+        )
+        assert diagnostics_status == 403, diagnostics_body.decode(errors="replace")
+
+        diagnostics = unode_client.get_json("/api/diagnostics")
+        assert diagnostics["detailed"] is True
+        assert isinstance(diagnostics["networkDiagnostics"], dict)
+        assert isinstance(diagnostics["artNetDiagnostics"], dict)
+        assert isinstance(diagnostics["sacnDiagnostics"], dict)
 
         step("Checking that wrong passwords are rejected")
         login_status, _body = anonymous.post_json(
@@ -78,7 +102,7 @@ def test_api_write_endpoints_require_auth_when_password_is_enabled(
             ("/api/auth/password", {"password": "should-not-apply"}),
         ]
 
-        network_diagnostics = status.get("networkDiagnostics", {})
+        network_diagnostics = diagnostics.get("networkDiagnostics", {})
         if network_diagnostics.get("testHarnessApiEnabled", False):
             protected_requests.extend(
                 [
@@ -147,6 +171,22 @@ def test_api_write_endpoints_require_auth_when_password_is_enabled(
 
         # Re-login for reliable cleanup.
         _login(unode_client, temporary_password)
+
+        step("Checking bounded login attempts")
+        rate_limited_client = UNodeClient(unode_client.base_url)
+        for attempt in range(1, 6):
+            login_status, body = rate_limited_client.post_json(
+                "/api/auth/login",
+                {"password": f"wrong-attempt-{attempt}"},
+            )
+            expected = 429 if attempt == 5 else 403
+            assert login_status == expected, body.decode(errors="replace")
+
+        login_status, body = rate_limited_client.post_json(
+            "/api/auth/login",
+            {"password": temporary_password},
+        )
+        assert login_status == 429, body.decode(errors="replace")
 
     finally:
         step("Restoring original authentication configuration")

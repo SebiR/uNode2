@@ -266,8 +266,9 @@ http://<hostname>.local
 - Recovery access is intentionally only available when the hardware recovery
   button is held during power-on or reset.
 - In AP + Client mode, the access point intentionally remains active.
-- `/api/status` reports total reconnect attempts, successful reconnect cycles,
-  and the last reconnect duration under `networkDiagnostics`.
+- The protected `/api/diagnostics` response reports total reconnect attempts,
+  successful reconnect cycles, and the last reconnect duration under
+  `networkDiagnostics`.
 
 Development builds compiled with `ENABLE_TEST_HARNESS_API=1` additionally
 provide authenticated fixture-only endpoints for a controlled reconnect and a
@@ -583,7 +584,16 @@ The web interface can be used read-only without logging in. When an admin
 password is configured in the System tab, settings and output-affecting actions
 are locked until the browser logs in with the status-bar Login button. The
 session token is kept only in RAM and is lost after logout, browser session
-clear, or node reboot.
+clear, node reboot, or 30 minutes without a protected user action. Five rejected
+password attempts within 60 seconds temporarily block further login attempts.
+Session tokens are generated from the ESP8266 system random-number source.
+
+`/api/status` remains anonymously readable and contains only the operational
+state required by dashboards and connection monitoring. Heap and flash details,
+reset information, stored Wi-Fi state, parser counters, and test-harness
+capabilities are returned by `/api/diagnostics`. That endpoint requires the
+normal session token whenever write protection is enabled. The supplied Python
+test client selects it automatically after authentication.
 
 Leaving the password field empty and applying the setting disables write
 protection. If the password is forgotten, recovery mode provides a password

@@ -306,6 +306,7 @@ async function toggleAuth()
         sessionStorage.removeItem(
             'uNodeAuthToken');
         await loadAuthStatus();
+        await loadStatus();
         return;
     }
 
@@ -367,6 +368,7 @@ async function toggleAuth()
     }
 
     await loadAuthStatus();
+    await loadStatus();
 }
 
 async function loadStatus()
@@ -382,8 +384,26 @@ async function loadStatus()
                 'Status request failed: HTTP ' + response.status);
         }
 
-        const data =
+        let data =
             await response.json();
+
+        if (!authEnabled || authAuthenticated)
+        {
+            const diagnosticsResponse =
+                await authenticatedFetch(
+                    '/api/diagnostics');
+
+            if (diagnosticsResponse.ok)
+            {
+                data = Object.assign(
+                    data,
+                    await diagnosticsResponse.json());
+            }
+            else if (diagnosticsResponse.status === 403)
+            {
+                await loadAuthStatus();
+            }
+        }
 
         markConnectionOnline();
 
@@ -514,12 +534,14 @@ async function loadStatus()
             'fsFree',
             formatKB(data.fsTotal - data.fsUsed));
 
-        setTextIfPresent('freeHeap', formatKB(data.freeHeap || 0));
-        setTextIfPresent('minimumFreeHeap', formatKB(data.minimumFreeHeap || 0));
-        setTextIfPresent('maxFreeBlock', formatKB(data.maxFreeBlock || 0));
+        setTextIfPresent('freeHeap', formatKB(data.freeHeap));
+        setTextIfPresent('minimumFreeHeap', formatKB(data.minimumFreeHeap));
+        setTextIfPresent('maxFreeBlock', formatKB(data.maxFreeBlock));
         setTextIfPresent(
             'heapFragmentation',
-            (data.heapFragmentation ?? 0) + ' %');
+            data.heapFragmentation === undefined
+                ? 'N/A'
+                : data.heapFragmentation + ' %');
         setTextIfPresent(
             'softAPStatus',
             (data.softAPActive ? 'active' : 'inactive')
@@ -529,7 +551,9 @@ async function loadStatus()
                 + (data.softAPIP || '---'));
         setTextIfPresent(
             'storedWifiCredentials',
-            data.storedWifiConfigured
+            data.storedWifiConfigured === undefined
+                ? 'N/A'
+                : data.storedWifiConfigured
                 ? 'Stored Wi-Fi: ' + (data.storedWifiSSID || '(unnamed)')
                 : 'Stored Wi-Fi: none');
         setTextIfPresent('resetReason', data.resetReason || '---');
@@ -555,6 +579,11 @@ async function loadStatus()
 
 function formatKB(bytes)
 {
+    if (!Number.isFinite(Number(bytes)))
+    {
+        return 'N/A';
+    }
+
     return Math.round(bytes / 1024) + " kB";
 }
 
@@ -1318,13 +1347,19 @@ function updateStatusMessages(data)
         data.artNetDiagnostics;
     const sacnDiagnostics =
         data.sacnDiagnostics;
+    const statusWarnings =
+        data.statusWarnings || {};
     const messages = [];
     const artNetProtocolDrops =
         Number(
-            diagnostics?.protocolDrops ?? 0);
+            statusWarnings.artNetProtocolDrops
+            ?? diagnostics?.protocolDrops
+            ?? 0);
     const sacnProtocolDrops =
         Number(
-            sacnDiagnostics?.protocolDrops ?? 0);
+            statusWarnings.sacnProtocolDrops
+            ?? sacnDiagnostics?.protocolDrops
+            ?? 0);
 
     if (lastArtNetProtocolDrops === null)
     {
@@ -1339,13 +1374,16 @@ function updateStatusMessages(data)
     }
 
     if (data.direction == 0
-        && diagnostics
-        && diagnostics.wrongUniverseWarningActive)
+        && (statusWarnings.wrongUniverseWarningActive
+            ?? diagnostics?.wrongUniverseWarningActive
+            ?? false))
     {
         wrongUniverseWarningVisibleUntil =
             Date.now() + wrongUniverseWarningHoldMs;
         lastWrongUniverseWarning =
-            diagnostics.lastWrongUniverse ?? '?';
+            statusWarnings.lastWrongUniverse
+            ?? diagnostics?.lastWrongUniverse
+            ?? '?';
     }
 
     if (Date.now() < wrongUniverseWarningVisibleUntil)
@@ -1390,7 +1428,8 @@ function updateStatusMessages(data)
             'Firmware/Web files mismatch');
     }
 
-    if (data.heapWarningActive)
+    if (data.heapWarningActive
+        || statusWarnings.heapWarningActive)
     {
         messages.push(
             'Heap headroom low - check diagnostics');
@@ -3789,8 +3828,7 @@ document
     }
 });
 
-loadAuthStatus();
-loadStatus();
+loadAuthStatus().then(loadStatus);
 loadConfig();
 refreshEventLog();
 createDMXMonitor();
@@ -3884,7 +3922,6 @@ ws.onmessage =
 	}
 
     updateHardwareStatus(data);
-    updateDetailedDiagnostics(data);
     updateStatusMessages(data);
 
     updateDashboardRuntime(data);

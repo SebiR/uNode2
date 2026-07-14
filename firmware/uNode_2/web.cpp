@@ -41,6 +41,9 @@ static size_t updateDeclaredSize = 0;
 static size_t updateWrittenSize = 0;
 static int updateCommand = U_FLASH;
 static String authSessionToken;
+static uint32_t authSessionLastActivityMillis = 0;
+static uint32_t authFailureWindowStartMillis = 0;
+static uint8_t authFailureCount = 0;
 
 static const char AUTH_HEADER[] = "X-uNode-Auth";
 static const char AUTH_HASH_PREFIX[] = "uNode-admin:";
@@ -55,13 +58,17 @@ static const size_t MAX_NETWORK_ACTION_JSON_SIZE = 64;
 static const size_t MAX_TEST_NETWORK_JSON_SIZE = 256;
 #endif
 static const size_t MAX_DMX_JSON_SIZE = 3072;
+static const uint32_t AUTH_SESSION_IDLE_TIMEOUT_MS = 30UL * 60UL * 1000UL;
+static const uint32_t AUTH_FAILURE_WINDOW_MS = 60UL * 1000UL;
+static const uint8_t AUTH_FAILURE_LIMIT = 5;
 static const uint32_t RTC_DIAGNOSTICS_OFFSET = 32;
 static const uint32_t RTC_DIAGNOSTICS_MAGIC = 0x554E4F44UL;
 static uint32_t minimumFreeHeap = UINT32_MAX;
 static bool bootDiagnosticsInitialized = false;
 static uint32_t bootCount = 0;
 
-static bool requireAuth();
+static bool requireAuth(
+  bool touchActivity = true);
 
 struct WebAssetVersionInfo {
   String version;
@@ -578,44 +585,115 @@ static String hashAdminPassword(
     String(AUTH_HASH_PREFIX) + password);
 }
 
-/** @return New volatile session token for the current boot. */
+/** @return New volatile session token sourced from the ESP radio/system RNG. */
 static String createAuthToken() {
+  uint8_t randomBytes[16];
+  ESP.random(
+    randomBytes,
+    sizeof(randomBytes));
+
   String token;
   token.reserve(32);
 
-  for (uint8_t i = 0; i < 4; i++) {
-    const uint32_t value =
-      ((uint32_t)random(65536) << 16)
-      | (uint32_t)random(65536);
-
-    char part[9];
+  for (uint8_t i = 0; i < sizeof(randomBytes); i++) {
+    char part[3];
     snprintf(
       part,
       sizeof(part),
-      "%08lx",
-      (unsigned long)value);
+      "%02x",
+      randomBytes[i]);
     token += part;
   }
+
+  memset(randomBytes, 0, sizeof(randomBytes));
 
   return token;
 }
 
+/** @brief Clears the current volatile session and its activity timestamp. */
+static void clearAuthSession() {
+  authSessionToken = "";
+  authSessionLastActivityMillis = 0;
+}
+
+/** @brief Resets the bounded login-failure window. */
+static void clearAuthFailures() {
+  authFailureWindowStartMillis = 0;
+  authFailureCount = 0;
+}
+
+/** @return Remaining login lockout time, or zero when another try is allowed. */
+static uint32_t getAuthRetryAfterMillis() {
+  if (authFailureCount < AUTH_FAILURE_LIMIT) {
+    return 0;
+  }
+
+  const uint32_t elapsed =
+    millis() - authFailureWindowStartMillis;
+
+  if (elapsed >= AUTH_FAILURE_WINDOW_MS) {
+    clearAuthFailures();
+    return 0;
+  }
+
+  return AUTH_FAILURE_WINDOW_MS - elapsed;
+}
+
+/** @brief Records one rejected password and starts/advances its time window. */
+static void recordAuthFailure() {
+  const uint32_t now = millis();
+
+  if (authFailureWindowStartMillis == 0
+      || now - authFailureWindowStartMillis >= AUTH_FAILURE_WINDOW_MS) {
+    authFailureWindowStartMillis = now;
+    authFailureCount = 0;
+  }
+
+  if (authFailureCount < UINT8_MAX) {
+    authFailureCount++;
+  }
+}
+
+/** @return True when the supplied token names a non-expired session. */
+static bool hasValidAuthSession(
+  bool touchActivity = true) {
+  if (authSessionToken.length() == 0) {
+    return false;
+  }
+
+  const uint32_t now = millis();
+  if (authSessionLastActivityMillis == 0
+      || now - authSessionLastActivityMillis
+           > AUTH_SESSION_IDLE_TIMEOUT_MS) {
+    clearAuthSession();
+    return false;
+  }
+
+  if (server.header(AUTH_HEADER) != authSessionToken) {
+    return false;
+  }
+
+  if (touchActivity) {
+    authSessionLastActivityMillis = now;
+  }
+
+  return true;
+}
+
 /** @return True when no password is configured or the request has a valid token. */
-static bool isAuthorizedRequest() {
+static bool isAuthorizedRequest(
+  bool touchActivity = true) {
   if (!isAuthEnabled()) {
     return true;
   }
 
-  const String token =
-    server.header(AUTH_HEADER);
-
-  return authSessionToken.length() > 0
-         && token == authSessionToken;
+  return hasValidAuthSession(touchActivity);
 }
 
 /** @brief Sends a 403 response when a mutating endpoint is locked. */
-static bool requireAuth() {
-  if (isAuthorizedRequest()) {
+static bool requireAuth(
+  bool touchActivity) {
+  if (isAuthorizedRequest(touchActivity)) {
     return true;
   }
 
@@ -656,7 +734,22 @@ static void handleAuthStatus() {
   doc["enabled"] =
     isAuthEnabled();
   doc["authenticated"] =
-    isAuthorizedRequest();
+    isAuthorizedRequest(false);
+  doc["sessionTimeoutSeconds"] =
+    AUTH_SESSION_IDLE_TIMEOUT_MS / 1000UL;
+
+  if (isAuthEnabled()
+      && authSessionToken.length() > 0
+      && authSessionLastActivityMillis > 0) {
+    const uint32_t age =
+      millis() - authSessionLastActivityMillis;
+    doc["sessionExpiresIn"] =
+      age < AUTH_SESSION_IDLE_TIMEOUT_MS
+        ? (AUTH_SESSION_IDLE_TIMEOUT_MS - age) / 1000UL
+        : 0;
+  } else {
+    doc["sessionExpiresIn"] = 0;
+  }
 
   String json;
   serializeJson(doc, json);
@@ -684,6 +777,20 @@ static void handleAuthLogin() {
     return;
   }
 
+  const uint32_t retryAfterMillis =
+    getAuthRetryAfterMillis();
+
+  if (retryAfterMillis > 0) {
+    server.sendHeader(
+      "Retry-After",
+      String((retryAfterMillis + 999UL) / 1000UL));
+    server.send(
+      429,
+      "text/plain",
+      "Too many login attempts");
+    return;
+  }
+
   if (!requirePlainBodyLimit(
         MAX_AUTH_JSON_SIZE,
         "Auth login")) {
@@ -706,6 +813,21 @@ static void handleAuthLogin() {
 
   if (hashAdminPassword(password)
       != config.adminPasswordHash) {
+    recordAuthFailure();
+
+    const uint32_t blockedFor =
+      getAuthRetryAfterMillis();
+    if (blockedFor > 0) {
+      server.sendHeader(
+        "Retry-After",
+        String((blockedFor + 999UL) / 1000UL));
+      server.send(
+        429,
+        "text/plain",
+        "Too many login attempts");
+      return;
+    }
+
     server.send(
       403,
       "text/plain",
@@ -713,8 +835,12 @@ static void handleAuthLogin() {
     return;
   }
 
+  clearAuthFailures();
+
   authSessionToken =
     createAuthToken();
+  authSessionLastActivityMillis =
+    millis();
 
   JsonDocument response;
   response["token"] =
@@ -734,7 +860,7 @@ static void handleAuthLogin() {
 /** @brief Clears the volatile browser session token. */
 static void handleAuthLogout() {
   if (server.header(AUTH_HEADER) == authSessionToken) {
-    authSessionToken = "";
+    clearAuthSession();
   }
 
   server.send(
@@ -786,11 +912,15 @@ static void handleAuthPassword() {
   }
 
   if (password.length() == 0) {
-    authSessionToken = "";
+    clearAuthSession();
   } else if (authSessionToken.length() == 0) {
     authSessionToken =
       createAuthToken();
+    authSessionLastActivityMillis =
+      millis();
   }
+
+  clearAuthFailures();
 
   JsonDocument response;
   response["enabled"] =
@@ -1072,13 +1202,19 @@ static bool handleFileRead(String path) {
   return true;
 }
 
-/** @brief Responds with the complete runtime status JSON document. */
-static void handleStatus() {
+/**
+ * @brief Responds with public operational state or protected diagnostics.
+ * @param detailed Include diagnostic counters and device internals.
+ */
+static void sendStatus(
+  bool detailed) {
   JsonDocument doc;
   initBootDiagnostics();
 
-  FSInfo fsInfo;
-  LittleFS.info(fsInfo);
+  FSInfo fsInfo = {};
+  if (detailed) {
+    LittleFS.info(fsInfo);
+  }
 
   const uint32_t freeHeap =
     ESP.getFreeHeap();
@@ -1107,6 +1243,7 @@ static void handleStatus() {
   }
 
   doc["name"] = config.shortName;
+  doc["detailed"] = detailed;
 
   doc["firmware"] = FW_VERSION;
   doc["buildDate"] = FW_BUILD_DATE;
@@ -1180,11 +1317,13 @@ static void handleStatus() {
   doc["wifiRecoveryAP"] =
     isNetworkRecoveryAPActive();
 
-  doc["storedWifiSSID"] =
-    getStoredWifiSSID();
+  if (detailed) {
+    doc["storedWifiSSID"] =
+      getStoredWifiSSID();
 
-  doc["storedWifiConfigured"] =
-    hasStoredWifiCredentials();
+    doc["storedWifiConfigured"] =
+      hasStoredWifiCredentials();
+  }
 
   doc["softAPActive"] =
     isSoftAPInterfaceActive();
@@ -1195,74 +1334,70 @@ static void handleStatus() {
   doc["softAPIP"] =
     getSoftAPIPAddress();
 
-  JsonObject networkDiagnostics =
-    doc["networkDiagnostics"].to<JsonObject>();
-  networkDiagnostics["ipFragmentGuardEnabled"] =
-    isIpFragmentGuardEnabled();
-  networkDiagnostics["ipv4FragmentsDropped"] =
-    getDroppedIpv4FragmentCount();
-  networkDiagnostics["ipv4FragmentedTxRejected"] =
-    getRejectedIpv4FragmentedTxCount();
-  networkDiagnostics["reconnectAttemptsTotal"] =
-    getNetworkReconnectAttemptCount();
-  networkDiagnostics["reconnectSuccesses"] =
-    getNetworkReconnectSuccessCount();
-  networkDiagnostics["lastReconnectDuration"] =
-    getLastNetworkReconnectDuration();
-  networkDiagnostics["testHarnessApiEnabled"] =
-    ENABLE_TEST_HARNESS_API != 0;
+  if (detailed) {
+    JsonObject networkDiagnostics =
+      doc["networkDiagnostics"].to<JsonObject>();
+    networkDiagnostics["ipFragmentGuardEnabled"] =
+      isIpFragmentGuardEnabled();
+    networkDiagnostics["ipv4FragmentsDropped"] =
+      getDroppedIpv4FragmentCount();
+    networkDiagnostics["ipv4FragmentedTxRejected"] =
+      getRejectedIpv4FragmentedTxCount();
+    networkDiagnostics["reconnectAttemptsTotal"] =
+      getNetworkReconnectAttemptCount();
+    networkDiagnostics["reconnectSuccesses"] =
+      getNetworkReconnectSuccessCount();
+    networkDiagnostics["lastReconnectDuration"] =
+      getLastNetworkReconnectDuration();
+    networkDiagnostics["testHarnessApiEnabled"] =
+      ENABLE_TEST_HARNESS_API != 0;
 #if ENABLE_TEST_HARNESS_API
-  networkDiagnostics["temporaryTestClientActive"] =
-    isTemporaryTestClientActive();
+    networkDiagnostics["temporaryTestClientActive"] =
+      isTemporaryTestClientActive();
 #endif
+  }
 
   doc["uptime"] = millis();
 
-  doc["freeHeap"] =
-    freeHeap;
-
-  doc["maxFreeBlock"] =
+  const uint32_t maxFreeBlock =
     ESP.getMaxFreeBlockSize();
-
-  doc["heapFragmentation"] =
-    ESP.getHeapFragmentation();
-
-  doc["minimumFreeHeap"] =
-    minimumFreeHeap;
+  const bool heapWarningActive =
+    freeHeap < HEAP_WARNING_FREE_BYTES
+    || maxFreeBlock < HEAP_WARNING_MAX_BLOCK_BYTES;
 
   doc["heapWarningActive"] =
-    freeHeap < HEAP_WARNING_FREE_BYTES
-    || ESP.getMaxFreeBlockSize() < HEAP_WARNING_MAX_BLOCK_BYTES;
+    heapWarningActive;
 
-  doc["heapWarningFreeThreshold"] =
-    HEAP_WARNING_FREE_BYTES;
-
-  doc["heapWarningBlockThreshold"] =
-    HEAP_WARNING_MAX_BLOCK_BYTES;
-
-  doc["resetReason"] =
-    ESP.getResetReason();
-
-  doc["resetInfo"] =
-    ESP.getResetInfo();
-
-  doc["bootCount"] =
-    bootCount;
-
-  doc["flashSize"] =
-    ESP.getFlashChipSize();
-
-  doc["sketchSize"] =
-    ESP.getSketchSize();
-
-  doc["freeSketch"] =
-    ESP.getFreeSketchSpace();
-
-  doc["fsTotal"] =
-    fsInfo.totalBytes;
-
-  doc["fsUsed"] =
-    fsInfo.usedBytes;
+  if (detailed) {
+    doc["freeHeap"] =
+      freeHeap;
+    doc["maxFreeBlock"] =
+      maxFreeBlock;
+    doc["heapFragmentation"] =
+      ESP.getHeapFragmentation();
+    doc["minimumFreeHeap"] =
+      minimumFreeHeap;
+    doc["heapWarningFreeThreshold"] =
+      HEAP_WARNING_FREE_BYTES;
+    doc["heapWarningBlockThreshold"] =
+      HEAP_WARNING_MAX_BLOCK_BYTES;
+    doc["resetReason"] =
+      ESP.getResetReason();
+    doc["resetInfo"] =
+      ESP.getResetInfo();
+    doc["bootCount"] =
+      bootCount;
+    doc["flashSize"] =
+      ESP.getFlashChipSize();
+    doc["sketchSize"] =
+      ESP.getSketchSize();
+    doc["freeSketch"] =
+      ESP.getFreeSketchSpace();
+    doc["fsTotal"] =
+      fsInfo.totalBytes;
+    doc["fsUsed"] =
+      fsInfo.usedBytes;
+  }
 
   doc["artnetPackets"] =
     getArtDmxCounter();
@@ -1285,40 +1420,42 @@ static void handleStatus() {
   doc["artSyncPending"] =
     isArtSyncPendingOutput();
 
-  JsonObject artNetDiagnostics =
-    doc["artNetDiagnostics"].to<JsonObject>();
-  artNetDiagnostics["oversizedPackets"] =
-    getArtNetOversizedPacketCount();
-  artNetDiagnostics["shortPackets"] =
-    getArtNetShortPacketCount();
-  artNetDiagnostics["invalidIdPackets"] =
-    getArtNetInvalidIdPacketCount();
-  artNetDiagnostics["unsupportedProtocolPackets"] =
-    getArtNetUnsupportedProtocolCount();
-  artNetDiagnostics["malformedPackets"] =
-    getArtNetMalformedPacketCount();
-  artNetDiagnostics["unsupportedOpcodes"] =
-    getArtNetUnsupportedOpcodeCount();
-  artNetDiagnostics["wrongUniversePackets"] =
-    getArtNetWrongUniverseCount();
-  artNetDiagnostics["lastWrongUniverse"] =
-    getArtNetLastWrongUniverse();
-  artNetDiagnostics["lastWrongUniverseAge"] =
-    getArtNetLastWrongUniverseAge();
-  artNetDiagnostics["wrongUniverseWarningActive"] =
-    isArtNetWrongUniverseWarningActive();
-  artNetDiagnostics["protocolDrops"] =
-    getArtNetProtocolDropCount();
-  artNetDiagnostics["directionDrops"] =
-    getArtNetDirectionDropCount();
-  artNetDiagnostics["sequenceDrops"] =
-    getArtNetSequenceDropCount();
-  artNetDiagnostics["mergeLockDrops"] =
-    getArtNetMergeLockDropCount();
-  artNetDiagnostics["mergeThirdSourceDrops"] =
-    getArtNetMergeThirdSourceDropCount();
-  artNetDiagnostics["syncTimeouts"] =
-    getArtNetSyncTimeoutCount();
+  if (detailed) {
+    JsonObject artNetDiagnostics =
+      doc["artNetDiagnostics"].to<JsonObject>();
+    artNetDiagnostics["oversizedPackets"] =
+      getArtNetOversizedPacketCount();
+    artNetDiagnostics["shortPackets"] =
+      getArtNetShortPacketCount();
+    artNetDiagnostics["invalidIdPackets"] =
+      getArtNetInvalidIdPacketCount();
+    artNetDiagnostics["unsupportedProtocolPackets"] =
+      getArtNetUnsupportedProtocolCount();
+    artNetDiagnostics["malformedPackets"] =
+      getArtNetMalformedPacketCount();
+    artNetDiagnostics["unsupportedOpcodes"] =
+      getArtNetUnsupportedOpcodeCount();
+    artNetDiagnostics["wrongUniversePackets"] =
+      getArtNetWrongUniverseCount();
+    artNetDiagnostics["lastWrongUniverse"] =
+      getArtNetLastWrongUniverse();
+    artNetDiagnostics["lastWrongUniverseAge"] =
+      getArtNetLastWrongUniverseAge();
+    artNetDiagnostics["wrongUniverseWarningActive"] =
+      isArtNetWrongUniverseWarningActive();
+    artNetDiagnostics["protocolDrops"] =
+      getArtNetProtocolDropCount();
+    artNetDiagnostics["directionDrops"] =
+      getArtNetDirectionDropCount();
+    artNetDiagnostics["sequenceDrops"] =
+      getArtNetSequenceDropCount();
+    artNetDiagnostics["mergeLockDrops"] =
+      getArtNetMergeLockDropCount();
+    artNetDiagnostics["mergeThirdSourceDrops"] =
+      getArtNetMergeThirdSourceDropCount();
+    artNetDiagnostics["syncTimeouts"] =
+      getArtNetSyncTimeoutCount();
+  }
 
   doc["artPolls"] =
     getArtPollCount();
@@ -1361,42 +1498,44 @@ static void handleStatus() {
   doc["sacnFailsafeActive"] =
     isSacnFailsafeActive();
 
-  JsonObject sacnDiagnostics =
-    doc["sacnDiagnostics"].to<JsonObject>();
-  sacnDiagnostics["wrongUniversePackets"] =
-    getSacnWrongUniverseCount();
-  sacnDiagnostics["lastWrongUniverse"] =
-    getSacnLastWrongUniverse();
-  sacnDiagnostics["malformedPackets"] =
-    getSacnMalformedPacketCount();
-  sacnDiagnostics["sequenceDrops"] =
-    getSacnSequenceDropCount();
-  sacnDiagnostics["protocolDrops"] =
-    getSacnProtocolDropCount();
-  sacnDiagnostics["directionDrops"] =
-    getSacnDirectionDropCount();
-  sacnDiagnostics["priorityDrops"] =
-    getSacnPriorityDropCount();
-  sacnDiagnostics["streamTerminated"] =
-    getSacnStreamTerminatedCount();
-  sacnDiagnostics["activeSources"] =
-    getSacnActiveSourceCount();
-  sacnDiagnostics["winningPriority"] =
-    getSacnWinningPriority();
-  sacnDiagnostics["sourceTimeouts"] =
-    getSacnSourceTimeoutCount();
-  sacnDiagnostics["multicastJoined"] =
-    isSacnMulticastJoined();
-  sacnDiagnostics["multicastJoins"] =
-    getSacnMulticastJoinCount();
-  sacnDiagnostics["multicastLeaves"] =
-    getSacnMulticastLeaveCount();
-  sacnDiagnostics["multicastJoinFailures"] =
-    getSacnMulticastJoinFailureCount();
-  sacnDiagnostics["multicastLeaveFailures"] =
-    getSacnMulticastLeaveFailureCount();
-  sacnDiagnostics["socketRebinds"] =
-    getSacnSocketRebindCount();
+  if (detailed) {
+    JsonObject sacnDiagnostics =
+      doc["sacnDiagnostics"].to<JsonObject>();
+    sacnDiagnostics["wrongUniversePackets"] =
+      getSacnWrongUniverseCount();
+    sacnDiagnostics["lastWrongUniverse"] =
+      getSacnLastWrongUniverse();
+    sacnDiagnostics["malformedPackets"] =
+      getSacnMalformedPacketCount();
+    sacnDiagnostics["sequenceDrops"] =
+      getSacnSequenceDropCount();
+    sacnDiagnostics["protocolDrops"] =
+      getSacnProtocolDropCount();
+    sacnDiagnostics["directionDrops"] =
+      getSacnDirectionDropCount();
+    sacnDiagnostics["priorityDrops"] =
+      getSacnPriorityDropCount();
+    sacnDiagnostics["streamTerminated"] =
+      getSacnStreamTerminatedCount();
+    sacnDiagnostics["activeSources"] =
+      getSacnActiveSourceCount();
+    sacnDiagnostics["winningPriority"] =
+      getSacnWinningPriority();
+    sacnDiagnostics["sourceTimeouts"] =
+      getSacnSourceTimeoutCount();
+    sacnDiagnostics["multicastJoined"] =
+      isSacnMulticastJoined();
+    sacnDiagnostics["multicastJoins"] =
+      getSacnMulticastJoinCount();
+    sacnDiagnostics["multicastLeaves"] =
+      getSacnMulticastLeaveCount();
+    sacnDiagnostics["multicastJoinFailures"] =
+      getSacnMulticastJoinFailureCount();
+    sacnDiagnostics["multicastLeaveFailures"] =
+      getSacnMulticastLeaveFailureCount();
+    sacnDiagnostics["socketRebinds"] =
+      getSacnSocketRebindCount();
+  }
 
   doc["failsafeMode"] =
     config.failsafeMode;
@@ -1511,6 +1650,19 @@ static void handleStatus() {
 
   addArtNetSources(doc);
 
+  JsonObject statusWarnings =
+    doc["statusWarnings"].to<JsonObject>();
+  statusWarnings["wrongUniverseWarningActive"] =
+    isArtNetWrongUniverseWarningActive();
+  statusWarnings["lastWrongUniverse"] =
+    getArtNetLastWrongUniverse();
+  statusWarnings["artNetProtocolDrops"] =
+    getArtNetProtocolDropCount();
+  statusWarnings["sacnProtocolDrops"] =
+    getSacnProtocolDropCount();
+  statusWarnings["heapWarningActive"] =
+    heapWarningActive;
+
   doc["subnet"] = WiFi.subnetMask().toString();
 
   String json;
@@ -1523,6 +1675,22 @@ static void handleStatus() {
     200,
     "application/json",
     json);
+}
+
+/** @brief Responds with the intentionally small public runtime status. */
+static void handleStatus() {
+  sendStatus(false);
+}
+
+/** @brief Responds with protected runtime diagnostics and internal counters. */
+static void handleDiagnostics() {
+  // Periodic diagnostics polling must not keep an otherwise idle browser
+  // session alive forever. Mutating calls and explicit protected actions do.
+  if (!requireAuth(false)) {
+    return;
+  }
+
+  sendStatus(true);
 }
 
 /** @brief Responds with the active configuration as JSON. */
@@ -2681,6 +2849,11 @@ bool initWeb() {
     "/api/status",
     HTTP_GET,
     handleStatus);
+
+  server.on(
+    "/api/diagnostics",
+    HTTP_GET,
+    handleDiagnostics);
 
   server.on(
     "/api/auth/status",

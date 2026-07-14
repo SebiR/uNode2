@@ -216,6 +216,9 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 - [x] Add upload and request-size limits to all web endpoints.
 - [x] Protect configuration, restart, reset, and update endpoints with
       authentication.
+- [x] Harden browser/API sessions with system-RNG tokens, an idle timeout, and
+      bounded login attempts; keep detailed diagnostics out of anonymous
+      status and WebSocket responses.
 - [x] Replace firmware-side blocking restart delays with a scheduled restart.
 - [x] Validate static network settings semantically, including subnet masks
       and address relationships.

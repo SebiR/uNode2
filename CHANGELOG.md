@@ -11,6 +11,13 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+### Added
+
+- Added a protected `/api/diagnostics` response for heap, reset, network,
+  parser, and protocol internals. The regression client transparently uses
+  this endpoint after authentication, so existing diagnostic tests remain
+  concise.
+
 ### Fixed
 
 - Quiesce the runtime-created fixture station interface before restarting a
@@ -19,6 +26,13 @@ explicitly in each release entry.
 
 ### Changed
 
+- Hardened optional web/API access control with ESP system-RNG session tokens,
+  a 30-minute idle timeout, and a global limit of five rejected login attempts
+  per 60 seconds.
+- Reduced the anonymous `/api/status` and WebSocket payloads to operational
+  state and compact warning indicators. Stored Wi-Fi information, memory and
+  reset internals, test-harness capabilities, and detailed protocol counters
+  now require authentication when a password is configured.
 - Added a compile-time isolated production-test Wi-Fi harness. Explicit
   `ENABLE_TEST_HARNESS_API=1` builds can accept RAM-only fixture credentials,
   switch from the node AP to a Raspberry Pi hotspot, force a controlled Client

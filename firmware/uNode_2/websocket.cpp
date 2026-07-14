@@ -7,7 +7,6 @@
 #include "dmx.h"
 #include "network.h"
 #include "leds.h"
-#include "ip_fragment_guard.h"
 
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
@@ -208,27 +207,6 @@ void broadcastStatus() {
   doc["uptime"] =
     millis();
 
-  JsonObject networkDiagnostics =
-    doc["networkDiagnostics"].to<JsonObject>();
-  networkDiagnostics["ipFragmentGuardEnabled"] =
-    isIpFragmentGuardEnabled();
-  networkDiagnostics["ipv4FragmentsDropped"] =
-    getDroppedIpv4FragmentCount();
-  networkDiagnostics["ipv4FragmentedTxRejected"] =
-    getRejectedIpv4FragmentedTxCount();
-  networkDiagnostics["reconnectAttemptsTotal"] =
-    getNetworkReconnectAttemptCount();
-  networkDiagnostics["reconnectSuccesses"] =
-    getNetworkReconnectSuccessCount();
-  networkDiagnostics["lastReconnectDuration"] =
-    getLastNetworkReconnectDuration();
-  networkDiagnostics["testHarnessApiEnabled"] =
-    ENABLE_TEST_HARNESS_API != 0;
-#if ENABLE_TEST_HARNESS_API
-  networkDiagnostics["temporaryTestClientActive"] =
-    isTemporaryTestClientActive();
-#endif
-
   doc["artnetPackets"] =
     getArtDmxCounter();
 
@@ -240,15 +218,6 @@ void broadcastStatus() {
 
   doc["artnetActive"] =
     isArtNetActive();
-
-  JsonObject artNetDiagnostics =
-    doc["artNetDiagnostics"].to<JsonObject>();
-  artNetDiagnostics["protocolDrops"] =
-    getArtNetProtocolDropCount();
-  artNetDiagnostics["wrongUniverseWarningActive"] =
-    isArtNetWrongUniverseWarningActive();
-  artNetDiagnostics["lastWrongUniverse"] =
-    getArtNetLastWrongUniverse();
 
   doc["liveProtocol"] =
     config.liveProtocol;
@@ -275,28 +244,16 @@ void broadcastStatus() {
   doc["sacnActive"] =
     isSacnActive();
 
-  JsonObject sacnDiagnostics =
-    doc["sacnDiagnostics"].to<JsonObject>();
-  sacnDiagnostics["protocolDrops"] =
+  JsonObject statusWarnings =
+    doc["statusWarnings"].to<JsonObject>();
+  statusWarnings["wrongUniverseWarningActive"] =
+    isArtNetWrongUniverseWarningActive();
+  statusWarnings["lastWrongUniverse"] =
+    getArtNetLastWrongUniverse();
+  statusWarnings["artNetProtocolDrops"] =
+    getArtNetProtocolDropCount();
+  statusWarnings["sacnProtocolDrops"] =
     getSacnProtocolDropCount();
-  sacnDiagnostics["activeSources"] =
-    getSacnActiveSourceCount();
-  sacnDiagnostics["winningPriority"] =
-    getSacnWinningPriority();
-  sacnDiagnostics["sourceTimeouts"] =
-    getSacnSourceTimeoutCount();
-  sacnDiagnostics["multicastJoined"] =
-    isSacnMulticastJoined();
-  sacnDiagnostics["multicastJoins"] =
-    getSacnMulticastJoinCount();
-  sacnDiagnostics["multicastLeaves"] =
-    getSacnMulticastLeaveCount();
-  sacnDiagnostics["multicastJoinFailures"] =
-    getSacnMulticastJoinFailureCount();
-  sacnDiagnostics["multicastLeaveFailures"] =
-    getSacnMulticastLeaveFailureCount();
-  sacnDiagnostics["socketRebinds"] =
-    getSacnSocketRebindCount();
 
   doc["artSyncs"] =
     getArtSyncCounter();

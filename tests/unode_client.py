@@ -20,6 +20,7 @@ class UNodeClient:
     def __post_init__(self) -> None:
         self.base_url = self.base_url.rstrip("/")
         self.token = ""
+        self.prefer_detailed_status = False
 
     def _request(
         self,
@@ -81,13 +82,31 @@ class UNodeClient:
         raise AssertionError(f"{method} {path} failed without response")
 
     def get_json(self, path: str, *, timeout: float = 5.0) -> dict[str, Any]:
+        request_path = path
+        if (
+            self.prefer_detailed_status
+            and path.split("?", 1)[0] == "/api/status"
+        ):
+            suffix = "?" + path.split("?", 1)[1] if "?" in path else ""
+            request_path = "/api/diagnostics" + suffix
+
         status, _content_type, body = self._request(
             "GET",
-            path,
+            request_path,
             timeout=timeout,
         )
+        if request_path.startswith("/api/diagnostics") and status == 404:
+            # The embedded Recovery Mode exposes only its compact /api/status.
+            request_path = path
+            status, _content_type, body = self._request(
+                "GET",
+                request_path,
+                timeout=timeout,
+            )
         if status < 200 or status >= 300:
-            raise AssertionError(f"GET {path} failed with HTTP {status}: {body!r}")
+            raise AssertionError(
+                f"GET {request_path} failed with HTTP {status}: {body!r}"
+            )
         return json.loads(body.decode("utf-8"))
 
     def post_json(
@@ -108,8 +127,10 @@ class UNodeClient:
     def ensure_authenticated(self) -> None:
         auth_status = self.get_json("/api/auth/status")
         if not auth_status.get("enabled", False):
+            self.prefer_detailed_status = True
             return
         if auth_status.get("authenticated", False):
+            self.prefer_detailed_status = True
             return
         if not self.password:
             raise AssertionError(
@@ -127,6 +148,8 @@ class UNodeClient:
         self.token = response.get("token", "")
         if not self.token:
             raise AssertionError("Login response did not contain an auth token")
+
+        self.prefer_detailed_status = True
 
     def get_config(self) -> dict[str, Any]:
         return self.get_json("/api/config")
