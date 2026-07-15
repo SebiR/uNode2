@@ -94,6 +94,7 @@ def test_node_red_uses_one_global_wifi_connection_manager() -> None:
 
     template = nodes["a11e000000000134"]
     state_builder = nodes["a11e000000000135"]
+    layout_style = nodes["a11e000000000136"]
     validator = nodes["a11e000000000119"]
     status_parser = nodes["a11e000000000123"]
 
@@ -108,6 +109,9 @@ def test_node_red_uses_one_global_wifi_connection_manager() -> None:
     assert "network-disconnect" in template["format"]
     assert template["wires"] == [["a11e000000000119"]]
     assert state_builder["wires"] == [[template["id"]]]
+    assert layout_style["templateScope"] == "site:style"
+    assert ".unode-global-connect" in layout_style["format"]
+    assert ".nrdb-ui-page" in layout_style["format"]
     assert "validSsid" in validator["func"]
     assert "network-connect" in validator["func"]
     assert "network-disconnect" in validator["func"]

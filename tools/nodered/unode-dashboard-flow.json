@@ -154,6 +154,28 @@
       "wires": [["a11e000000000134"]]
     },
     {
+      "id": "a11e000000000136",
+      "type": "ui-template",
+      "z": "a11e000000000001",
+      "group": "",
+      "page": "",
+      "ui": "a11e000000000201",
+      "name": "Global connection bar layout",
+      "order": 2,
+      "width": 0,
+      "height": 0,
+      "head": "",
+      "format": ".nrdb-ui-page { padding-top:78px !important; }\n.nrdb-app .unode-global-connect { position:fixed !important; top:72px !important; left:12px !important; right:12px !important; width:auto !important; margin:0 !important; }\n@media(max-width:760px) { .nrdb-ui-page { padding-top:158px !important; } .nrdb-app .unode-global-connect { position:fixed !important; } }",
+      "storeOutMessages": true,
+      "passthru": true,
+      "resendOnRefresh": true,
+      "templateScope": "site:style",
+      "className": "",
+      "x": 870,
+      "y": 220,
+      "wires": [[]]
+    },
+    {
       "id": "a11e000000000109",
       "type": "ui-template",
       "z": "a11e000000000001",
