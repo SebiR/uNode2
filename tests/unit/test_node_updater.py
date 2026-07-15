@@ -88,6 +88,26 @@ def test_node_red_test_controls_require_an_online_node() -> None:
         assert "uNode offline" in template
 
 
+def test_node_red_status_page_can_scan_and_connect_to_unode_wifi() -> None:
+    flow = json.loads(FLOW_PATH.read_text(encoding="utf-8"))
+    nodes = {node["id"]: node for node in flow["nodes"]}
+
+    template = nodes["a11e000000000134"]
+    validator = nodes["a11e000000000119"]
+    status_parser = nodes["a11e000000000123"]
+
+    assert template["group"] == "a11e000000000204"
+    assert "Scan uNode APs" in template["format"]
+    assert "Connect selected" in template["format"]
+    assert "network-scan" in template["format"]
+    assert "network-connect" in template["format"]
+    assert template["wires"] == [["a11e000000000119"]]
+    assert "validSsid" in validator["func"]
+    assert "network-connect" in validator["func"]
+    assert template["id"] in validator["wires"][1]
+    assert template["id"] in status_parser["wires"][0]
+
+
 def test_platform_test_runners_execute_unode_preflight() -> None:
     linux_runner = LINUX_TEST_RUNNER_PATH.read_text(encoding="utf-8")
     windows_runner = WINDOWS_TEST_RUNNER_PATH.read_text(encoding="utf-8")
@@ -219,6 +239,128 @@ def test_connect_node_creates_private_user_profile(
             "yes",
         )
     ]
+
+
+def test_dashboard_connection_scan_does_not_change_wifi_connection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[tuple] = []
+
+    class FakeJob:
+        def __init__(self) -> None:
+            self.data = {}
+
+        def progress(self, message: str, *, percent: int | None = None) -> None:
+            events.append((message, percent))
+
+    access_points = [
+        {
+            "ssid": "uNode_ABC123",
+            "chipId": "ABC123",
+            "signal": 87,
+            "active": False,
+        }
+    ]
+    monkeypatch.setattr(
+        node_updater,
+        "scan_access_points",
+        lambda: access_points,
+    )
+    monkeypatch.setattr(
+        node_updater,
+        "current_connection",
+        lambda: pytest.fail("Lightweight scan must not alter the connection"),
+    )
+
+    job = FakeJob()
+    assert node_updater.scan_for_dashboard_connection(job) == access_points
+    assert job.data["accessPoints"] == access_points
+    assert events[-1] == ("Found 1 uNode access point(s)", 90)
+
+
+def test_dashboard_connect_verifies_identity_and_keeps_node_connected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[tuple] = []
+
+    class FakeJob:
+        def __init__(self) -> None:
+            self.data = {}
+
+        def progress(self, message: str, *, percent: int | None = None) -> None:
+            events.append(("progress", message, percent))
+
+    monkeypatch.setattr(
+        node_updater,
+        "scan_access_points",
+        lambda: [
+            {
+                "ssid": "uNode_ABC123",
+                "chipId": "ABC123",
+                "signal": 91,
+                "active": False,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        node_updater,
+        "connect_node",
+        lambda ssid: events.append(("connect", ssid)),
+    )
+    monkeypatch.setattr(
+        node_updater,
+        "probe_node",
+        lambda: {
+            "chipId": "ABC123",
+            "name": "IN_uNode",
+            "firmware": "0.23.19",
+            "mode": "normal",
+        },
+    )
+    monkeypatch.setattr(
+        node_updater,
+        "restore_connection",
+        lambda _name: pytest.fail("Dashboard connect must remain active"),
+    )
+
+    job = FakeJob()
+    result = node_updater.connect_dashboard_node(
+        job,
+        {"action": "network-connect", "ssid": "uNode_ABC123"},
+    )
+
+    assert result["chipId"] == "ABC123"
+    assert result["identityMatch"] is True
+    assert result["active"] is True
+    assert ("connect", "uNode_ABC123") in events
+    assert job.data["accessPoints"][0]["firmware"] == "0.23.19"
+
+
+def test_dashboard_connect_rejects_disappeared_or_wrong_node(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    job = SimpleNamespace(data={}, progress=lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(node_updater, "scan_access_points", lambda: [])
+
+    with pytest.raises(RuntimeError, match="no longer visible"):
+        node_updater.connect_dashboard_node(
+            job,
+            {"action": "network-connect", "ssid": "uNode_ABC123"},
+        )
+
+    monkeypatch.setattr(
+        node_updater,
+        "scan_access_points",
+        lambda: [{"ssid": "uNode_ABC123", "signal": 50}],
+    )
+    monkeypatch.setattr(node_updater, "connect_node", lambda _ssid: None)
+    monkeypatch.setattr(node_updater, "probe_node", lambda: {"chipId": "DEF456"})
+
+    with pytest.raises(RuntimeError, match="identity mismatch"):
+        node_updater.connect_dashboard_node(
+            job,
+            {"action": "network-connect", "ssid": "uNode_ABC123"},
+        )
 
 
 def test_led_control_applies_colors_and_restores_previous_connection(

@@ -119,6 +119,25 @@ def persisted_node_inventory() -> list[dict[str, Any]]:
     return []
 
 
+def persisted_access_points() -> list[dict[str, Any]]:
+    """Return the most recent lightweight dashboard Wi-Fi scan."""
+
+    if not STATUS_FILE.is_file():
+        return []
+    try:
+        status = json.loads(STATUS_FILE.read_text(encoding="utf-8"))
+        access_points = (
+            status.get("accessPoints", []) if isinstance(status, dict) else []
+        )
+        if isinstance(access_points, list) and all(
+            isinstance(access_point, dict) for access_point in access_points
+        ):
+            return access_points
+    except (OSError, json.JSONDecodeError):
+        pass
+    return []
+
+
 def split_nmcli_fields(line: str) -> list[str]:
     """Split one escaped ``nmcli -t`` record without losing literal colons."""
 
@@ -324,6 +343,7 @@ class JobStatus:
                 if key != "password"
             },
             "nodes": persisted_node_inventory(),
+            "accessPoints": persisted_access_points(),
             "releases": available_releases(),
             "serialProgrammers": serial_programmers(),
             "progress": 0,
@@ -455,6 +475,62 @@ def scan_access_points() -> list[dict[str, Any]]:
             nodes[ssid] = candidate
 
     return sorted(nodes.values(), key=lambda item: (-int(item["signal"]), item["ssid"]))
+
+
+def scan_for_dashboard_connection(job: JobStatus) -> list[dict[str, Any]]:
+    """Perform a lightweight AP scan without changing the active connection."""
+
+    job.data["state"] = "scanning"
+    job.progress("Scanning wlan0 for uNode access points", percent=10)
+    access_points = scan_access_points()
+    job.data["accessPoints"] = access_points
+    job.progress(
+        f"Found {len(access_points)} uNode access point(s)",
+        percent=90,
+    )
+    return access_points
+
+
+def connect_dashboard_node(
+    job: JobStatus, request: dict[str, Any]
+) -> dict[str, Any]:
+    """Connect the fixture Wi-Fi to one advertised uNode and leave it active."""
+
+    ssid = str(request.get("ssid", ""))
+    expected_chip = validate_ssid(ssid).group(1).upper()
+
+    job.data["state"] = "connecting"
+    job.progress(f"Checking that {ssid} is still available", percent=10)
+    access_points = scan_access_points()
+    selected = next(
+        (item for item in access_points if item.get("ssid") == ssid),
+        None,
+    )
+    if selected is None:
+        raise RuntimeError(f"{ssid} is no longer visible on wlan0")
+
+    job.data["accessPoints"] = access_points
+    job.progress(f"Connecting wlan0 to {ssid}", percent=35)
+    connect_node(ssid)
+    job.progress(f"Waiting for the uNode API at {BASE_URL}", percent=65)
+    node = probe_node()
+    actual_chip = str(node.get("chipId", "")).upper()
+    if actual_chip != expected_chip:
+        raise RuntimeError(
+            f"Connected AP identity mismatch: expected {expected_chip}, got "
+            f"{actual_chip or 'unknown'}"
+        )
+
+    selected.update(node)
+    selected["identityMatch"] = True
+    selected["active"] = True
+    job.data["accessPoints"] = access_points
+    job.progress(
+        f"Connected to {node.get('name', ssid)} {actual_chip} "
+        f"({node.get('mode', 'unknown')})",
+        percent=95,
+    )
+    return selected
 
 
 def validate_ssid(ssid: str) -> re.Match[str]:
@@ -1242,6 +1318,7 @@ def idle_status() -> dict[str, Any]:
                 status["serialProgrammers"] = serial_programmers()
                 status["esptoolVersion"] = installed_esptool_version()
                 status["fixtureBusy"] = fixture_busy
+                status.setdefault("accessPoints", [])
                 if (
                     not fixture_busy
                     and not status.get("running")
@@ -1265,6 +1342,7 @@ def idle_status() -> dict[str, Any]:
         "startedAt": "",
         "finishedAt": "",
         "nodes": [],
+        "accessPoints": [],
         "releases": available_releases(),
         "serialProgrammers": serial_programmers(),
         "esptoolVersion": installed_esptool_version(),
@@ -1309,6 +1387,21 @@ def run_request(encoded: str) -> int:
                     f"Scan complete: {len(nodes)} uNode access point(s) found"
                 )
                 job.finish("ready", message, nodes=nodes)
+            elif action == "network-scan":
+                access_points = scan_for_dashboard_connection(job)
+                message = (
+                    f"Wi-Fi scan complete: {len(access_points)} uNode "
+                    "access point(s) found"
+                )
+                job.finish("ready", message, accessPoints=access_points)
+            elif action == "network-connect":
+                result = connect_dashboard_node(job, request)
+                job.finish(
+                    "ready",
+                    f"Connected wlan0 to {result['ssid']}",
+                    result=result,
+                    accessPoints=job.data["accessPoints"],
+                )
             elif action == "update":
                 result = perform_update(job, request)
                 job.finish(
@@ -1336,8 +1429,8 @@ def run_request(encoded: str) -> int:
                 )
             else:
                 raise ValueError(
-                    "Updater action must be scan, update, initial-flash, "
-                    "led-set, or led-release"
+                    "Updater action must be scan, network-scan, network-connect, "
+                    "update, initial-flash, led-set, or led-release"
                 )
         except Exception as error:  # noqa: BLE001 - surface complete failure in dashboard.
             job.finish("error", str(error))
