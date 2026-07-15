@@ -165,7 +165,7 @@
       "width": 0,
       "height": 0,
       "head": "",
-      "format": ".nrdb-ui-page { padding-top:78px !important; }\n.nrdb-app .unode-global-connect { position:fixed !important; top:72px !important; left:12px !important; right:12px !important; width:auto !important; margin:0 !important; }\n@media(max-width:760px) { .nrdb-ui-page { padding-top:158px !important; } .nrdb-app .unode-global-connect { position:fixed !important; } }",
+      "format": ".nrdb-ui-page { padding-top:78px !important; }\n.nrdb-app .unode-global-connect { position:absolute !important; top:72px !important; left:12px !important; right:12px !important; width:auto !important; margin:0 !important; }\n@media(max-width:760px) { .nrdb-ui-page { padding-top:158px !important; } .nrdb-app .unode-global-connect { position:absolute !important; } }",
       "storeOutMessages": true,
       "passthru": true,
       "resendOnRefresh": true,

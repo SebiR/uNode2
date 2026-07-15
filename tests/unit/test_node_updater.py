@@ -112,6 +112,8 @@ def test_node_red_uses_one_global_wifi_connection_manager() -> None:
     assert layout_style["templateScope"] == "site:style"
     assert ".unode-global-connect" in layout_style["format"]
     assert ".nrdb-ui-page" in layout_style["format"]
+    assert "position:absolute" in layout_style["format"]
+    assert "position:fixed" not in layout_style["format"]
     assert "validSsid" in validator["func"]
     assert "network-connect" in validator["func"]
     assert "network-disconnect" in validator["func"]
