@@ -41,3 +41,41 @@ def test_detailed_status_falls_back_to_recovery_status_on_404(monkeypatch) -> No
 
     assert client.get_json("/api/status")["recoveryMode"] is True
     assert paths == ["/api/diagnostics", "/api/status"]
+
+
+def test_runtime_config_uses_test_endpoint_without_unrelated_fields(monkeypatch) -> None:
+    client = UNodeClient("http://2.0.0.1")
+    requests: list[tuple[str, dict]] = []
+
+    monkeypatch.setattr(client, "ensure_authenticated", lambda: None)
+
+    def post_json(path: str, data: dict, **_kwargs):
+        requests.append((path, data))
+        return 200, json.dumps({"persistent": False}).encode("utf-8")
+
+    monkeypatch.setattr(client, "post_json", post_json)
+
+    response = client.apply_runtime_config(
+        {
+            "liveProtocol": 1,
+            "direction": 0,
+            "mergeMode": 1,
+            "failsafeMode": 2,
+            "legacyArtPollReply": True,
+            "hostname": "must-not-be-sent",
+        }
+    )
+
+    assert response["persistent"] is False
+    assert requests == [
+        (
+            "/api/test/runtime-config",
+            {
+                "liveProtocol": 1,
+                "direction": 0,
+                "mergeMode": 1,
+                "failsafeMode": 2,
+                "legacyArtPollReply": True,
+            },
+        )
+    ]

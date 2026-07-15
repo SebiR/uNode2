@@ -107,6 +107,7 @@ def test_api_write_endpoints_require_auth_when_password_is_enabled(
             protected_requests.extend(
                 [
                     ("/api/network/reconnect", {"outageMs": 1000}),
+                    ("/api/test/runtime-config", {"liveProtocol": 0}),
                     (
                         "/api/test/network/client",
                         {

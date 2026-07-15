@@ -69,6 +69,26 @@
     "title": "sACN foreign UDP flood",
     "description": "Floods the sACN port with malformed and jumbo datagrams, then verifies API, heap, ArtPoll and valid sACN recovery without a reboot."
   },
+  "tests/integration/test_soak.py::test_host_soak_network_output_and_runtime_stability[artnet-output]": {
+    "group": "Network Soak",
+    "title": "Art-Net runtime stability",
+    "description": "Streams ArtDmx while exercising volatile runtime settings, parser faults, HTTP diagnostics and ArtPoll reachability without writing LittleFS."
+  },
+  "tests/integration/test_soak.py::test_host_soak_network_output_and_runtime_stability[sacn-output]": {
+    "group": "Network Soak",
+    "title": "sACN runtime stability",
+    "description": "Streams sACN while exercising volatile runtime settings, parser faults, HTTP diagnostics and ArtPoll reachability without writing LittleFS."
+  },
+  "tests/integration/test_config_flash_stress.py::test_persistent_config_flash_stress_isolated_from_network_soak": {
+    "group": "Storage Stress",
+    "title": "Persistent configuration writes",
+    "description": "Explicitly stresses atomic LittleFS configuration commits while monitoring heap and reset state, then restores the original configuration."
+  },
+  "tests/integration/test_runtime_config_api.py::test_test_harness_runtime_config_is_live_and_non_persistent": {
+    "group": "Test Harness",
+    "title": "Volatile runtime configuration",
+    "description": "Applies protocol runtime settings without LittleFS writes and verifies that a reboot restores the persisted configuration."
+  },
   "tests/integration/test_artipprog.py::test_artipprog_enquiry_reports_current_network_without_changing_it": {
     "group": "ArtIpProg",
     "title": "Network enquiry",

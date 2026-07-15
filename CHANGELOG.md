@@ -23,6 +23,12 @@ explicitly in each release entry.
 
 ### Fixed
 
+- Separated network soak traffic from LittleFS persistence stress. Test-harness
+  firmware now accepts a protected RAM-only runtime configuration for protocol,
+  direction, merge, failsafe, and legacy PollReply changes; normal network
+  soaks no longer commit `config.json` every ten seconds. A separate opt-in
+  flash-stress test retains deliberate persistence coverage and delayed
+  watchdog recovery is captured with host routing diagnostics.
 - Prevented offline hardware tests from entering pytest as repeated fixture
   errors. Linux and PowerShell runners now perform a bounded `/api/status`
   preflight, while the Node-RED dashboard disables and rejects test starts

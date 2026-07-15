@@ -56,6 +56,7 @@ static const size_t MAX_LED_OVERRIDE_JSON_SIZE = 192;
 #if ENABLE_TEST_HARNESS_API
 static const size_t MAX_NETWORK_ACTION_JSON_SIZE = 64;
 static const size_t MAX_TEST_NETWORK_JSON_SIZE = 256;
+static const size_t MAX_TEST_RUNTIME_CONFIG_JSON_SIZE = 256;
 #endif
 static const size_t MAX_DMX_JSON_SIZE = 3072;
 static const uint32_t AUTH_SESSION_IDLE_TIMEOUT_MS = 30UL * 60UL * 1000UL;
@@ -1785,6 +1786,164 @@ static void handleRestart() {
 }
 
 #if ENABLE_TEST_HARNESS_API
+/** @return True when a test-only runtime configuration field is supported. */
+static bool isTestRuntimeConfigField(const char* key) {
+  return strcmp(key, "liveProtocol") == 0
+    || strcmp(key, "direction") == 0
+    || strcmp(key, "mergeMode") == 0
+    || strcmp(key, "failsafeMode") == 0
+    || strcmp(key, "legacyArtPollReply") == 0;
+}
+
+/** @brief Applies protocol runtime settings without writing LittleFS. */
+static void handleTemporaryRuntimeConfig() {
+  if (!requireAuth()) {
+    return;
+  }
+
+  if (!requirePlainBodyLimit(
+        MAX_TEST_RUNTIME_CONFIG_JSON_SIZE,
+        "Temporary runtime config")) {
+    return;
+  }
+
+  JsonDocument request;
+  const DeserializationError parseResult =
+    deserializeJson(
+      request,
+      server.arg("plain"));
+
+  if (parseResult
+      || !request.is<JsonObject>()) {
+    server.send(
+      400,
+      "text/plain",
+      "Runtime configuration must be a JSON object");
+    return;
+  }
+
+  const JsonObjectConst object =
+    request.as<JsonObjectConst>();
+
+  for (JsonPairConst entry : object) {
+    if (!isTestRuntimeConfigField(
+          entry.key().c_str())) {
+      server.send(
+        400,
+        "text/plain",
+        "Unsupported temporary runtime field");
+      return;
+    }
+  }
+
+  Config candidate = config;
+
+  if (!object["liveProtocol"].isNull()) {
+    if (!object["liveProtocol"].is<int>()) {
+      server.send(400, "text/plain", "Invalid liveProtocol");
+      return;
+    }
+
+    const int value = object["liveProtocol"].as<int>();
+    if (value < LIVE_PROTOCOL_ARTNET
+        || value > LIVE_PROTOCOL_SACN) {
+      server.send(400, "text/plain", "Invalid liveProtocol");
+      return;
+    }
+    candidate.liveProtocol = (LiveProtocol)value;
+  }
+
+  if (!object["direction"].isNull()) {
+    if (!object["direction"].is<int>()) {
+      server.send(400, "text/plain", "Invalid direction");
+      return;
+    }
+
+    const int value = object["direction"].as<int>();
+    if (value < ARTNET_TO_DMX
+        || value > DMX_TO_ARTNET) {
+      server.send(400, "text/plain", "Invalid direction");
+      return;
+    }
+    candidate.direction = (Direction)value;
+  }
+
+  if (!object["mergeMode"].isNull()) {
+    if (!object["mergeMode"].is<int>()) {
+      server.send(400, "text/plain", "Invalid mergeMode");
+      return;
+    }
+
+    const int value = object["mergeMode"].as<int>();
+    if (value < MERGE_HTP
+        || value > MERGE_LTP) {
+      server.send(400, "text/plain", "Invalid mergeMode");
+      return;
+    }
+    candidate.mergeMode = (MergeMode)value;
+  }
+
+  if (!object["failsafeMode"].isNull()) {
+    if (!object["failsafeMode"].is<int>()) {
+      server.send(400, "text/plain", "Invalid failsafeMode");
+      return;
+    }
+
+    const int value = object["failsafeMode"].as<int>();
+    if (value < FAILSAFE_HOLD
+        || value > FAILSAFE_SCENE) {
+      server.send(400, "text/plain", "Invalid failsafeMode");
+      return;
+    }
+    candidate.failsafeMode = (FailsafeMode)value;
+  }
+
+  if (!object["legacyArtPollReply"].isNull()) {
+    if (!object["legacyArtPollReply"].is<bool>()) {
+      server.send(400, "text/plain", "Invalid legacyArtPollReply");
+      return;
+    }
+    candidate.legacyArtPollReply =
+      object["legacyArtPollReply"].as<bool>();
+  }
+
+  const Config previousConfig = config;
+  config = candidate;
+
+  String message;
+  if (!applyArtNetRuntimeConfig(
+        previousConfig,
+        message)) {
+    config = previousConfig;
+
+    String rollbackMessage;
+    applyArtNetRuntimeConfig(
+      candidate,
+      rollbackMessage);
+
+    server.send(
+      500,
+      "text/plain",
+      message.length() > 0
+        ? message
+        : "Failed to apply temporary runtime configuration");
+    return;
+  }
+
+  JsonDocument response;
+  response["appliedLive"] = true;
+  response["persistent"] = false;
+  response["liveProtocol"] = (int)config.liveProtocol;
+  response["direction"] = (int)config.direction;
+  response["mergeMode"] = (int)config.mergeMode;
+  response["failsafeMode"] = (int)config.failsafeMode;
+  response["legacyArtPollReply"] = config.legacyArtPollReply;
+
+  String json;
+  serializeJson(response, json);
+  server.send(200, "application/json", json);
+}
+
 /** @brief Starts a controlled Client-mode Wi-Fi reconnect cycle. */
 static void handleNetworkReconnect() {
   if (!requireAuth()) {
@@ -2905,6 +3064,11 @@ bool initWeb() {
     handleRestart);
 
 #if ENABLE_TEST_HARNESS_API
+  server.on(
+    "/api/test/runtime-config",
+    HTTP_POST,
+    handleTemporaryRuntimeConfig);
+
   server.on(
     "/api/network/reconnect",
     HTTP_POST,

@@ -47,6 +47,25 @@ Or:
 .\tools\test.ps1 -Integration
 ```
 
+The normal network soak changes protocol, merge, failsafe, and compatibility
+settings through the test-harness runtime API. These changes are deliberately
+volatile and do not write `config.json`, keeping network/radio stability
+separate from LittleFS endurance and garbage collection.
+
+Persistent configuration stress is a separate, explicitly enabled profile:
+
+```bash
+UNODE_CONFIG_FLASH_STRESS_WRITES=100 \
+UNODE_CONFIG_FLASH_STRESS_INTERVAL=1 \
+bash tools/test.sh --integration \
+  --path tests/integration/test_config_flash_stress.py
+```
+
+It repeatedly commits safe live settings, checks the boot counter and heap
+after every write, then restores the original persisted configuration. Do not
+include it in routine regression or production tests because it intentionally
+consumes flash erase/program cycles.
+
 Linux/Raspberry Pi, including RP2040 auto-detection:
 
 ```bash

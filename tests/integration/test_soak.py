@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import random
 import socket
+import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
@@ -75,6 +76,76 @@ def _reachability_grace_seconds() -> float:
 
 def _stream_fps() -> float:
     return min(44.0, max(1.0, float(os.environ.get("UNODE_SOAK_STREAM_FPS", "40"))))
+
+
+def _post_failure_recovery_seconds() -> float:
+    return max(
+        0.0,
+        float(os.environ.get("UNODE_SOAK_POST_FAILURE_RECOVERY", "420")),
+    )
+
+
+def _host_network_snapshot(unode_ip: str) -> str:
+    """Capture compact host-side routing evidence without changing the link."""
+
+    commands = [
+        ["ip", "route", "get", unode_ip],
+        ["ip", "neigh", "show", "to", unode_ip],
+        ["nmcli", "-t", "-f", "DEVICE,STATE,CONNECTION", "device", "status"],
+        ["ping", "-c", "1", "-W", "1", unode_ip],
+    ]
+    evidence: list[str] = []
+
+    for command in commands:
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                check=False,
+                text=True,
+                timeout=3.0,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired) as error:
+            evidence.append(f"{' '.join(command)} => {type(error).__name__}")
+            continue
+
+        output = (result.stdout or result.stderr).strip().replace("\n", " | ")
+        evidence.append(
+            f"{' '.join(command)} => rc={result.returncode} {output[:600]}"
+        )
+
+    return " || ".join(evidence)
+
+
+def _observe_post_failure_recovery(
+    unode_client: UNodeClient,
+    *,
+    timeout: float,
+) -> dict | None:
+    """Wait after a failed soak so a delayed watchdog reset is recorded."""
+
+    if timeout <= 0:
+        return None
+
+    deadline = time.monotonic() + timeout
+    step(f"Watching for uNode recovery for up to {timeout:.0f}s")
+
+    while time.monotonic() < deadline:
+        try:
+            status = unode_client.get_json("/api/status", timeout=1.0)
+            step(
+                "uNode recovered after soak failure: "
+                f"bootCount={status.get('bootCount')} "
+                f"uptime={status.get('uptime')} "
+                f"resetReason={status.get('resetReason')!r} "
+                f"resetInfo={status.get('resetInfo')!r}"
+            )
+            return status
+        except Exception:  # noqa: BLE001 - recovery polling records final state.
+            time.sleep(1.0)
+
+    step("uNode did not recover during the post-failure observation window")
+    return None
 
 
 def _run_network_stream(
@@ -307,7 +378,8 @@ def test_host_soak_network_output_and_runtime_stability(
             "Switching node to network -> DMX for host-only soak: "
             f"profile={profile.name}"
         )
-        unode_client.save_config(soak_config)
+        runtime_response = unode_client.apply_runtime_config(soak_config)
+        assert runtime_response.get("persistent") is False
 
         initial_status = _read_status_with_timeout(unode_client)
         initial_boot_count = int(initial_status["bootCount"])
@@ -430,7 +502,8 @@ def test_host_soak_network_output_and_runtime_stability(
                     f"failsafe={config['failsafeMode']} "
                     f"legacy={config['legacyArtPollReply']}"
                 )
-                unode_client.save_config(config)
+                runtime_response = unode_client.apply_runtime_config(config)
+                assert runtime_response.get("persistent") is False
                 universe = configured_port_address(config)
                 sacn_universe = max(1, universe)
                 with stream_state.lock:
@@ -440,6 +513,36 @@ def test_host_soak_network_output_and_runtime_stability(
 
             time.sleep(interval)
 
+    except Exception as error:
+        if stream_state is not None:
+            stream_state.stop.set()
+        if stream_thread is not None:
+            stream_thread.join(timeout=3.0)
+
+        host_network = _host_network_snapshot(unode_ip)
+        step(f"Host network snapshot after soak failure: {host_network}")
+        recovered = _observe_post_failure_recovery(
+            unode_client,
+            timeout=_post_failure_recovery_seconds(),
+        )
+        recovery_summary = None
+        if recovered is not None:
+            recovery_summary = {
+                key: recovered.get(key)
+                for key in (
+                    "bootCount",
+                    "uptime",
+                    "resetReason",
+                    "resetInfo",
+                    "freeHeap",
+                    "maxFreeBlock",
+                )
+            }
+
+        raise AssertionError(
+            f"{error}; host_network={host_network}; "
+            f"post_failure_status={recovery_summary}"
+        ) from error
     finally:
         if stream_state is not None:
             stream_state.stop.set()
@@ -451,11 +554,11 @@ def test_host_soak_network_output_and_runtime_stability(
             else:
                 stats.sacn_packets = stream_state.sent
 
-        step("Restoring original config after soak")
+        step("Restoring original runtime config after soak")
         try:
-            unode_client.save_config(original_config)
+            unode_client.apply_runtime_config(original_config)
         except Exception as error:
-            step(f"Could not restore original config after soak: {error}")
+            step(f"Could not restore original runtime config after soak: {error}")
 
     final_status = _read_status_with_timeout(unode_client)
     stats.last_status = final_status

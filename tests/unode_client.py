@@ -162,3 +162,26 @@ class UNodeClient:
                 f"Saving config failed with HTTP {status}: {body.decode(errors='replace')}"
             )
         return json.loads(body.decode("utf-8"))
+
+    def apply_runtime_config(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Apply test-only protocol settings without writing LittleFS."""
+
+        fields = (
+            "liveProtocol",
+            "direction",
+            "mergeMode",
+            "failsafeMode",
+            "legacyArtPollReply",
+        )
+        payload = {key: config[key] for key in fields if key in config}
+        if not payload:
+            raise AssertionError("No supported runtime configuration fields supplied")
+
+        self.ensure_authenticated()
+        status, body = self.post_json("/api/test/runtime-config", payload)
+        if status != 200:
+            raise AssertionError(
+                "Applying temporary runtime config failed with HTTP "
+                f"{status}: {body.decode(errors='replace')}"
+            )
+        return json.loads(body.decode("utf-8"))
