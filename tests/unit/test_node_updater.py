@@ -13,6 +13,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MODULE_PATH = PROJECT_ROOT / "tools" / "nodered" / "node_updater.py"
 FLOW_PATH = PROJECT_ROOT / "tools" / "nodered" / "unode-dashboard-flow.json"
 TEST_JOB_PATH = PROJECT_ROOT / "tools" / "nodered" / "run_test_job.sh"
+LINUX_TEST_RUNNER_PATH = PROJECT_ROOT / "tools" / "test.sh"
+WINDOWS_TEST_RUNNER_PATH = PROJECT_ROOT / "tools" / "test.ps1"
 SPEC = importlib.util.spec_from_file_location("unode_node_updater", MODULE_PATH)
 assert SPEC is not None and SPEC.loader is not None
 node_updater = importlib.util.module_from_spec(SPEC)
@@ -58,6 +60,40 @@ def test_node_red_flow_exposes_controlled_reconnection_test() -> None:
     assert "reconnect)" in test_job
     assert "--reconnection" in test_job
     assert "--fixture-hotspot" in test_job
+
+
+def test_node_red_test_controls_require_an_online_node() -> None:
+    flow = json.loads(FLOW_PATH.read_text(encoding="utf-8"))
+    nodes = {node["id"]: node for node in flow["nodes"]}
+
+    normalizer = nodes["a11e000000000103"]
+    validator = nodes["a11e000000000110"]
+    status_parser = nodes["a11e000000000114"]
+    reconnect_validator = nodes["a11e000000000133"]
+
+    assert "flow.set('uNodeOnline', online)" in normalizer["func"]
+    assert "flow.get('uNodeOnline') !== true" in validator["func"]
+    assert "uNode is offline" in validator["func"]
+    assert "nodeOnline = flow.get('uNodeOnline') === true" in status_parser["func"]
+    assert "a11e000000000132" in status_parser["wires"][0]
+    assert "flow.get('uNodeOnline') !== true" in reconnect_validator["func"]
+
+    for node_id in (
+        "a11e000000000109",
+        "a11e000000000117",
+        "a11e000000000132",
+    ):
+        template = nodes[node_id]["format"]
+        assert "nodeOnline" in template
+        assert "uNode offline" in template
+
+
+def test_platform_test_runners_execute_unode_preflight() -> None:
+    linux_runner = LINUX_TEST_RUNNER_PATH.read_text(encoding="utf-8")
+    windows_runner = WINDOWS_TEST_RUNNER_PATH.read_text(encoding="utf-8")
+
+    assert "tools/check_unode.py" in linux_runner
+    assert "tools\\check_unode.py" in windows_runner
 
     fixture_runner = (
         PROJECT_ROOT / "tools" / "fixture_reconnection.py"

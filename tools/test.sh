@@ -92,11 +92,19 @@ if [[ ! -x "$PYTHON" ]]; then
     exit 2
 fi
 
+preflight_node() {
+    local base_url="$1"
+    echo "Preflight: checking uNode at $base_url"
+    "$PYTHON" "$PROJECT_ROOT/tools/check_unode.py" --base-url "$base_url"
+}
+
 cd "$PROJECT_ROOT"
 
 if [[ "$RECONNECTION" -eq 1 && "$FIXTURE_HOTSPOT" -eq 1 ]]; then
+    PREFLIGHT_URL="${BASE_URL:-http://${NODE_IP:-2.0.0.1}}"
+    preflight_node "$PREFLIGHT_URL"
     FIXTURE_ARGS=(
-        --base-url "${BASE_URL:-http://${NODE_IP:-2.0.0.1}}"
+        --base-url "$PREFLIGHT_URL"
         --interface "${UNODE_FIXTURE_WIFI_INTERFACE:-wlan0}"
     )
     [[ -n "$PASSWORD" ]] && FIXTURE_ARGS+=(--password "$PASSWORD")
@@ -144,6 +152,7 @@ if [[ "$INTEGRATION" -eq 1 ]]; then
     fi
     PYTEST_ARGS=(-s -vv "$TEST_PATH")
     MODE="integration"
+    preflight_node "$BASE_URL"
 else
     unset UNODE_RUN_INTEGRATION
     TEST_PATH="${TEST_PATH:-tests/unit}"

@@ -20,6 +20,10 @@ explicitly in each release entry.
 
 ### Fixed
 
+- Prevented offline hardware tests from entering pytest as repeated fixture
+  errors. Linux and PowerShell runners now perform a bounded `/api/status`
+  preflight, while the Node-RED dashboard disables and rejects test starts
+  whenever its node monitor reports offline.
 - Kept the Raspberry Pi production updater compatible with protected status
   details. Its post-OTA reboot check now authenticates before reading Boot Count
   instead of waiting for a field intentionally removed from public status.

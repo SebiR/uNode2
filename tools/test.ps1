@@ -240,6 +240,13 @@ if ($Integration)
 
     $pytestArgs = @("-s", "-vv", $Path)
 
+    Write-Host "Preflight: checking uNode at $BaseUrl" -ForegroundColor Cyan
+    python .\tools\check_unode.py --base-url $BaseUrl
+    if ($LASTEXITCODE -ne 0)
+    {
+        exit $LASTEXITCODE
+    }
+
     Write-Host "Mode    : integration" -ForegroundColor Yellow
     Write-Host "Node IP : $env:UNODE_IP"
     Write-Host "Base URL: $env:UNODE_BASE_URL"

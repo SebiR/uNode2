@@ -9,6 +9,12 @@ The dashboard can start either of the guarded soak profiles:
 - **Network soak** exercises Art-Net and sACN without the RP2040 fixture.
 - **DMX HIL soak** exercises Art-Net and sACN through the RP2040 DMX fixture.
 
+All test controls follow the five-second node monitor and remain disabled while
+the uNode is offline. Start requests are checked again in the Node-RED flow,
+and both platform test runners perform a bounded HTTP preflight immediately
+before pytest starts. Connect the Pi to the node AP (or otherwise make the
+configured node URL reachable) before starting a job.
+
 The selected duration is applied once to each protocol, so a one-hour selection
 takes approximately two hours in total. A shared `flock` prevents two dashboard
 or wrapper-started soak tests from using the fixture at the same time. Test
