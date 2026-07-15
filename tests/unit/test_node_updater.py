@@ -118,6 +118,8 @@ def test_node_red_uses_one_global_wifi_connection_manager() -> None:
     assert template["id"] in validator["wires"][1]
     assert state_builder["id"] in status_parser["wires"][0]
     assert "uNodeUpdaterStatus" in status_parser["func"]
+    assert "request.action === 'network-disconnect'" in status_parser["func"]
+    assert "flow.set('uNodeOnline', false)" in status_parser["func"]
 
 
 def test_platform_test_runners_execute_unode_preflight() -> None:

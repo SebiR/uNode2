@@ -615,7 +615,7 @@
       "type": "function",
       "z": "a11e000000000001",
       "name": "Parse updater status",
-      "func": "try {\n  const text = Buffer.isBuffer(msg.payload) ? msg.payload.toString('utf8') : String(msg.payload || '');\n  msg.payload = JSON.parse(text.trim());\n} catch (error) {\n  msg.payload = { running:false, state:'error', message:`Updater status failed: ${error.message}`, progress:0, nodes:[], accessPoints:[], releases:[] };\n}\nmsg.payload.nodeOnline = flow.get('uNodeOnline') === true;\nflow.set('uNodeUpdaterStatus', msg.payload);\nreturn msg;",
+      "func": "try {\n  const text = Buffer.isBuffer(msg.payload) ? msg.payload.toString('utf8') : String(msg.payload || '');\n  msg.payload = JSON.parse(text.trim());\n} catch (error) {\n  msg.payload = { running:false, state:'error', message:`Updater status failed: ${error.message}`, progress:0, nodes:[], accessPoints:[], releases:[] };\n}\nif (!msg.payload.running && msg.payload.state === 'ready' && msg.payload.request && msg.payload.request.action === 'network-disconnect') {\n  flow.set('uNodeOnline', false);\n}\nmsg.payload.nodeOnline = flow.get('uNodeOnline') === true;\nflow.set('uNodeUpdaterStatus', msg.payload);\nreturn msg;",
       "outputs": 1,
       "timeout": 0,
       "noerr": 0,
