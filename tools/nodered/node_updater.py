@@ -533,6 +533,23 @@ def connect_dashboard_node(
     return selected
 
 
+def disconnect_dashboard_node(job: JobStatus) -> dict[str, Any]:
+    """Disconnect only an active uNode AP, leaving other Wi-Fi links alone."""
+
+    active = current_connection()
+    if not SSID_PATTERN.fullmatch(active):
+        raise RuntimeError("wlan0 is not connected to a uNode access point")
+
+    job.data["state"] = "disconnecting"
+    job.progress(f"Disconnecting wlan0 from {active}", percent=35)
+    run_nmcli("--wait", "20", "connection", "down", "id", active)
+    for access_point in job.data.get("accessPoints", []):
+        if isinstance(access_point, dict):
+            access_point["active"] = False
+    job.progress(f"Disconnected wlan0 from {active}", percent=95)
+    return {"ssid": active}
+
+
 def validate_ssid(ssid: str) -> re.Match[str]:
     """Validate a selected node AP and return its chip-ID match."""
 
@@ -1402,6 +1419,14 @@ def run_request(encoded: str) -> int:
                     result=result,
                     accessPoints=job.data["accessPoints"],
                 )
+            elif action == "network-disconnect":
+                result = disconnect_dashboard_node(job)
+                job.finish(
+                    "ready",
+                    f"Disconnected wlan0 from {result['ssid']}",
+                    result=result,
+                    accessPoints=job.data["accessPoints"],
+                )
             elif action == "update":
                 result = perform_update(job, request)
                 job.finish(
@@ -1430,7 +1455,8 @@ def run_request(encoded: str) -> int:
             else:
                 raise ValueError(
                     "Updater action must be scan, network-scan, network-connect, "
-                    "update, initial-flash, led-set, or led-release"
+                    "network-disconnect, update, initial-flash, led-set, or "
+                    "led-release"
                 )
         except Exception as error:  # noqa: BLE001 - surface complete failure in dashboard.
             job.finish("error", str(error))

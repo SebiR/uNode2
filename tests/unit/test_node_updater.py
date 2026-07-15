@@ -88,24 +88,32 @@ def test_node_red_test_controls_require_an_online_node() -> None:
         assert "uNode offline" in template
 
 
-def test_node_red_status_page_can_scan_and_connect_to_unode_wifi() -> None:
+def test_node_red_uses_one_global_wifi_connection_manager() -> None:
     flow = json.loads(FLOW_PATH.read_text(encoding="utf-8"))
     nodes = {node["id"]: node for node in flow["nodes"]}
 
     template = nodes["a11e000000000134"]
+    state_builder = nodes["a11e000000000135"]
     validator = nodes["a11e000000000119"]
     status_parser = nodes["a11e000000000123"]
 
-    assert template["group"] == "a11e000000000204"
-    assert "Scan uNode APs" in template["format"]
-    assert "Connect selected" in template["format"]
+    assert template["group"] == ""
+    assert template["ui"] == "a11e000000000201"
+    assert template["templateScope"] == "widget:ui"
+    assert "Scan" in template["format"]
+    assert "Connect" in template["format"]
+    assert "Disconnect" in template["format"]
     assert "network-scan" in template["format"]
     assert "network-connect" in template["format"]
+    assert "network-disconnect" in template["format"]
     assert template["wires"] == [["a11e000000000119"]]
+    assert state_builder["wires"] == [[template["id"]]]
     assert "validSsid" in validator["func"]
     assert "network-connect" in validator["func"]
+    assert "network-disconnect" in validator["func"]
     assert template["id"] in validator["wires"][1]
-    assert template["id"] in status_parser["wires"][0]
+    assert state_builder["id"] in status_parser["wires"][0]
+    assert "uNodeUpdaterStatus" in status_parser["func"]
 
 
 def test_platform_test_runners_execute_unode_preflight() -> None:
@@ -361,6 +369,44 @@ def test_dashboard_connect_rejects_disappeared_or_wrong_node(
             job,
             {"action": "network-connect", "ssid": "uNode_ABC123"},
         )
+
+
+def test_dashboard_disconnect_only_drops_an_active_unode_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, ...]] = []
+
+    class FakeJob:
+        def __init__(self) -> None:
+            self.data = {
+                "accessPoints": [
+                    {"ssid": "uNode_ABC123", "active": True},
+                    {"ssid": "uNode_DEF456", "active": False},
+                ]
+            }
+
+        def progress(self, _message: str, *, percent: int | None = None) -> None:
+            del percent
+
+    monkeypatch.setattr(node_updater, "current_connection", lambda: "uNode_ABC123")
+    monkeypatch.setattr(
+        node_updater,
+        "run_nmcli",
+        lambda *arguments, **_kwargs: calls.append(arguments) or "",
+    )
+
+    job = FakeJob()
+    result = node_updater.disconnect_dashboard_node(job)
+
+    assert result == {"ssid": "uNode_ABC123"}
+    assert calls == [
+        ("--wait", "20", "connection", "down", "id", "uNode_ABC123")
+    ]
+    assert not any(item["active"] for item in job.data["accessPoints"])
+
+    monkeypatch.setattr(node_updater, "current_connection", lambda: "IllumiNet")
+    with pytest.raises(RuntimeError, match="not connected to a uNode"):
+        node_updater.disconnect_dashboard_node(job)
 
 
 def test_led_control_applies_colors_and_restores_previous_connection(

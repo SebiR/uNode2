@@ -13,9 +13,9 @@ explicitly in each release entry.
 
 ### Added
 
-- Added a compact Wi-Fi connection control to the Raspberry Pi status page.
-  It scans `wlan0` for validated `uNode_XXXXXX` access points and connects the
-  test fixture to the selected node without requiring desktop Wi-Fi settings.
+- Added one shared Wi-Fi connection bar to every Raspberry Pi dashboard page.
+  It scans `wlan0` for validated `uNode_XXXXXX` access points and connects or
+  disconnects the test fixture without requiring desktop Wi-Fi settings.
 - Added a protected `/api/diagnostics` response for heap, reset, network,
   parser, and protocol internals. The regression client transparently uses
   this endpoint after authentication, so existing diagnostic tests remain

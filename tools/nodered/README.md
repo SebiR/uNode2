@@ -15,14 +15,15 @@ and both platform test runners perform a bounded HTTP preflight immediately
 before pytest starts. Connect the Pi to the node AP (or otherwise make the
 configured node URL reachable) before starting a job.
 
-The **Test network connection** control directly below Live Status removes the
-need for desktop Wi-Fi settings on a headless test host. **Scan uNode APs**
-performs a lightweight `wlan0` scan without associating with every node. Select
-one validated `uNode_XXXXXX` result and choose **Connect selected** to leave the
-Pi associated with that AP. The backend scans once more before connecting,
-uses only the deterministic factory credential, verifies that the responding
-chip ID matches the SSID, and shares the fixture lock with updater and test
-jobs.
+The shared connection bar at the top of every dashboard page removes the need
+for desktop Wi-Fi settings on a headless test host. **Scan** performs a
+lightweight `wlan0` scan without associating with every node. Select one
+validated `uNode_XXXXXX` result and choose **Connect** to leave the Pi
+associated with that AP; **Disconnect** releases only an active uNode profile
+and never drops an unrelated Wi-Fi connection. The backend scans once more
+before connecting, uses only the deterministic factory credential, verifies
+that the responding chip ID matches the SSID, and shares the fixture lock with
+updater and test jobs.
 
 The selected duration is applied once to each protocol, so a one-hour selection
 takes approximately two hours in total. A shared `flock` prevents two dashboard
