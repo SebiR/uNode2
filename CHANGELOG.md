@@ -13,6 +13,11 @@ explicitly in each release entry.
 
 ### Added
 
+- Added a reproducible PlatformIO project with pinned ESP8266 Arduino 3.1.2
+  dependencies and four explicit build environments: current hardware, legacy
+  hardware, and opt-in test-harness variants of both. The release builder now
+  produces firmware, ELF/map diagnostics, LittleFS images, and manifests from
+  the same configuration used by VS Code.
 - Added one shared Wi-Fi connection bar to every Raspberry Pi dashboard page.
   It scans `wlan0` for validated `uNode_XXXXXX` access points and connects or
   disconnects the test fixture without requiring desktop Wi-Fi settings.
@@ -23,6 +28,12 @@ explicitly in each release entry.
 
 ### Fixed
 
+- Made the UDP-flood regression wait for post-flood heap recovery instead of
+  sampling the still-transient low-heap state as soon as Boot Count matched.
+- Removed build warnings exposed by the newer toolchain diagnostics: ArtPoll
+  opcode byte narrowing is now explicit, ArduinoJson field validation uses the
+  current API, ESP8266 interrupt handlers use `IRAM_ATTR`, and RDM UIDs are
+  formatted into a correctly sized hexadecimal buffer.
 - Separated network soak traffic from LittleFS persistence stress. Test-harness
   firmware now accepts a protected RAM-only runtime configuration for protocol,
   direction, merge, failsafe, and legacy PollReply changes; normal network

@@ -442,8 +442,8 @@ int ArtNetNode::sendArtPoll(IPAddress ip) {
     artnetId,
     sizeof(artnetId));
 
-  pollPacket[8] = OpPoll;
-  pollPacket[9] = OpPoll >> 8;
+  pollPacket[8] = (uint8_t)(OpPoll & 0xff);
+  pollPacket[9] = (uint8_t)(OpPoll >> 8);
   pollPacket[10] = ARTNET_PROTOCOL_VERSION >> 8;
   pollPacket[11] = ARTNET_PROTOCOL_VERSION & 0xff;
   pollPacket[12] = 0;

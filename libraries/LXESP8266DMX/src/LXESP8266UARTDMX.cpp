@@ -97,7 +97,7 @@ void uart_uninit_rdm(void);
 
 // UART register definitions see esp8266_peri.h
 
-ICACHE_RAM_ATTR void uart_tx_interrupt_handler(LX8266DMX* dmxo) {
+IRAM_ATTR void uart_tx_interrupt_handler(LX8266DMX* dmxo) {
 
     // -------------- UART 1 --------------
     // check uart status register 
@@ -110,7 +110,7 @@ ICACHE_RAM_ATTR void uart_tx_interrupt_handler(LX8266DMX* dmxo) {
 	 
 }
 
-ICACHE_RAM_ATTR void uart_rx_interrupt_handler(LX8266DMX* dmxi) {
+IRAM_ATTR void uart_rx_interrupt_handler(LX8266DMX* dmxi) {
 	  uint32_t status = U0IS;
 
     // -------------- UART 0 --------------
@@ -131,7 +131,7 @@ ICACHE_RAM_ATTR void uart_rx_interrupt_handler(LX8266DMX* dmxi) {
      U0IC = status;
 }
 
-ICACHE_RAM_ATTR void uart_rdm_interrupt_handler(LX8266DMX* dmxr) {
+IRAM_ATTR void uart_rdm_interrupt_handler(LX8266DMX* dmxr) {
 	  uint32_t status = U0IS;
 
     // -------------- UART 0 --------------
@@ -583,7 +583,7 @@ uint8_t* LX8266DMX::receivedRDMData( void ) {
  * and the cycle repeats...
 */
 
-ICACHE_RAM_ATTR void LX8266DMX::txEmptyInterruptHandler(void) {
+IRAM_ATTR void LX8266DMX::txEmptyInterruptHandler(void) {
 
 	switch ( _dmx_send_state ) {
 		
@@ -632,7 +632,7 @@ ICACHE_RAM_ATTR void LX8266DMX::txEmptyInterruptHandler(void) {
 	}
 }
 
-ICACHE_RAM_ATTR void LX8266DMX::rdmTxEmptyInterruptHandler(void) {
+IRAM_ATTR void LX8266DMX::rdmTxEmptyInterruptHandler(void) {
 
 	if ( _rdm_task_mode == DMX_TASK_SEND_RDM ) {
 		switch ( _dmx_send_state ) {
@@ -760,7 +760,7 @@ void LX8266DMX::printReceivedData( void ) {
 	}
 }
 
-ICACHE_RAM_ATTR void LX8266DMX::packetComplete( void ) {
+IRAM_ATTR void LX8266DMX::packetComplete( void ) {
 	if ( _receivedData[0] == 0 ) {				//zero start code is DMX
 		if ( _rdm_read_handled == 0 ) {			// not handled by specific method
 			if ( _next_read_slot > DMX_MIN_RECEIVE_SLOTS ) {
@@ -797,12 +797,12 @@ ICACHE_RAM_ATTR void LX8266DMX::packetComplete( void ) {
 	resetFrame();
 }
 
-ICACHE_RAM_ATTR void LX8266DMX::resetFrame( void ) {		
+IRAM_ATTR void LX8266DMX::resetFrame( void ) {
 	_dmx_read_state = DMX_READ_STATE_IDLE;						// insure wait for next break
 	//_dmx_send_state????
 }
 
-ICACHE_RAM_ATTR void LX8266DMX::receiveTimeout( void ) {
+IRAM_ATTR void LX8266DMX::receiveTimeout( void ) {
 	if ( _dmx_read_state == DMX_READ_STATE_RECEIVING ) {
 		if ( _next_read_slot > DMX_MIN_RECEIVE_SLOTS ) {
 			packetComplete();
@@ -810,7 +810,7 @@ ICACHE_RAM_ATTR void LX8266DMX::receiveTimeout( void ) {
 	}
 }
 
-ICACHE_RAM_ATTR void LX8266DMX::breakReceived( void ) {
+IRAM_ATTR void LX8266DMX::breakReceived( void ) {
 	if ( _dmx_read_state == DMX_READ_STATE_RECEIVING ) {	// break has already been detected
 		if ( _next_read_slot > 1 ) {						// break before end of maximum frame
 			if ( _receivedData[0] == 0 ) {				// zero start code is DMX
@@ -823,7 +823,7 @@ ICACHE_RAM_ATTR void LX8266DMX::breakReceived( void ) {
 	_packet_length = DMX_MAX_FRAME;						// default to receive complete frame
 }
 
-ICACHE_RAM_ATTR void LX8266DMX::byteReceived(uint8_t c) {
+IRAM_ATTR void LX8266DMX::byteReceived(uint8_t c) {
 	if ( _dmx_read_state == DMX_READ_STATE_RECEIVING ) {
 		if ( _next_read_slot >= DMX_MAX_FRAME ) {
 			packetComplete();
@@ -865,7 +865,7 @@ void LX8266DMX::setRDMReceivedCallback(LXRecvCallback callback) {
 	_rdm_receive_callback = callback;
 }
 
-ICACHE_RAM_ATTR uint8_t LX8266DMX::rdmTaskMode( void ) {		// applies to bidirectional RDM connection
+IRAM_ATTR uint8_t LX8266DMX::rdmTaskMode( void ) {		// applies to bidirectional RDM connection
 	return _rdm_task_mode;
 }
 
@@ -875,7 +875,7 @@ void LX8266DMX::setTaskSendDMX( void ) {		// only valid if connection started us
 }
 
 
-ICACHE_RAM_ATTR void LX8266DMX::restoreTaskSendDMX( void ) {		// only valid if connection started using startRDM()
+IRAM_ATTR void LX8266DMX::restoreTaskSendDMX( void ) {		// only valid if connection started using startRDM()
 	digitalWrite(_direction_pin, HIGH);
 	_dmx_send_state = DMX_STATE_BREAK;
 	 _rdm_task_mode = DMX_TASK_SET_SEND;

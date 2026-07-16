@@ -258,7 +258,14 @@ def test_foreign_udp_flood_is_bounded_and_recovers(
     )
     recovered = wait_for_status(
         unode_client,
-        lambda status: int(status.get("bootCount", -1)) == initial_boot_count,
+        lambda status: (
+            int(status.get("bootCount", -1)) == initial_boot_count
+            and status.get("heapWarningActive") is False
+            and int(status.get("freeHeap", 0))
+            >= int(status.get("heapWarningFreeThreshold", 1))
+            and int(status.get("maxFreeBlock", 0))
+            >= int(status.get("heapWarningBlockThreshold", 1))
+        ),
         timeout=15.0,
         interval=0.2,
     )

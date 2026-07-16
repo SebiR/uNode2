@@ -308,7 +308,14 @@ Release artifacts can be generated with:
 .\tools\build_release.ps1
 ```
 
-The script writes versioned firmware, LittleFS, and manifest files to
+The repository uses PlatformIO Core 6.1.19 with a pinned ESP8266 Arduino 3.1.2
+toolchain. `platformio.ini` defines separate `normal`, `legacy`, `test`, and
+`legacy_test` environments. The last two explicitly enable the production-test
+API and are not part of a regular release build. Direct development builds can
+be started from the VS Code PlatformIO toolbar or with `pio run -e <name>`.
+
+The release script locates the Core installed by the VS Code extension when
+`pio` is not on `PATH`. It writes versioned firmware, LittleFS, and manifest files to
 `artifacts/release`. File names contain only the firmware version, hardware
 profile suffix, and artifact type; no build timestamp is added. Each release
 run creates both the current hardware profile and the legacy hardware profile:
@@ -319,8 +326,10 @@ run creates both the current hardware profile and the legacy hardware profile:
 - `uNode-<version>_legacy-littlefs.bin`
 - `uNode-<version>-manifest.json`
 
-The manifest includes both hardware profiles, flash layout, LittleFS image
-size, and SHA-256 hashes.
+The manifest includes both hardware profiles, PlatformIO environment and Core
+metadata, flash layout, LittleFS image size, and SHA-256 hashes. Use
+`-IncludeTestHarness` to generate the additional `_test` and `_legacy_test`
+firmware artifacts.
 
 Generated release artifacts can also be flashed over UART with:
 

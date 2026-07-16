@@ -18,14 +18,15 @@ doxygen/               Generated API documentation
 misc/                  Loose project assets and experiments
 ```
 
-The ESP8266 firmware remains Arduino-IDE compatible: open
+The ESP8266 firmware is built with PlatformIO by default and remains
+Arduino-IDE compatible: open
 `firmware/uNode_2/uNode_2.ino` as the sketch. The sketch folder name and the
 `.ino` file name intentionally match. The reusable Art-Net implementation and
 the maintained ESP8266 DMX fork are kept below `libraries/`. Install or link
 `libraries/uNodeArtNet` and `libraries/LXESP8266DMX` into the Arduino
 sketchbook's `libraries` directory when compiling directly from Arduino IDE.
-The repository build script supplies the complete local library path
-automatically and therefore does not depend on global copies.
+PlatformIO uses the repository-local libraries automatically and downloads the
+pinned third-party dependencies declared in `platformio.ini`.
 
 The RP2040 DMX tool is intended as the hardware test fixture for future
 DMX-level integration tests.
@@ -56,6 +57,25 @@ Build versioned firmware and LittleFS release artifacts:
 ```powershell
 .\tools\build_release.ps1
 ```
+
+The release build requires PlatformIO Core 6.1.19. The script finds either a
+`pio`/`platformio` command on `PATH` or the Core installed by the VS Code
+PlatformIO extension below `~/.platformio/penv`. The ESP8266 platform and all
+third-party Arduino libraries are version-pinned in `platformio.ini`.
+
+For a quick development build, use the PlatformIO toolbar in VS Code or run:
+
+```powershell
+pio run                         # current hardware
+pio run -e legacy               # legacy LED and RS485 wiring
+pio run -e test                 # current hardware with test-harness API
+pio run -e legacy_test          # legacy hardware with test-harness API
+pio run -e normal -t buildfs    # LittleFS image
+```
+
+The default environment is `normal`. All environments use the ESP8266 Arduino
+3.1.2 framework, the `4M1M` flash layout, DOUT flash mode, and a 512000 baud
+upload speed.
 
 Development/production-test firmware with the isolated Wi-Fi test harness is
 built only by explicit request:

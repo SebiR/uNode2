@@ -1,7 +1,7 @@
 param(
-    [string]$Fqbn = "esp8266:esp8266:generic:eesz=4M1M",
     [string]$OutputDir = "",
-    [switch]$IncludeTestHarness
+    [switch]$IncludeTestHarness,
+    [string]$PlatformIoExecutable = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,19 +13,54 @@ $projectRoot =
 $sketchDir =
     Join-Path $projectRoot "firmware\uNode_2"
 
-$librariesDir =
-    Join-Path $projectRoot "libraries"
-
 $dataDir =
     Join-Path $sketchDir "data"
 
-$arduinoCli =
-    Join-Path $env:LOCALAPPDATA `
-        "Programs\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe"
+function Resolve-PlatformIoExecutable {
+    if (![string]::IsNullOrWhiteSpace($PlatformIoExecutable)) {
+        if (!(Test-Path -LiteralPath $PlatformIoExecutable)) {
+            throw "PlatformIO executable not found at $PlatformIoExecutable"
+        }
 
-if (!(Test-Path $arduinoCli)) {
-    throw "arduino-cli.exe not found at $arduinoCli"
+        return (Resolve-Path -LiteralPath $PlatformIoExecutable).Path
+    }
+
+    foreach ($commandName in @("pio", "platformio")) {
+        $command =
+            Get-Command $commandName -ErrorAction SilentlyContinue
+
+        if ($command) {
+            return $command.Source
+        }
+    }
+
+    $homeDirectory =
+        [Environment]::GetFolderPath("UserProfile")
+
+    foreach ($candidate in @(
+        (Join-Path $homeDirectory ".platformio\penv\Scripts\pio.exe"),
+        (Join-Path $homeDirectory ".platformio\penv\bin\pio")
+    )) {
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+    }
+
+    throw "PlatformIO Core not found. Install the PlatformIO IDE extension or PlatformIO Core 6.1.19."
 }
+
+$platformIo =
+    Resolve-PlatformIoExecutable
+
+$platformIoVersion =
+    (& $platformIo --version).Trim()
+
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to execute PlatformIO Core at $platformIo"
+}
+
+$buildRoot =
+    Join-Path $projectRoot ".pio\build"
 
 $configHeader =
     Get-Content `
@@ -89,56 +124,32 @@ function Build-FirmwareArtifact {
         [Parameter(Mandatory = $true)]
         [string]$Profile,
 
-        [string]$Suffix = "",
-
-        [string[]]$BuildProperties = @()
+        [string]$Suffix = ""
     )
 
     $buildPath =
-        Join-Path ([System.IO.Path]::GetTempPath()) "unode-release-build-$Profile"
+        Join-Path $buildRoot $Profile
 
-    if (Test-Path $buildPath) {
-        Remove-Item `
-            -LiteralPath $buildPath `
-            -Recurse `
-            -Force
+    Write-Host "Building PlatformIO environment $Profile"
+
+    & $platformIo run -e $Profile -t clean |
+        Out-Host
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Profile environment clean failed"
     }
 
-    Write-Host "Building $Profile firmware with FQBN $Fqbn"
-
-    $compileArgs = @(
-        "compile",
-        "--fqbn",
-        $Fqbn,
-        "--libraries",
-        $librariesDir,
-        "--build-path",
-        $buildPath
-    )
-
-    foreach ($property in $BuildProperties) {
-        $compileArgs += @(
-            "--build-property",
-            $property
-        )
-    }
-
-    $compileArgs += $sketchDir
-
-    & $arduinoCli @compileArgs
+    & $platformIo run -e $Profile |
+        Out-Host
 
     if ($LASTEXITCODE -ne 0) {
         throw "$Profile firmware build failed"
     }
 
     $firmwareSource =
-        Get-ChildItem `
-            -Path $buildPath `
-            -Filter "*.ino.bin" `
-            -Recurse |
-        Select-Object -First 1
+        Join-Path $buildPath "firmware.bin"
 
-    if (!$firmwareSource) {
+    if (!(Test-Path -LiteralPath $firmwareSource)) {
         throw "$Profile firmware binary not found in $buildPath"
     }
 
@@ -146,19 +157,15 @@ function Build-FirmwareArtifact {
         Join-Path $OutputDir "uNode-$version$Suffix-firmware.bin"
 
     Copy-Item `
-        -LiteralPath $firmwareSource.FullName `
+        -LiteralPath $firmwareSource `
         -Destination $artifact `
         -Force
 
     foreach ($extension in @("elf", "map")) {
         $debugSource =
-            Get-ChildItem `
-                -Path $buildPath `
-                -Filter "*.ino.$extension" `
-                -Recurse |
-            Select-Object -First 1
+            Join-Path $buildPath "firmware.$extension"
 
-        if (!$debugSource) {
+        if (!(Test-Path -LiteralPath $debugSource)) {
             throw "$Profile firmware $extension file not found in $buildPath"
         }
 
@@ -166,7 +173,7 @@ function Build-FirmwareArtifact {
             Join-Path $OutputDir "uNode-$version$Suffix-firmware.$extension"
 
         Copy-Item `
-            -LiteralPath $debugSource.FullName `
+            -LiteralPath $debugSource `
             -Destination $debugArtifact `
             -Force
     }
@@ -195,10 +202,7 @@ $firmwareArtifact =
 $legacyFirmwareArtifact =
     Build-FirmwareArtifact `
         -Profile "legacy" `
-        -Suffix "_legacy" `
-        -BuildProperties @(
-            "compiler.cpp.extra_flags=-DUSE_LEGACY_HARDWARE=1"
-        )
+        -Suffix "_legacy"
 
 $testFirmwareArtifact = $null
 $legacyTestFirmwareArtifact = $null
@@ -207,18 +211,12 @@ if ($IncludeTestHarness) {
     $testFirmwareArtifact =
         Build-FirmwareArtifact `
             -Profile "test" `
-            -Suffix "_test" `
-            -BuildProperties @(
-                "compiler.cpp.extra_flags=-DENABLE_TEST_HARNESS_API=1"
-            )
+            -Suffix "_test"
 
     $legacyTestFirmwareArtifact =
         Build-FirmwareArtifact `
-            -Profile "legacy-test" `
-            -Suffix "_legacy_test" `
-            -BuildProperties @(
-                "compiler.cpp.extra_flags=-DUSE_LEGACY_HARDWARE=1 -DENABLE_TEST_HARNESS_API=1"
-            )
+            -Profile "legacy_test" `
+            -Suffix "_legacy_test"
 }
 
 $firmwareElfArtifact =
@@ -237,18 +235,6 @@ $legacyTestFirmwareElfArtifact =
     Join-Path $OutputDir "uNode-$version`_legacy_test-firmware.elf"
 $legacyTestFirmwareMapArtifact =
     Join-Path $OutputDir "uNode-$version`_legacy_test-firmware.map"
-
-$mklittlefs =
-    Get-ChildItem `
-        -Path (Join-Path $env:LOCALAPPDATA "Arduino15\packages\esp8266") `
-        -Recurse `
-        -File `
-        -Filter "mklittlefs.exe" |
-    Select-Object -First 1
-
-if (!$mklittlefs) {
-    throw "mklittlefs.exe not found in the installed ESP8266 Arduino package"
-}
 
 $filesystemArtifact =
     Join-Path $OutputDir "uNode-$version-littlefs.bin"
@@ -274,16 +260,27 @@ $webVersion |
     }
 
 try {
-    & $mklittlefs.FullName `
-        -c $dataDir `
-        -b 8192 `
-        -p 256 `
-        -s 1024000 `
-        $filesystemArtifact
+    & $platformIo run -e normal -t buildfs
 
     if ($LASTEXITCODE -ne 0) {
         throw "LittleFS image build failed"
     }
+
+    $filesystemSource =
+        Join-Path $buildRoot "normal\littlefs.bin"
+
+    if (!(Test-Path -LiteralPath $filesystemSource)) {
+        throw "PlatformIO LittleFS image not found at $filesystemSource"
+    }
+
+    if ((Get-Item -LiteralPath $filesystemSource).Length -ne 1024000) {
+        throw "PlatformIO LittleFS image does not match the 4M1M layout"
+    }
+
+    Copy-Item `
+        -LiteralPath $filesystemSource `
+        -Destination $filesystemArtifact `
+        -Force
 } finally {
     if ($webVersionOriginalExists) {
         [System.IO.File]::WriteAllBytes(
@@ -349,12 +346,17 @@ $manifest = [ordered]@{
     project = "uNode"
     version = $version
     generatedAt = (Get-Date).ToUniversalTime().ToString("o")
-    fqbn = $Fqbn
+    buildSystem = "PlatformIO"
+    platformIoCore = $platformIoVersion
+    platform = "platformio/espressif8266@4.2.1"
+    framework = "arduino"
+    board = "esp12e"
     flashLayout = "4M1M"
     profiles = [ordered]@{
         normal = [ordered]@{
             hardwareProfile = "normal"
-            buildProperties = @()
+            platformIoEnvironment = "normal"
+            buildFlags = @()
             firmware = [ordered]@{
                 file = (Split-Path $firmwareArtifact -Leaf)
                 size = (Get-Item $firmwareArtifact).Length
@@ -382,8 +384,9 @@ $manifest = [ordered]@{
         }
         legacy = [ordered]@{
             hardwareProfile = "legacy"
-            buildProperties = @(
-                "compiler.cpp.extra_flags=-DUSE_LEGACY_HARDWARE=1"
+            platformIoEnvironment = "legacy"
+            buildFlags = @(
+                "-DUSE_LEGACY_HARDWARE=1"
             )
             firmware = [ordered]@{
                 file = (Split-Path $legacyFirmwareArtifact -Leaf)
@@ -417,8 +420,9 @@ if ($IncludeTestHarness) {
     $manifest["profiles"]["test"] = [ordered]@{
         hardwareProfile = "normal"
         testHarnessApi = $true
-        buildProperties = @(
-            "compiler.cpp.extra_flags=-DENABLE_TEST_HARNESS_API=1"
+        platformIoEnvironment = "test"
+        buildFlags = @(
+            "-DENABLE_TEST_HARNESS_API=1"
         )
         firmware = [ordered]@{
             file = (Split-Path $testFirmwareArtifact -Leaf)
@@ -443,8 +447,10 @@ if ($IncludeTestHarness) {
     $manifest["profiles"]["legacyTest"] = [ordered]@{
         hardwareProfile = "legacy"
         testHarnessApi = $true
-        buildProperties = @(
-            "compiler.cpp.extra_flags=-DUSE_LEGACY_HARDWARE=1 -DENABLE_TEST_HARNESS_API=1"
+        platformIoEnvironment = "legacy_test"
+        buildFlags = @(
+            "-DUSE_LEGACY_HARDWARE=1",
+            "-DENABLE_TEST_HARNESS_API=1"
         )
         firmware = [ordered]@{
             file = (Split-Path $legacyTestFirmwareArtifact -Leaf)

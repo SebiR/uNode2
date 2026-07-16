@@ -246,6 +246,10 @@ lists only open items; implemented behaviour is documented in `MANUAL.md`.
 
 ## Priority 6: Verification and Release Quality
 
+- [x] Migrate the ESP8266 build to a reproducible PlatformIO project with
+      pinned framework dependencies, explicit normal/legacy/test profiles,
+      integrated LittleFS generation, and release-manifest output while
+      retaining Arduino IDE source compatibility.
 - [x] Update LXESP8266DMX input handling to accept short DMX frames with one
       or more data slots; its current receive path rejects frames below the
       24-slot transmitter minimum.

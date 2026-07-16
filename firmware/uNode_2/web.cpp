@@ -2443,10 +2443,7 @@ static bool parseLedRgb(
   JsonObjectConst object =
     value.as<JsonObjectConst>();
 
-  if (!object.containsKey("r")
-      || !object.containsKey("g")
-      || !object.containsKey("b")
-      || !object["r"].is<int>()
+  if (!object["r"].is<int>()
       || !object["g"].is<int>()
       || !object["b"].is<int>()) {
     return false;

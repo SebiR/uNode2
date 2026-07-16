@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import configparser
 import json
 import re
 import shutil
@@ -42,6 +43,48 @@ def test_littlefs_version_file_matches_firmware_defines() -> None:
     assert int(version_json["configSchemaVersion"]) == int(
         _read_define("CONFIG_SCHEMA_VERSION")
     )
+
+
+def test_platformio_profiles_pin_the_release_build_configuration() -> None:
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.read(PROJECT_ROOT / "platformio.ini", encoding="utf-8")
+
+    assert parser["platformio"]["default_envs"] == "normal"
+    assert parser["platformio"]["src_dir"] == "firmware/uNode_2"
+    assert parser["platformio"]["data_dir"] == "firmware/uNode_2/data"
+    assert parser["platformio"]["lib_dir"] == "libraries"
+
+    common = parser["env"]
+    assert common["platform"] == "platformio/espressif8266@4.2.1"
+    assert common["framework"] == "arduino"
+    assert common["board"] == "esp12e"
+    assert common["board_build.ldscript"] == "eagle.flash.4m1m.ld"
+    assert common["board_build.filesystem"] == "littlefs"
+    assert common["board_build.flash_mode"] == "dout"
+    assert common["upload_speed"] == "512000"
+
+    for profile in ("normal", "legacy", "test", "legacy_test"):
+        assert parser.has_section(f"env:{profile}")
+
+    assert "-DUSE_LEGACY_HARDWARE=1" in parser["env:legacy"]["build_flags"]
+    assert "-DENABLE_TEST_HARNESS_API=1" in parser["env:test"]["build_flags"]
+    legacy_test_flags = parser["env:legacy_test"]["build_flags"]
+    assert "-DUSE_LEGACY_HARDWARE=1" in legacy_test_flags
+    assert "-DENABLE_TEST_HARNESS_API=1" in legacy_test_flags
+
+
+def test_platformio_dependencies_are_version_pinned() -> None:
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.read(PROJECT_ROOT / "platformio.ini", encoding="utf-8")
+
+    dependencies = [
+        line.strip()
+        for line in parser["env"]["lib_deps"].splitlines()
+        if line.strip()
+    ]
+
+    assert dependencies
+    assert all("@" in dependency for dependency in dependencies)
 
 
 def test_uart_flash_helper_lists_normal_and_legacy_artifacts(tmp_path: Path) -> None:
