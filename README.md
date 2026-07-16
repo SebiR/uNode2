@@ -11,7 +11,7 @@ firmware/uNode_2/      Self-contained ESP8266 PlatformIO/Arduino firmware
   scripts/             PlatformIO build hooks
   tools/               Firmware release builder
 firmware/rp2040_dmx_tool/
-                       RP2040 DMX analyzer / test sender firmware
+                       Self-contained RP2040 PlatformIO DMX test fixture
 libraries/uNodeArtNet/ Portable Arduino Art-Net protocol library
 libraries/LXESP8266DMX/
                        Local ESP8266 UART DMX library fork used by uNode
@@ -33,8 +33,9 @@ PlatformIO uses the repository-local libraries automatically and downloads the
 pinned third-party dependencies declared in
 `firmware/uNode_2/platformio.ini`.
 
-The RP2040 DMX tool is intended as the hardware test fixture for future
-DMX-level integration tests.
+The RP2040 DMX tool is the hardware test fixture for DMX-level integration
+tests. It is a separate PlatformIO project using the pinned Earle Philhower
+Arduino-Pico core and Waveshare RP2040-Zero board definition.
 
 ## Common commands
 
@@ -78,6 +79,13 @@ pio run -d .\firmware\uNode_2 -e legacy               # legacy hardware
 pio run -d .\firmware\uNode_2 -e test                 # test-harness API
 pio run -d .\firmware\uNode_2 -e legacy_test          # legacy test build
 pio run -d .\firmware\uNode_2 -e normal -t buildfs    # LittleFS image
+```
+
+Build or upload the RP2040 DMX test fixture:
+
+```powershell
+pio run -d .\firmware\rp2040_dmx_tool
+pio run -d .\firmware\rp2040_dmx_tool -t upload
 ```
 
 The default environment is `normal`. All environments use the ESP8266 Arduino

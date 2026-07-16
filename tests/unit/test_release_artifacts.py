@@ -99,6 +99,42 @@ def test_platformio_dependencies_are_version_pinned() -> None:
     assert all("@" in dependency for dependency in dependencies)
 
 
+def test_rp2040_tool_platformio_configuration_is_reproducible() -> None:
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.read(
+        PROJECT_ROOT / "firmware" / "rp2040_dmx_tool" / "platformio.ini",
+        encoding="utf-8",
+    )
+
+    assert parser["platformio"]["default_envs"] == "tester"
+    assert parser["platformio"]["src_dir"] == "."
+
+    environment = parser["env:tester"]
+    assert environment["framework"] == "arduino"
+    assert environment["board"] == "waveshare_rp2040_zero"
+    assert environment["board_build.core"] == "earlephilhower"
+    assert environment["monitor_speed"] == "115200"
+    assert environment["platform"].startswith(
+        "https://github.com/maxgerhardt/platform-raspberrypi.git#"
+    )
+
+    platform_packages = [
+        line.strip()
+        for line in environment["platform_packages"].splitlines()
+        if line.strip()
+    ]
+    dependencies = [
+        line.strip()
+        for line in environment["lib_deps"].splitlines()
+        if line.strip()
+    ]
+
+    assert platform_packages
+    assert dependencies
+    assert all("@" in package and "#" in package for package in platform_packages)
+    assert all("@" in dependency for dependency in dependencies)
+
+
 def test_uart_flash_helper_lists_normal_and_legacy_artifacts(tmp_path: Path) -> None:
     powershell = shutil.which("powershell")
     if powershell is None:

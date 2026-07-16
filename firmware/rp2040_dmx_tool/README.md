@@ -33,9 +33,36 @@ For a common tied `DE` + `!RE` transceiver input, use the defaults
 
 ## Dependencies
 
-- Arduino-Pico core for RP2040 boards.
-- ArduinoJson.
-- Adafruit NeoPixel. Its RP2040 backend uses PIO for status LED output.
+- PlatformIO Core 6.1.19.
+- Arduino-Pico core 5.6.0 for RP2040 boards.
+- ArduinoJson 7.4.3.
+- Adafruit NeoPixel 1.15.2. Its RP2040 backend uses PIO for status LED output.
+
+The PlatformIO project pins the RP2040 platform, Arduino-Pico core, and both
+libraries in `platformio.ini`. It deliberately uses the Earle Philhower core
+instead of the Mbed Arduino core because the DMX implementation relies on its
+RP2040 UART and PIO APIs.
+
+## Build and upload
+
+Open this directory as the PlatformIO project in VS Code, or build it from the
+repository root:
+
+```powershell
+pio run -d .\firmware\rp2040_dmx_tool
+```
+
+Upload to a connected Waveshare RP2040-Zero and open the JSONL serial monitor:
+
+```powershell
+pio run -d .\firmware\rp2040_dmx_tool -t upload
+pio device monitor -d .\firmware\rp2040_dmx_tool
+```
+
+The generated UF2 file is
+`.pio/build/tester/firmware.uf2` below this project directory. The existing
+Arduino sketch layout remains Arduino-IDE compatible; PlatformIO compiles the
+matching `rp2040_dmx_tool.ino` directly from the project root.
 
 ## Status LED
 

@@ -13,6 +13,10 @@ explicitly in each release entry.
 
 ### Added
 
+- Added a self-contained PlatformIO project for the Waveshare RP2040-Zero DMX
+  test fixture. The RP2040 platform, Earle Philhower Arduino-Pico 5.6.0 core,
+  ArduinoJson, and Adafruit NeoPixel dependencies are pinned for reproducible
+  UF2 builds while the sketch remains Arduino-IDE compatible.
 - Added a reproducible PlatformIO project with pinned ESP8266 Arduino 3.1.2
   dependencies and four explicit build environments: current hardware, legacy
   hardware, and opt-in test-harness variants of both. The release builder now
