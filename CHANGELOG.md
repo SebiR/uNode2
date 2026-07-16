@@ -53,6 +53,10 @@ explicitly in each release entry.
 
 ### Changed
 
+- Made `firmware/uNode_2` a self-contained PlatformIO project by moving its
+  build configuration, PlatformIO hook, and release builder below the firmware
+  directory. Workspace-level libraries, deployment tools, and HIL tests remain
+  shared, with all relative paths covered by the release/unit tests.
 - Hardened optional web/API access control with ESP system-RNG session tokens,
   a 30-minute idle timeout, and a global limit of five rejected login attempts
   per 60 seconds.

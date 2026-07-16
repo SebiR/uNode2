@@ -6,12 +6,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$projectRoot =
+$sketchDir =
     Resolve-Path (
         Join-Path $PSScriptRoot "..")
 
-$sketchDir =
-    Join-Path $projectRoot "firmware\uNode_2"
+$projectRoot =
+    Resolve-Path (
+        Join-Path $sketchDir "..\..")
 
 $dataDir =
     Join-Path $sketchDir "data"
@@ -60,7 +61,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $buildRoot =
-    Join-Path $projectRoot ".pio\build"
+    Join-Path $sketchDir ".pio\build"
 
 $configHeader =
     Get-Content `
@@ -132,14 +133,14 @@ function Build-FirmwareArtifact {
 
     Write-Host "Building PlatformIO environment $Profile"
 
-    & $platformIo run -e $Profile -t clean |
+    & $platformIo run --project-dir $sketchDir -e $Profile -t clean |
         Out-Host
 
     if ($LASTEXITCODE -ne 0) {
         throw "$Profile environment clean failed"
     }
 
-    & $platformIo run -e $Profile |
+    & $platformIo run --project-dir $sketchDir -e $Profile |
         Out-Host
 
     if ($LASTEXITCODE -ne 0) {
@@ -260,7 +261,7 @@ $webVersion |
     }
 
 try {
-    & $platformIo run -e normal -t buildfs
+    & $platformIo run --project-dir $sketchDir -e normal -t buildfs
 
     if ($LASTEXITCODE -ne 0) {
         throw "LittleFS image build failed"

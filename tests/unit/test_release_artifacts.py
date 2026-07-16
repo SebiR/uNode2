@@ -46,13 +46,22 @@ def test_littlefs_version_file_matches_firmware_defines() -> None:
 
 
 def test_platformio_profiles_pin_the_release_build_configuration() -> None:
+    firmware_project = PROJECT_ROOT / "firmware" / "uNode_2"
     parser = configparser.ConfigParser(interpolation=None)
-    parser.read(PROJECT_ROOT / "platformio.ini", encoding="utf-8")
+    parser.read(
+        firmware_project / "platformio.ini",
+        encoding="utf-8",
+    )
 
     assert parser["platformio"]["default_envs"] == "normal"
-    assert parser["platformio"]["src_dir"] == "firmware/uNode_2"
-    assert parser["platformio"]["data_dir"] == "firmware/uNode_2/data"
-    assert parser["platformio"]["lib_dir"] == "libraries"
+    assert parser["platformio"]["src_dir"] == "."
+    assert parser["platformio"]["data_dir"] == "data"
+    assert parser["platformio"]["lib_dir"] == "../../libraries"
+    assert (
+        firmware_project / parser["platformio"]["lib_dir"]
+    ).resolve() == (PROJECT_ROOT / "libraries").resolve()
+    assert (firmware_project / "scripts" / "platformio_build.py").is_file()
+    assert (firmware_project / "tools" / "build_release.ps1").is_file()
 
     common = parser["env"]
     assert common["platform"] == "platformio/espressif8266@4.2.1"
@@ -75,7 +84,10 @@ def test_platformio_profiles_pin_the_release_build_configuration() -> None:
 
 def test_platformio_dependencies_are_version_pinned() -> None:
     parser = configparser.ConfigParser(interpolation=None)
-    parser.read(PROJECT_ROOT / "platformio.ini", encoding="utf-8")
+    parser.read(
+        PROJECT_ROOT / "firmware" / "uNode_2" / "platformio.ini",
+        encoding="utf-8",
+    )
 
     dependencies = [
         line.strip()

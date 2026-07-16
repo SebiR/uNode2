@@ -5,14 +5,18 @@ This repository is structured as a small multi-project workspace.
 ## Layout
 
 ```text
-firmware/uNode_2/      ESP8266 Arduino sketch and LittleFS web assets
+firmware/uNode_2/      Self-contained ESP8266 PlatformIO/Arduino firmware
+  platformio.ini       Pinned build environments and dependencies
+  data/                LittleFS web assets
+  scripts/             PlatformIO build hooks
+  tools/               Firmware release builder
 firmware/rp2040_dmx_tool/
                        RP2040 DMX analyzer / test sender firmware
 libraries/uNodeArtNet/ Portable Arduino Art-Net protocol library
 libraries/LXESP8266DMX/
                        Local ESP8266 UART DMX library fork used by uNode
 tests/                 Python host-side and integration tests
-tools/                 Build, release, and test helper scripts
+tools/                 Host tests, deployment, and fixture helper scripts
 artifacts/             Generated release files
 doxygen/               Generated API documentation
 misc/                  Loose project assets and experiments
@@ -26,7 +30,8 @@ the maintained ESP8266 DMX fork are kept below `libraries/`. Install or link
 `libraries/uNodeArtNet` and `libraries/LXESP8266DMX` into the Arduino
 sketchbook's `libraries` directory when compiling directly from Arduino IDE.
 PlatformIO uses the repository-local libraries automatically and downloads the
-pinned third-party dependencies declared in `platformio.ini`.
+pinned third-party dependencies declared in
+`firmware/uNode_2/platformio.ini`.
 
 The RP2040 DMX tool is intended as the hardware test fixture for future
 DMX-level integration tests.
@@ -55,22 +60,24 @@ powershell -ExecutionPolicy Bypass -File .\tools\test.ps1 -Integration -NodeIp 2
 Build versioned firmware and LittleFS release artifacts:
 
 ```powershell
-.\tools\build_release.ps1
+.\firmware\uNode_2\tools\build_release.ps1
 ```
 
 The release build requires PlatformIO Core 6.1.19. The script finds either a
 `pio`/`platformio` command on `PATH` or the Core installed by the VS Code
 PlatformIO extension below `~/.platformio/penv`. The ESP8266 platform and all
-third-party Arduino libraries are version-pinned in `platformio.ini`.
+third-party Arduino libraries are version-pinned in the firmware-local
+`platformio.ini`.
 
-For a quick development build, use the PlatformIO toolbar in VS Code or run:
+Open `firmware/uNode_2` as the PlatformIO project in VS Code to use its toolbar.
+From the workspace root, equivalent command-line builds are:
 
 ```powershell
-pio run                         # current hardware
-pio run -e legacy               # legacy LED and RS485 wiring
-pio run -e test                 # current hardware with test-harness API
-pio run -e legacy_test          # legacy hardware with test-harness API
-pio run -e normal -t buildfs    # LittleFS image
+pio run -d .\firmware\uNode_2                         # current hardware
+pio run -d .\firmware\uNode_2 -e legacy               # legacy hardware
+pio run -d .\firmware\uNode_2 -e test                 # test-harness API
+pio run -d .\firmware\uNode_2 -e legacy_test          # legacy test build
+pio run -d .\firmware\uNode_2 -e normal -t buildfs    # LittleFS image
 ```
 
 The default environment is `normal`. All environments use the ESP8266 Arduino
@@ -81,7 +88,7 @@ Development/production-test firmware with the isolated Wi-Fi test harness is
 built only by explicit request:
 
 ```powershell
-.\tools\build_release.ps1 -IncludeTestHarness
+.\firmware\uNode_2\tools\build_release.ps1 -IncludeTestHarness
 ```
 
 The release script builds both supported hardware profiles and writes artifacts

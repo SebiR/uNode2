@@ -121,7 +121,7 @@ function Select-ReleaseCandidate {
     )
 
     if ($Candidates.Count -eq 0) {
-        throw "No release firmware artifacts found in $ArtifactsDir. Run .\tools\build_release.ps1 first."
+        throw "No release firmware artifacts found in $ArtifactsDir. Run .\firmware\uNode_2\tools\build_release.ps1 first."
     }
 
     Write-Host ""

@@ -305,14 +305,15 @@ LittleFS filesystem image.
 Release artifacts can be generated with:
 
 ```powershell
-.\tools\build_release.ps1
+.\firmware\uNode_2\tools\build_release.ps1
 ```
 
 The repository uses PlatformIO Core 6.1.19 with a pinned ESP8266 Arduino 3.1.2
-toolchain. `platformio.ini` defines separate `normal`, `legacy`, `test`, and
-`legacy_test` environments. The last two explicitly enable the production-test
-API and are not part of a regular release build. Direct development builds can
-be started from the VS Code PlatformIO toolbar or with `pio run -e <name>`.
+toolchain. `firmware/uNode_2/platformio.ini` defines separate `normal`,
+`legacy`, `test`, and `legacy_test` environments. The last two explicitly
+enable the production-test API and are not part of a regular release build.
+Open `firmware/uNode_2` as the PlatformIO project in VS Code, or build from the
+workspace root with `pio run -d firmware/uNode_2 -e <name>`.
 
 The release script locates the Core installed by the VS Code extension when
 `pio` is not on `PATH`. It writes versioned firmware, LittleFS, and manifest files to
