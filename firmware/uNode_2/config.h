@@ -9,7 +9,7 @@
 
 #define FW_VERSION_MAJOR 0
 #define FW_VERSION_MINOR 25
-#define FW_VERSION_PATCH 2
+#define FW_VERSION_PATCH 3
 
 #define FW_STRINGIFY_IMPL(value) #value
 #define FW_STRINGIFY(value) FW_STRINGIFY_IMPL(value)
@@ -39,6 +39,16 @@
 // WS2812 + split RE/DE + switchable-termination hardware profile.
 #ifndef USE_LEGACY_HARDWARE
 #define USE_LEGACY_HARDWARE 0
+#endif
+
+// Workaround profile for the PCB revision whose ESP8266 symbol swapped GPIO4
+// and GPIO5. This keeps the corrected/default board mapping unchanged.
+#ifndef USE_GPIO_FIX_HARDWARE
+#define USE_GPIO_FIX_HARDWARE 0
+#endif
+
+#if USE_LEGACY_HARDWARE && USE_GPIO_FIX_HARDWARE
+#error "Legacy and GPIO_Fix hardware profiles are mutually exclusive"
 #endif
 
 #ifndef ENABLE_DEBUG
@@ -107,7 +117,11 @@
 #endif
 
 #define PIN_RS485_DIR 5
+#if USE_GPIO_FIX_HARDWARE
+#define PIN_RS485_RE 4
+#else
 #define PIN_RS485_RE 5
+#endif
 #define PIN_RS485_DE 12
 #define PIN_RS485_TERMINATION 13
 
@@ -122,7 +136,11 @@
 #define LED_ARTNET_PIN 12
 #define LED_STATUS_PIN 13
 
+#if USE_GPIO_FIX_HARDWARE
+#define LED_WS2812_PIN 5
+#else
 #define LED_WS2812_PIN 4
+#endif
 #define LED_WS2812_COUNT 2
 #define LED_WS2812_STATUS_INDEX 0
 #define LED_WS2812_ARTNET_INDEX 1

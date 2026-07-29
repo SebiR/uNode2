@@ -76,6 +76,7 @@ From the workspace root, equivalent command-line builds are:
 ```powershell
 pio run -d .\firmware\uNode_2                         # current hardware
 pio run -d .\firmware\uNode_2 -e legacy               # legacy hardware
+pio run -d .\firmware\uNode_2 -e gpio_fix             # GPIO4/GPIO5 PCB fix
 pio run -d .\firmware\uNode_2 -e test                 # test-harness API
 pio run -d .\firmware\uNode_2 -e legacy_test          # legacy test build
 pio run -d .\firmware\uNode_2 -e normal -t buildfs    # LittleFS image
@@ -99,13 +100,15 @@ built only by explicit request:
 .\firmware\uNode_2\tools\build_release.ps1 -IncludeTestHarness
 ```
 
-The release script builds both supported hardware profiles and writes artifacts
+The release script builds all supported hardware profiles and writes artifacts
 without a build timestamp in the file name:
 
 - `uNode-<version>-firmware.bin`
 - `uNode-<version>-littlefs.bin`
 - `uNode-<version>_legacy-firmware.bin`
 - `uNode-<version>_legacy-littlefs.bin`
+- `uNode-<version>_gpio_fix-firmware.bin`
+- `uNode-<version>_gpio_fix-littlefs.bin`
 - `uNode-<version>-manifest.json`
 
 The opt-in command additionally creates `_test` and `_legacy_test` firmware.

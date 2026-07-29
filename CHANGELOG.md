@@ -13,6 +13,9 @@ explicitly in each release entry.
 
 ### Added
 
+- Added the `GPIO_Fix` firmware profile for the PCB revision with GPIO4 and
+  GPIO5 swapped in the ESP8266 component definition. It keeps `NEO_RGB`, moves
+  WS2812 data to GPIO5, and moves the split RS-485 `/RE` signal to GPIO4.
 - Added a self-contained PlatformIO project for the Waveshare RP2040-Zero DMX
   test fixture. The RP2040 platform, Earle Philhower Arduino-Pico 5.6.0 core,
   ArduinoJson, and Adafruit NeoPixel dependencies are pinned for reproducible

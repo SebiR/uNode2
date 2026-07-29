@@ -9,10 +9,10 @@
     "title": "OTA helper dry run",
     "description": "Checks that the OTA flash helper targets the expected update endpoint."
   },
-  "tests/unit/test_release_artifacts.py::test_uart_flash_helper_lists_normal_and_legacy_artifacts": {
+  "tests/unit/test_release_artifacts.py::test_uart_flash_helper_lists_all_hardware_profiles": {
     "group": "Release",
     "title": "UART artifact selection",
-    "description": "Checks normal and legacy UART flash artifact listing."
+    "description": "Checks normal, GPIO_Fix, and legacy UART flash artifact listing."
   },
   "tests/unit/test_sacn_packets.py::test_sacn_dmx_wire_format_and_parser": {
     "group": "sACN Packet Helpers",

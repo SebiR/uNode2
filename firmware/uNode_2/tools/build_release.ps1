@@ -205,6 +205,11 @@ $legacyFirmwareArtifact =
         -Profile "legacy" `
         -Suffix "_legacy"
 
+$gpioFixFirmwareArtifact =
+    Build-FirmwareArtifact `
+        -Profile "gpio_fix" `
+        -Suffix "_gpio_fix"
+
 $testFirmwareArtifact = $null
 $legacyTestFirmwareArtifact = $null
 
@@ -228,6 +233,10 @@ $legacyFirmwareElfArtifact =
     Join-Path $OutputDir "uNode-$version`_legacy-firmware.elf"
 $legacyFirmwareMapArtifact =
     Join-Path $OutputDir "uNode-$version`_legacy-firmware.map"
+$gpioFixFirmwareElfArtifact =
+    Join-Path $OutputDir "uNode-$version`_gpio_fix-firmware.elf"
+$gpioFixFirmwareMapArtifact =
+    Join-Path $OutputDir "uNode-$version`_gpio_fix-firmware.map"
 $testFirmwareElfArtifact =
     Join-Path $OutputDir "uNode-$version`_test-firmware.elf"
 $testFirmwareMapArtifact =
@@ -242,6 +251,9 @@ $filesystemArtifact =
 
 $legacyFilesystemArtifact =
     Join-Path $OutputDir "uNode-$version`_legacy-littlefs.bin"
+
+$gpioFixFilesystemArtifact =
+    Join-Path $OutputDir "uNode-$version`_gpio_fix-littlefs.bin"
 
 Write-Host "Building LittleFS image"
 
@@ -299,6 +311,11 @@ Copy-Item `
     -Destination $legacyFilesystemArtifact `
     -Force
 
+Copy-Item `
+    -LiteralPath $filesystemArtifact `
+    -Destination $gpioFixFilesystemArtifact `
+    -Force
+
 $firmwareHash =
     Get-FileHash `
         -Algorithm SHA256 `
@@ -309,6 +326,11 @@ $legacyFirmwareHash =
         -Algorithm SHA256 `
         -LiteralPath $legacyFirmwareArtifact
 
+$gpioFixFirmwareHash =
+    Get-FileHash `
+        -Algorithm SHA256 `
+        -LiteralPath $gpioFixFirmwareArtifact
+
 $firmwareElfHash =
     Get-FileHash -Algorithm SHA256 -LiteralPath $firmwareElfArtifact
 $firmwareMapHash =
@@ -317,6 +339,10 @@ $legacyFirmwareElfHash =
     Get-FileHash -Algorithm SHA256 -LiteralPath $legacyFirmwareElfArtifact
 $legacyFirmwareMapHash =
     Get-FileHash -Algorithm SHA256 -LiteralPath $legacyFirmwareMapArtifact
+$gpioFixFirmwareElfHash =
+    Get-FileHash -Algorithm SHA256 -LiteralPath $gpioFixFirmwareElfArtifact
+$gpioFixFirmwareMapHash =
+    Get-FileHash -Algorithm SHA256 -LiteralPath $gpioFixFirmwareMapArtifact
 
 $filesystemHash =
     Get-FileHash `
@@ -327,6 +353,11 @@ $legacyFilesystemHash =
     Get-FileHash `
         -Algorithm SHA256 `
         -LiteralPath $legacyFilesystemArtifact
+
+$gpioFixFilesystemHash =
+    Get-FileHash `
+        -Algorithm SHA256 `
+        -LiteralPath $gpioFixFilesystemArtifact
 
 if ($IncludeTestHarness) {
     $testFirmwareHash =
@@ -414,6 +445,38 @@ $manifest = [ordered]@{
                 sha256 = $legacyFilesystemHash.Hash
             }
         }
+        gpioFix = [ordered]@{
+            hardwareProfile = "gpio_fix"
+            platformIoEnvironment = "gpio_fix"
+            buildFlags = @(
+                "-DUSE_GPIO_FIX_HARDWARE=1",
+                "-DLED_WS2812_COLOR_ORDER=NEO_RGB"
+            )
+            firmware = [ordered]@{
+                file = (Split-Path $gpioFixFirmwareArtifact -Leaf)
+                size = (Get-Item $gpioFixFirmwareArtifact).Length
+                sha256 = $gpioFixFirmwareHash.Hash
+            }
+            debug = [ordered]@{
+                elf = [ordered]@{
+                    file = (Split-Path $gpioFixFirmwareElfArtifact -Leaf)
+                    size = (Get-Item $gpioFixFirmwareElfArtifact).Length
+                    sha256 = $gpioFixFirmwareElfHash.Hash
+                }
+                map = [ordered]@{
+                    file = (Split-Path $gpioFixFirmwareMapArtifact -Leaf)
+                    size = (Get-Item $gpioFixFirmwareMapArtifact).Length
+                    sha256 = $gpioFixFirmwareMapHash.Hash
+                }
+            }
+            littleFs = [ordered]@{
+                size = 1024000
+                blockSize = 8192
+                pageSize = 256
+                file = (Split-Path $gpioFixFilesystemArtifact -Leaf)
+                sha256 = $gpioFixFilesystemHash.Hash
+            }
+        }
     }
 }
 
@@ -493,6 +556,9 @@ Write-Host "LittleFS normal : $filesystemArtifact"
 Write-Host "Firmware legacy : $legacyFirmwareArtifact"
 Write-Host "Debug legacy    : $legacyFirmwareElfArtifact / $legacyFirmwareMapArtifact"
 Write-Host "LittleFS legacy : $legacyFilesystemArtifact"
+Write-Host "Firmware GPIO_Fix: $gpioFixFirmwareArtifact"
+Write-Host "Debug GPIO_Fix   : $gpioFixFirmwareElfArtifact / $gpioFixFirmwareMapArtifact"
+Write-Host "LittleFS GPIO_Fix: $gpioFixFilesystemArtifact"
 if ($IncludeTestHarness) {
     Write-Host "Firmware test   : $testFirmwareArtifact"
     Write-Host "Firmware legacy test: $legacyTestFirmwareArtifact"

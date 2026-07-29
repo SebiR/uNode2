@@ -72,10 +72,13 @@ def test_platformio_profiles_pin_the_release_build_configuration() -> None:
     assert common["board_build.flash_mode"] == "dout"
     assert common["upload_speed"] == "512000"
 
-    for profile in ("normal", "legacy", "test", "legacy_test"):
+    for profile in ("normal", "legacy", "gpio_fix", "test", "legacy_test"):
         assert parser.has_section(f"env:{profile}")
 
     assert "-DUSE_LEGACY_HARDWARE=1" in parser["env:legacy"]["build_flags"]
+    gpio_fix_flags = parser["env:gpio_fix"]["build_flags"]
+    assert "-DUSE_GPIO_FIX_HARDWARE=1" in gpio_fix_flags
+    assert "-DLED_WS2812_COLOR_ORDER=NEO_RGB" in gpio_fix_flags
     assert "-DENABLE_TEST_HARNESS_API=1" in parser["env:test"]["build_flags"]
     legacy_test_flags = parser["env:legacy_test"]["build_flags"]
     assert "-DUSE_LEGACY_HARDWARE=1" in legacy_test_flags
@@ -135,7 +138,7 @@ def test_rp2040_tool_platformio_configuration_is_reproducible() -> None:
     assert all("@" in dependency for dependency in dependencies)
 
 
-def test_uart_flash_helper_lists_normal_and_legacy_artifacts(tmp_path: Path) -> None:
+def test_uart_flash_helper_lists_all_hardware_profiles(tmp_path: Path) -> None:
     powershell = shutil.which("powershell")
     if powershell is None:
         pytest.skip("PowerShell is required to test flash_uart.ps1")
@@ -145,6 +148,8 @@ def test_uart_flash_helper_lists_normal_and_legacy_artifacts(tmp_path: Path) -> 
         "uNode-0.99.0-littlefs.bin",
         "uNode-0.99.0_legacy-firmware.bin",
         "uNode-0.99.0_legacy-littlefs.bin",
+        "uNode-0.99.0_gpio_fix-firmware.bin",
+        "uNode-0.99.0_gpio_fix-littlefs.bin",
     ]
 
     for name in artifact_names:
@@ -174,10 +179,16 @@ def test_uart_flash_helper_lists_normal_and_legacy_artifacts(tmp_path: Path) -> 
         "0.99.0 legacy: "
         "uNode-0.99.0_legacy-firmware.bin / uNode-0.99.0_legacy-littlefs.bin"
     )
+    gpio_fix = (
+        "0.99.0 gpio_fix: "
+        "uNode-0.99.0_gpio_fix-firmware.bin / "
+        "uNode-0.99.0_gpio_fix-littlefs.bin"
+    )
 
     assert normal in output
+    assert gpio_fix in output
     assert legacy in output
-    assert output.index(normal) < output.index(legacy)
+    assert output.index(normal) < output.index(gpio_fix) < output.index(legacy)
 
 
 def test_ota_flash_helper_dry_run_targets_expected_update_endpoint(
@@ -192,6 +203,8 @@ def test_ota_flash_helper_dry_run_targets_expected_update_endpoint(
         "uNode-0.99.0-littlefs.bin",
         "uNode-0.99.0_legacy-firmware.bin",
         "uNode-0.99.0_legacy-littlefs.bin",
+        "uNode-0.99.0_gpio_fix-firmware.bin",
+        "uNode-0.99.0_gpio_fix-littlefs.bin",
     ]
 
     for name in artifact_names:
@@ -214,7 +227,7 @@ def test_ota_flash_helper_dry_run_targets_expected_update_endpoint(
         cwd=PROJECT_ROOT,
         check=True,
         capture_output=True,
-        input="2\n",
+        input="3\n",
         text=True,
         timeout=30,
     )

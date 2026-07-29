@@ -61,7 +61,7 @@ function Get-ReleaseCandidates {
         $match =
             [regex]::Match(
                 $firmware.Name,
-                "^uNode-(?<version>\d+\.\d+\.\d+)(?<suffix>_legacy)?-firmware\.bin$")
+                "^uNode-(?<version>\d+\.\d+\.\d+)(?<suffix>_(?:legacy|gpio_fix))?-firmware\.bin$")
 
         if (!$match.Success) {
             continue
@@ -74,17 +74,17 @@ function Get-ReleaseCandidates {
             $match.Groups["suffix"].Value
 
         $profile =
-            if ($suffix -eq "_legacy") {
-                "legacy"
-            } else {
-                "normal"
+            switch ($suffix) {
+                "_legacy" { "legacy" }
+                "_gpio_fix" { "gpio_fix" }
+                default { "normal" }
             }
 
         $profileOrder =
-            if ($profile -eq "normal") {
-                0
-            } else {
-                1
+            switch ($profile) {
+                "normal" { 0 }
+                "gpio_fix" { 1 }
+                default { 2 }
             }
 
         $littleFs =
