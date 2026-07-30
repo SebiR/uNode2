@@ -123,6 +123,14 @@ def test_node_red_uses_one_global_wifi_connection_manager() -> None:
     assert "request.action === 'network-disconnect'" in status_parser["func"]
     assert "flow.set('uNodeOnline', false)" in status_parser["func"]
 
+    updater_template = nodes["a11e000000000118"]["format"]
+    flasher_template = nodes["a11e000000000127"]["format"]
+    regression_template = nodes["a11e000000000117"]["format"]
+    assert updater_template.count('value="gpio_fix"') == 1
+    assert flasher_template.count('value="gpio_fix"') == 1
+    assert regression_template.count('value="gpio_fix"') == 1
+    assert "['normal','legacy','gpio_fix']" in validator["func"]
+
 
 def test_platform_test_runners_execute_unode_preflight() -> None:
     linux_runner = LINUX_TEST_RUNNER_PATH.read_text(encoding="utf-8")
@@ -561,10 +569,20 @@ def test_decode_request_accepts_urlsafe_json_and_rejects_non_objects() -> None:
 def test_available_releases_lists_only_complete_profiles_newest_first(
     tmp_path: Path,
 ) -> None:
-    def add_release(version: str, *, normal: bool, legacy: bool) -> None:
+    def add_release(
+        version: str,
+        *,
+        normal: bool,
+        legacy: bool,
+        gpio_fix: bool = False,
+    ) -> None:
         profiles = {}
-        for profile, enabled in (("normal", normal), ("legacy", legacy)):
-            suffix = "" if profile == "normal" else "_legacy"
+        for profile, enabled in (
+            ("normal", normal),
+            ("legacy", legacy),
+            ("gpio_fix", gpio_fix),
+        ):
+            suffix = "" if profile == "normal" else f"_{profile}"
             firmware_name = f"uNode-{version}{suffix}-firmware.bin"
             littlefs_name = f"uNode-{version}{suffix}-littlefs.bin"
             firmware = tmp_path / firmware_name
@@ -594,13 +612,13 @@ def test_available_releases_lists_only_complete_profiles_newest_first(
         )
 
     add_release("0.23.22", normal=True, legacy=False)
-    add_release("0.23.23", normal=True, legacy=True)
+    add_release("0.23.23", normal=True, legacy=True, gpio_fix=True)
     add_release("0.24.0", normal=False, legacy=False)
 
     releases = node_updater.available_releases(tmp_path)
 
     assert [item["version"] for item in releases] == ["0.23.23", "0.23.22"]
-    assert set(releases[0]["profiles"]) == {"normal", "legacy"}
+    assert set(releases[0]["profiles"]) == {"normal", "legacy", "gpio_fix"}
     assert releases[1]["profiles"] == ["normal"]
 
 

@@ -445,7 +445,7 @@ $manifest = [ordered]@{
                 sha256 = $legacyFilesystemHash.Hash
             }
         }
-        gpioFix = [ordered]@{
+        gpio_fix = [ordered]@{
             hardwareProfile = "gpio_fix"
             platformIoEnvironment = "gpio_fix"
             buildFlags = @(

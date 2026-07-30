@@ -9,7 +9,7 @@ param(
     [string]$Rp2040Port = "",
     [int]$ButtonGpio = -1,
     [int]$ResetGpio = -1,
-    [ValidateSet("normal", "legacy")]
+    [ValidateSet("normal", "legacy", "gpio_fix")]
     [string]$OtaProfile = "normal",
     [string]$OtaArtifactsDir = "",
     [int]$SoakSeconds = 0,

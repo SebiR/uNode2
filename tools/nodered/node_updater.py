@@ -76,7 +76,7 @@ SERIAL_BY_ID_DIR = Path(
 
 SSID_PATTERN = re.compile(r"^uNode_([0-9A-Fa-f]{6})$")
 VERSION_PATTERN = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
-ALLOWED_PROFILES = {"normal", "legacy"}
+ALLOWED_PROFILES = {"normal", "legacy", "gpio_fix"}
 ALLOWED_COMPONENTS = {"firmware", "littlefs", "both"}
 FLASH_BAUD = 512_000
 FIRMWARE_ADDRESS = 0x000000
@@ -940,7 +940,7 @@ def perform_initial_flash(job: JobStatus, request: dict[str, Any]) -> dict[str, 
 
     version_key(version)
     if profile not in ALLOWED_PROFILES:
-        raise ValueError("Hardware profile must be normal or legacy")
+        raise ValueError("Hardware profile must be normal, legacy, or gpio_fix")
 
     artifacts = resolve_release_artifacts(
         version,
@@ -1137,7 +1137,7 @@ def perform_update(job: JobStatus, request: dict[str, Any]) -> dict[str, Any]:
     validate_ssid(ssid)
     version_key(version)
     if profile not in ALLOWED_PROFILES:
-        raise ValueError("Hardware profile must be normal or legacy")
+        raise ValueError("Hardware profile must be normal, legacy, or gpio_fix")
     if components not in ALLOWED_COMPONENTS:
         raise ValueError("Update components must be firmware, littlefs, or both")
 

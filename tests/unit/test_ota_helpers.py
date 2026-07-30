@@ -45,7 +45,19 @@ def test_resolve_release_artifacts_verifies_manifest_hashes(tmp_path: Path) -> N
                     "size": littlefs.stat().st_size,
                     "sha256": digest(littlefs),
                 },
-            }
+            },
+            "gpio_fix": {
+                "firmware": {
+                    "file": firmware.name,
+                    "size": firmware.stat().st_size,
+                    "sha256": digest(firmware),
+                },
+                "littleFs": {
+                    "file": littlefs.name,
+                    "size": littlefs.stat().st_size,
+                    "sha256": digest(littlefs),
+                },
+            },
         },
     }
     (tmp_path / "uNode-1.2.3-manifest.json").write_text(
@@ -61,6 +73,16 @@ def test_resolve_release_artifacts_verifies_manifest_hashes(tmp_path: Path) -> N
     assert artifacts.firmware == firmware
     assert artifacts.littlefs == littlefs
     assert artifacts.profile == "normal"
+
+    gpio_fix_artifacts = resolve_release_artifacts(
+        "1.2.3",
+        profile="gpio_fix",
+        artifacts_dir=tmp_path,
+    )
+
+    assert gpio_fix_artifacts.firmware == firmware
+    assert gpio_fix_artifacts.littlefs == littlefs
+    assert gpio_fix_artifacts.profile == "gpio_fix"
 
 
 def test_resolve_release_artifacts_rejects_modified_binary(tmp_path: Path) -> None:

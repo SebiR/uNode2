@@ -37,7 +37,7 @@ Usage: tools/test.sh [options] [-- pytest-args]
   --fixture-hotspot             Temporarily make Pi wlan0 the test Client AP
   --ota                          Run safe OTA validation/reinstall tests
   --destructive-ota              Run opt-in OTA interruption/recovery tests
-  --ota-profile PROFILE          Release profile: normal or legacy
+  --ota-profile PROFILE          Release profile: normal, legacy, or gpio_fix
   --ota-artifacts DIR            Release artifact directory
   --path PATH                   Test file/directory (default depends on mode)
   --soak-seconds N              Host/network soak duration
@@ -85,6 +85,14 @@ while [[ $# -gt 0 ]]; do
         *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac
 done
+
+case "$OTA_PROFILE" in
+    normal|legacy|gpio_fix) ;;
+    *)
+        echo "Unsupported OTA profile: $OTA_PROFILE" >&2
+        exit 2
+        ;;
+esac
 
 if [[ ! -x "$PYTHON" ]]; then
     echo "Python environment not found: $PYTHON" >&2

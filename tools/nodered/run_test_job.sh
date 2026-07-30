@@ -201,6 +201,7 @@ case "$PROFILE" in
                 soak) INCLUDE_SOAK=true ;;
                 ota-normal) OTA_PROFILE="normal" ;;
                 ota-legacy) OTA_PROFILE="legacy" ;;
+                ota-gpio-fix) OTA_PROFILE="gpio_fix" ;;
                 *)
                     echo "Unsupported regression option: $flag" >&2
                     exit 2

@@ -55,9 +55,9 @@ def resolve_release_artifacts(
     selected_profile = (
         profile or os.environ.get("UNODE_OTA_PROFILE", "normal")
     ).strip().lower()
-    if selected_profile not in {"normal", "legacy"}:
+    if selected_profile not in {"normal", "legacy", "gpio_fix"}:
         raise AssertionError(
-            "UNODE_OTA_PROFILE must be either 'normal' or 'legacy'"
+            "UNODE_OTA_PROFILE must be 'normal', 'legacy', or 'gpio_fix'"
         )
 
     root = Path(

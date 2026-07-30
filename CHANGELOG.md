@@ -60,6 +60,8 @@ explicitly in each release entry.
 
 ### Changed
 
+- Added `GPIO_Fix` as a selectable Node-RED OTA and initial-flash hardware
+  profile, including manifest and SHA-256 artifact validation.
 - Restored the WS2812 color order to `NEO_GRB` after verification on production
   hardware.
 - Made `firmware/uNode_2` a self-contained PlatformIO project by moving its
