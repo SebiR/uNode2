@@ -11,6 +11,13 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+### Changed
+
+- Consolidated configuration candidate validation and persistence, shared
+  Art-Net source JSON generation between HTTP and WebSocket status, skipped
+  periodic WebSocket JSON generation without connected clients, and copied
+  outgoing sACN channel data as one coherent frame snapshot.
+
 ### Fixed
 
 - Kept Status LED test brightness inside the volatile RGB override instead of

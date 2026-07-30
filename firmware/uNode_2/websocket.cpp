@@ -7,6 +7,7 @@
 #include "dmx.h"
 #include "network.h"
 #include "leds.h"
+#include "status_json.h"
 
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
@@ -69,55 +70,6 @@ static void addLedStatus(JsonDocument& doc) {
     networkCss;
   leds["activity"] =
     activityCss;
-}
-
-static String getKnownArtNetName(
-  const IPAddress& ip) {
-  ArtNetSubscriberInfo subscriber;
-
-  for (uint8_t i = 0;
-       i < getArtNetSubscriberCount();
-       i++) {
-    if (!getArtNetSubscriber(i, subscriber)) {
-      continue;
-    }
-
-    if (subscriber.ip == ip
-        && subscriber.name[0] != '\0') {
-      return String(subscriber.name);
-    }
-  }
-
-  return ip.toString();
-}
-
-static void addArtNetSources(
-  JsonDocument& doc) {
-  JsonArray sources =
-    doc["artNetSources"].to<JsonArray>();
-
-  for (uint8_t i = 0;
-       i < getArtNetSourceCount();
-       i++) {
-    ArtNetSourceInfo source;
-
-    if (!getArtNetSource(i, source)) {
-      continue;
-    }
-
-    JsonObject item =
-      sources.add<JsonObject>();
-    item["ip"] =
-      source.ip.toString();
-    item["name"] =
-      getKnownArtNetName(source.ip);
-    item["physical"] =
-      source.physical;
-    item["lastSeenAge"] =
-      millis() - source.lastSeenMillis;
-    item["winning"] =
-      source.winning;
-  }
 }
 
 /** @brief Sends the current LED state to one WebSocket client. */
@@ -297,7 +249,7 @@ void broadcastStatus() {
   doc["artnetSubscribers"] =
     getArtNetSubscriberCount();
 
-  addArtNetSources(doc);
+  addArtNetSourcesToJson(doc);
 
   doc["dmxFrames"] =
     getDMXFrameCounter();
@@ -377,6 +329,14 @@ void broadcastStatus() {
 
 void updateWebSocket() {
   ws.loop();
+
+  if (ws.connectedClients() == 0) {
+    getRenderedLedColors(
+      lastNetworkLedColor,
+      lastActivityLedColor);
+    ledStatusInitialized = true;
+    return;
+  }
 
   broadcastLedStatusIfChanged();
 

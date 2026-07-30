@@ -547,6 +547,30 @@ static bool persistConfig(const Config& source) {
   return true;
 }
 
+/**
+ * @brief Validates, persists, and activates one candidate configuration.
+ * @param candidate Fully assembled configuration candidate.
+ * @param error Receives validation or storage details.
+ * @param storageError Message returned when the atomic write fails.
+ */
+static ConfigResult commitConfigCandidate(
+  const Config& candidate,
+  String& error,
+  const char* storageError) {
+  if (!validateConfig(candidate, error)) {
+    return ConfigResult::INVALID;
+  }
+
+  if (!persistConfig(candidate)) {
+    error = storageError;
+    return ConfigResult::STORAGE_ERROR;
+  }
+
+  config = candidate;
+  error = "";
+  return ConfigResult::OK;
+}
+
 /** @brief Parses JSON into a candidate configuration without persisting it. */
 static ConfigResult parseJson(
   const String& json,
@@ -665,13 +689,10 @@ ConfigResult updateConfigFromJson(
     return result;
   }
 
-  if (!persistConfig(candidate)) {
-    error = "Failed to store configuration";
-    return ConfigResult::STORAGE_ERROR;
-  }
-
-  config = candidate;
-  return ConfigResult::OK;
+  return commitConfigCandidate(
+    candidate,
+    error,
+    "Failed to store configuration");
 }
 
 /** @return Printable ASCII Art-Net name truncated to the protocol limit. */
@@ -730,18 +751,10 @@ ConfigResult updateArtNetNames(
     candidate.longName = requestedLongName;
   }
 
-  if (!validateConfig(candidate, error)) {
-    return ConfigResult::INVALID;
-  }
-
-  if (!persistConfig(candidate)) {
-    error = "Failed to store Art-Net names";
-    return ConfigResult::STORAGE_ERROR;
-  }
-
-  config = candidate;
-  error = "";
-  return ConfigResult::OK;
+  return commitConfigCandidate(
+    candidate,
+    error,
+    "Failed to store Art-Net names");
 }
 
 ConfigResult updateFailsafeMode(
@@ -761,18 +774,10 @@ ConfigResult updateFailsafeMode(
   Config candidate = config;
   candidate.failsafeMode = mode;
 
-  if (!validateConfig(candidate, error)) {
-    return ConfigResult::INVALID;
-  }
-
-  if (!persistConfig(candidate)) {
-    error = "Failed to store failsafe mode";
-    return ConfigResult::STORAGE_ERROR;
-  }
-
-  config = candidate;
-  error = "";
-  return ConfigResult::OK;
+  return commitConfigCandidate(
+    candidate,
+    error,
+    "Failed to store failsafe mode");
 }
 
 ConfigResult updateMergeMode(
@@ -792,18 +797,10 @@ ConfigResult updateMergeMode(
   Config candidate = config;
   candidate.mergeMode = mode;
 
-  if (!validateConfig(candidate, error)) {
-    return ConfigResult::INVALID;
-  }
-
-  if (!persistConfig(candidate)) {
-    error = "Failed to store merge mode";
-    return ConfigResult::STORAGE_ERROR;
-  }
-
-  config = candidate;
-  error = "";
-  return ConfigResult::OK;
+  return commitConfigCandidate(
+    candidate,
+    error,
+    "Failed to store merge mode");
 }
 
 ConfigResult updateArtNetPortAddress(
@@ -838,18 +835,10 @@ ConfigResult updateArtNetPortAddress(
   candidate.subnetId = subnetId;
   candidate.universe = universe;
 
-  if (!validateConfig(candidate, error)) {
-    return ConfigResult::INVALID;
-  }
-
-  if (!persistConfig(candidate)) {
-    error = "Failed to store Art-Net Port-Address";
-    return ConfigResult::STORAGE_ERROR;
-  }
-
-  config = candidate;
-  error = "";
-  return ConfigResult::OK;
+  return commitConfigCandidate(
+    candidate,
+    error,
+    "Failed to store Art-Net Port-Address");
 }
 
 ConfigResult updateConfiguredDirection(
@@ -869,18 +858,10 @@ ConfigResult updateConfiguredDirection(
   Config candidate = config;
   candidate.direction = direction;
 
-  if (!validateConfig(candidate, error)) {
-    return ConfigResult::INVALID;
-  }
-
-  if (!persistConfig(candidate)) {
-    error = "Failed to store direction";
-    return ConfigResult::STORAGE_ERROR;
-  }
-
-  config = candidate;
-  error = "";
-  return ConfigResult::OK;
+  return commitConfigCandidate(
+    candidate,
+    error,
+    "Failed to store direction");
 }
 
 ConfigResult updateNetworkFromArtIpProg(
@@ -930,18 +911,10 @@ ConfigResult updateNetworkFromArtIpProg(
     return ConfigResult::OK;
   }
 
-  if (!validateConfig(candidate, error)) {
-    return ConfigResult::INVALID;
-  }
-
-  if (!persistConfig(candidate)) {
-    error = "Failed to store network settings";
-    return ConfigResult::STORAGE_ERROR;
-  }
-
-  config = candidate;
-  error = "";
-  return ConfigResult::OK;
+  return commitConfigCandidate(
+    candidate,
+    error,
+    "Failed to store network settings");
 }
 
 ConfigResult updateAdminPasswordHash(
@@ -950,18 +923,10 @@ ConfigResult updateAdminPasswordHash(
   Config candidate = config;
   candidate.adminPasswordHash = hash;
 
-  if (!validateConfig(candidate, error)) {
-    return ConfigResult::INVALID;
-  }
-
-  if (!persistConfig(candidate)) {
-    error = "Failed to store admin password";
-    return ConfigResult::STORAGE_ERROR;
-  }
-
-  config = candidate;
-  error = "";
-  return ConfigResult::OK;
+  return commitConfigCandidate(
+    candidate,
+    error,
+    "Failed to store admin password");
 }
 
 ConfigResult importConfigFile(
@@ -993,27 +958,20 @@ ConfigResult importConfigFile(
     return ConfigResult::INVALID;
   }
 
-  if (!persistConfig(candidate)) {
-    error = "Failed to store uploaded configuration";
-    return ConfigResult::STORAGE_ERROR;
-  }
-
-  config = candidate;
-  return ConfigResult::OK;
+  return commitConfigCandidate(
+    candidate,
+    error,
+    "Failed to store uploaded configuration");
 }
 
 ConfigResult resetConfig(String& error) {
   Config candidate;
   setDefaults(candidate);
 
-  if (!persistConfig(candidate)) {
-    error = "Failed to store factory defaults";
-    return ConfigResult::STORAGE_ERROR;
-  }
-
-  config = candidate;
-  error = "";
-  return ConfigResult::OK;
+  return commitConfigCandidate(
+    candidate,
+    error,
+    "Failed to store factory defaults");
 }
 
 String getFirmwareString() {

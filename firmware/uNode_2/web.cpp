@@ -10,6 +10,7 @@
 #include "hardware.h"
 #include "event_log.h"
 #include "ip_fragment_guard.h"
+#include "status_json.h"
 
 #include <ESP8266WebServer.h>
 #include <LittleFS.h>
@@ -82,55 +83,6 @@ struct RtcDiagnostics {
   uint32_t bootCount;
   uint32_t checksum;
 };
-
-static String getKnownArtNetName(
-  const IPAddress& ip) {
-  ArtNetSubscriberInfo subscriber;
-
-  for (uint8_t i = 0;
-       i < getArtNetSubscriberCount();
-       i++) {
-    if (!getArtNetSubscriber(i, subscriber)) {
-      continue;
-    }
-
-    if (subscriber.ip == ip
-        && subscriber.name[0] != '\0') {
-      return String(subscriber.name);
-    }
-  }
-
-  return ip.toString();
-}
-
-static void addArtNetSources(
-  JsonDocument& doc) {
-  JsonArray sources =
-    doc["artNetSources"].to<JsonArray>();
-
-  for (uint8_t i = 0;
-       i < getArtNetSourceCount();
-       i++) {
-    ArtNetSourceInfo source;
-
-    if (!getArtNetSource(i, source)) {
-      continue;
-    }
-
-    JsonObject item =
-      sources.add<JsonObject>();
-    item["ip"] =
-      source.ip.toString();
-    item["name"] =
-      getKnownArtNetName(source.ip);
-    item["physical"] =
-      source.physical;
-    item["lastSeenAge"] =
-      millis() - source.lastSeenMillis;
-    item["winning"] =
-      source.winning;
-  }
-}
 
 static const char RECOVERY_HTML[] PROGMEM = R"rawliteral(
 <!doctype html>
@@ -1651,7 +1603,7 @@ static void sendStatus(
   doc["artnetSubscribers"] =
     getArtNetSubscriberCount();
 
-  addArtNetSources(doc);
+  addArtNetSourcesToJson(doc);
 
   JsonObject statusWarnings =
     doc["statusWarnings"].to<JsonObject>();

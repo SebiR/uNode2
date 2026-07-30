@@ -735,10 +735,9 @@ static uint16_t buildSacnDataPacket() {
   put16(123, propertyCount);
   packetBuffer[125] = 0x00;
 
-  for (uint16_t i = 0; i < slots; i++) {
-    packetBuffer[126 + i] =
-      getDmxChannel(i);
-  }
+  copyDmxFrame(
+    packetBuffer + 126,
+    slots);
 
   return packetLength;
 }
