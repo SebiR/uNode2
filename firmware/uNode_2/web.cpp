@@ -1621,6 +1621,8 @@ static void sendStatus(
     isLedColorOverrideActive();
   doc["ledColorOverrideSupported"] =
     USE_WS2812 != 0;
+  doc["ledBrightnessOverrideSupported"] =
+    USE_WS2812 != 0;
 
   doc["terminationEnabled"] =
     isTerminationEnabled();
@@ -2501,6 +2503,8 @@ static void sendLedColorState() {
   response["fullColor"] =
     USE_WS2812 != 0;
   response["brightness"] =
+    getRenderedLedBrightness();
+  response["configuredBrightness"] =
     config.ledBrightness;
 
   addLedRgbResponse(
@@ -2552,6 +2556,8 @@ static void handleSetLedColors() {
 
   StatusLedRgb networkColor;
   StatusLedRgb activityColor;
+  uint8_t brightness =
+    config.ledBrightness;
 
   if (!parseLedRgb(
         doc["network"],
@@ -2566,9 +2572,35 @@ static void handleSetLedColors() {
     return;
   }
 
+  if (!doc["brightness"].isNull()) {
+    if (!doc["brightness"].is<int>()) {
+      server.send(
+        400,
+        "text/plain",
+        "brightness must be an integer from 1 to 100");
+      return;
+    }
+
+    const int requestedBrightness =
+      doc["brightness"].as<int>();
+
+    if (requestedBrightness < 1
+        || requestedBrightness > 100) {
+      server.send(
+        400,
+        "text/plain",
+        "brightness must be an integer from 1 to 100");
+      return;
+    }
+
+    brightness =
+      (uint8_t)requestedBrightness;
+  }
+
   setLedColorOverride(
     networkColor,
-    activityColor);
+    activityColor,
+    brightness);
   updateLEDs();
   sendLedColorState();
 }

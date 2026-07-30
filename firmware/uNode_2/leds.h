@@ -77,10 +77,12 @@ bool areLEDsMuted();
  * @brief Enables a volatile direct-color override for both status LEDs.
  * @param networkColor Requested network/status LED RGB value.
  * @param activityColor Requested Art-Net/DMX activity LED RGB value.
+ * @param brightness Temporary override brightness from 1 to 100 percent.
  */
 void setLedColorOverride(
   StatusLedRgb networkColor,
-  StatusLedRgb activityColor);
+  StatusLedRgb activityColor,
+  uint8_t brightness);
 /** @brief Releases the direct-color override back to normal status logic. */
 void releaseLedColorOverride();
 /** @return True while direct RGB colors override normal status logic. */
@@ -90,3 +92,5 @@ bool isLedColorOverrideActive();
 void getRenderedLedColors(
   StatusLedRgb& networkColor,
   StatusLedRgb& activityColor);
+/** @return Brightness most recently submitted to the LED driver. */
+uint8_t getRenderedLedBrightness();

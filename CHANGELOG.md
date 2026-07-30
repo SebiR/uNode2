@@ -11,6 +11,12 @@ explicitly in each release entry.
 
 ## [Unreleased]
 
+### Fixed
+
+- Kept Status LED test brightness inside the volatile RGB override instead of
+  replacing the configured LED brightness. Releasing the override now
+  immediately restores the configured brightness.
+
 ### Added
 
 - Added the `GPIO_Fix` firmware profile for the PCB revision with GPIO4 and

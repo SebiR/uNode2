@@ -22,20 +22,25 @@ def test_led_api_applies_and_releases_volatile_rgb_override(
     step("Releasing any LED override left by an interrupted earlier test")
     status, body = unode_client.post_json("/api/leds/release")
     assert status == 200, body.decode(errors="replace")
+    configured_brightness = unode_client.get_config()["ledBrightness"]
+    test_brightness = 37 if configured_brightness != 37 else 63
 
     try:
-        step("Applying direct LED colors using hex and RGB object forms")
+        step("Applying direct LED colors and an isolated test brightness")
         status, body = unode_client.post_json(
             "/api/leds",
             {
                 "network": "#123456",
                 "activity": {"r": 171, "g": 205, "b": 239},
+                "brightness": test_brightness,
             },
         )
         assert status == 200, body.decode(errors="replace")
 
         response = _decode(body)
         assert response["overrideActive"] is True
+        assert response["brightness"] == test_brightness
+        assert response["configuredBrightness"] == configured_brightness
         assert response["network"] == {
             "r": 18,
             "g": 52,
@@ -57,6 +62,7 @@ def test_led_api_applies_and_releases_volatile_rgb_override(
 
         node_status = unode_client.get_json("/api/status")
         assert node_status["ledOverrideActive"] is True
+        assert unode_client.get_config()["ledBrightness"] == configured_brightness
 
         step("Rejecting malformed colors without replacing the active override")
         status, _body = unode_client.post_json(
@@ -75,4 +81,7 @@ def test_led_api_applies_and_releases_volatile_rgb_override(
 
     released = _decode(body)
     assert released["overrideActive"] is False
+    assert released["brightness"] == configured_brightness
+    assert released["configuredBrightness"] == configured_brightness
+    assert unode_client.get_config()["ledBrightness"] == configured_brightness
     assert unode_client.get_json("/api/status")["ledOverrideActive"] is False

@@ -459,6 +459,8 @@ def test_led_control_applies_colors_and_restores_previous_connection(
                 json.dumps(
                     {
                         "overrideActive": True,
+                        "brightness": 37,
+                        "configuredBrightness": 50,
                         "network": {"hex": "#123456"},
                         "activity": {"hex": "#ABCDEF"},
                     }
@@ -479,6 +481,7 @@ def test_led_control_applies_colors_and_restores_previous_connection(
             "recoveryMode": False,
             "inferredProfile": "normal",
             "ledColorOverrideSupported": True,
+            "ledBrightnessOverrideSupported": True,
         },
     )
     monkeypatch.setattr(node_updater, "UNodeClient", lambda *_args, **_kwargs: FakeClient())
@@ -501,12 +504,20 @@ def test_led_control_applies_colors_and_restores_previous_connection(
     )
 
     assert result["action"] == "led-set"
-    assert ("post", "/api/brightness", {"brightness": 37}) in events
     assert (
         "post",
         "/api/leds",
-        {"network": "#123456", "activity": "#ABCDEF"},
+        {
+            "network": "#123456",
+            "activity": "#ABCDEF",
+            "brightness": 37,
+        },
     ) in events
+    assert not any(
+        event[1] == "/api/brightness"
+        for event in events
+        if event[0] == "post"
+    )
     assert events[-1] == ("restore", "IllumiNet")
     assert job.data["nodes"][0]["ledOverrideActive"] is True
 
@@ -532,6 +543,7 @@ def test_led_control_rejects_legacy_hardware_and_restores_connection(
             "recoveryMode": False,
             "inferredProfile": "legacy",
             "ledColorOverrideSupported": False,
+            "ledBrightnessOverrideSupported": False,
         },
     )
     monkeypatch.setattr(

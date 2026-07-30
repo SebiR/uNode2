@@ -643,6 +643,9 @@ def probe_node(timeout: float = 20.0) -> dict[str, Any]:
                 "ledColorOverrideSupported": bool(
                     status.get("ledColorOverrideSupported", False)
                 ),
+                "ledBrightnessOverrideSupported": bool(
+                    status.get("ledBrightnessOverrideSupported", False)
+                ),
                 "ledOverrideActive": bool(status.get("ledOverrideActive", False)),
                 "recoveryMode": False,
             }
@@ -661,6 +664,7 @@ def probe_node(timeout: float = 20.0) -> dict[str, Any]:
                 "webAssetsMatch": False,
                 "inferredProfile": "normal",
                 "ledColorOverrideSupported": False,
+                "ledBrightnessOverrideSupported": False,
                 "ledOverrideActive": False,
                 "recoveryMode": True,
                 "fsMounted": bool(status.get("fsMounted", False)),
@@ -1100,23 +1104,24 @@ def perform_led_control(job: JobStatus, request: dict[str, Any]) -> dict[str, An
             raise RuntimeError(
                 "Direct RGB LED control requires firmware 0.23.25 or newer"
             )
+        if (
+            action == "led-set"
+            and not node.get("ledBrightnessOverrideSupported")
+        ):
+            raise RuntimeError(
+                "Isolated LED test brightness requires firmware 0.25.5 or newer"
+            )
 
         client = UNodeClient(BASE_URL, password=password)
         client.ensure_authenticated()
-        if action == "led-set":
-            status, body = client.post_json(
-                "/api/brightness",
-                {"brightness": brightness},
-            )
-            if status != 200:
-                raise RuntimeError(
-                    f"LED brightness API failed with HTTP {status}: "
-                    + body.decode(errors="replace")
-                )
 
         endpoint = "/api/leds" if action == "led-set" else "/api/leds/release"
         payload = (
-            {"network": network_color, "activity": activity_color}
+            {
+                "network": network_color,
+                "activity": activity_color,
+                "brightness": brightness,
+            }
             if action == "led-set"
             else None
         )

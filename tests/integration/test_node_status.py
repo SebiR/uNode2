@@ -26,6 +26,10 @@ def test_status_endpoint_reports_expected_basics(unode_client: UNodeClient) -> N
     assert status["ledColorOverrideSupported"] is (
         status.get("ledHardware") == "WS2812"
     )
+    assert isinstance(status["ledBrightnessOverrideSupported"], bool)
+    assert status["ledBrightnessOverrideSupported"] is (
+        status.get("ledHardware") == "WS2812"
+    )
 
     network_diagnostics = status["networkDiagnostics"]
     assert network_diagnostics["ipFragmentGuardEnabled"] is True

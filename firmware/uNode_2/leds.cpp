@@ -39,11 +39,13 @@ static StatusLedRgb overrideNetworkColor =
   {0, 0, 0};
 static StatusLedRgb overrideActivityColor =
   {0, 0, 0};
+static uint8_t overrideBrightness = 50;
 
 static StatusLedRgb renderedNetworkColor =
   {0, 0, 0};
 static StatusLedRgb renderedActivityColor =
   {0, 0, 0};
+static uint8_t renderedBrightness = 0;
 
 void initLEDs() {
   initStatusLedDriver();
@@ -161,9 +163,15 @@ bool areLEDsMuted() {
 
 void setLedColorOverride(
   StatusLedRgb networkColor,
-  StatusLedRgb activityLedColor) {
+  StatusLedRgb activityLedColor,
+  uint8_t brightness) {
   overrideNetworkColor = networkColor;
   overrideActivityColor = activityLedColor;
+  overrideBrightness =
+    constrain(
+      brightness,
+      1,
+      100);
   colorOverrideActive = true;
 }
 
@@ -180,6 +188,10 @@ void getRenderedLedColors(
   StatusLedRgb& activityLedColor) {
   networkColor = renderedNetworkColor;
   activityLedColor = renderedActivityColor;
+}
+
+uint8_t getRenderedLedBrightness() {
+  return renderedBrightness;
 }
 
 void setLEDBrightness(
@@ -285,14 +297,16 @@ static StatusLedColor getStatusColor(
 /** @brief Renders one RGB pair and stores it for WebSocket mirroring. */
 static void renderRgbColors(
   StatusLedRgb networkColor,
-  StatusLedRgb activityLedColor) {
+  StatusLedRgb activityLedColor,
+  uint8_t brightness) {
   renderedNetworkColor = networkColor;
   renderedActivityColor = activityLedColor;
+  renderedBrightness = brightness;
 
   renderStatusLedsRgb(
     networkColor,
     activityLedColor,
-    config.ledBrightness);
+    brightness);
 }
 
 /** @brief Converts and renders one pair of predefined logical LED colors. */
@@ -301,7 +315,8 @@ static void renderLogicalColors(
   StatusLedColor activityLedColor) {
   renderRgbColors(
     statusLedColorToRgb(networkColor),
-    statusLedColorToRgb(activityLedColor));
+    statusLedColorToRgb(activityLedColor),
+    config.ledBrightness);
 }
 
 /** @return True when a temporary or persistent system pattern was rendered. */
@@ -375,7 +390,8 @@ void updateLEDs() {
   if (colorOverrideActive) {
     renderRgbColors(
       overrideNetworkColor,
-      overrideActivityColor);
+      overrideActivityColor,
+      overrideBrightness);
 
     return;
   }

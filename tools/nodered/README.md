@@ -53,10 +53,11 @@ The separate **Hardware Test** page contains a **Status LED Test** card. It uses
 the stored node inventory from the updater, connects the Pi to the selected AP,
 and exposes separate color pickers for the network and Art-Net/DMX WS2812
 pixels plus a brightness slider. Apply sends the temporary brightness through
-`/api/brightness` and creates a volatile RGB override through `/api/leds`;
-Release returns color control to firmware status logic. Capability data from
-`/api/status` disables the controls for Legacy hardware, Recovery Mode, and
-older firmware that does not provide the RGB API.
+the volatile `/api/leds` override together with both RGB values. Release
+returns color and brightness control to firmware status logic without changing
+the configured brightness. Capability data from `/api/status` disables the
+controls for Legacy hardware, Recovery Mode, and older firmware that does not
+provide the RGB API.
 
 The same page provides a guarded **Client Reconnection Test**. A firmware built
 with `ENABLE_TEST_HARNESS_API=1` may start in pure AP mode: the backend passes
