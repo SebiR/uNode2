@@ -1043,6 +1043,20 @@ def normalize_rgb_color(value: Any, label: str) -> str:
     return color.upper()
 
 
+def normalize_led_brightness(value: Any) -> int:
+    """Validate one dashboard LED brightness percentage."""
+
+    if isinstance(value, bool):
+        raise ValueError("LED brightness must be an integer from 1 to 100")
+    try:
+        brightness = int(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError("LED brightness must be an integer from 1 to 100") from error
+    if brightness < 1 or brightness > 100:
+        raise ValueError("LED brightness must be an integer from 1 to 100")
+    return brightness
+
+
 def perform_led_control(job: JobStatus, request: dict[str, Any]) -> dict[str, Any]:
     """Apply or release volatile WS2812 colors on one selected node."""
 
@@ -1062,6 +1076,7 @@ def perform_led_control(job: JobStatus, request: dict[str, Any]) -> dict[str, An
             request.get("activity"),
             "Activity LED color",
         )
+        brightness = normalize_led_brightness(request.get("brightness"))
     elif action != "led-release":
         raise ValueError("LED action must be led-set or led-release")
 
@@ -1088,6 +1103,17 @@ def perform_led_control(job: JobStatus, request: dict[str, Any]) -> dict[str, An
 
         client = UNodeClient(BASE_URL, password=password)
         client.ensure_authenticated()
+        if action == "led-set":
+            status, body = client.post_json(
+                "/api/brightness",
+                {"brightness": brightness},
+            )
+            if status != 200:
+                raise RuntimeError(
+                    f"LED brightness API failed with HTTP {status}: "
+                    + body.decode(errors="replace")
+                )
+
         endpoint = "/api/leds" if action == "led-set" else "/api/leds/release"
         payload = (
             {"network": network_color, "activity": activity_color}
@@ -1101,11 +1127,15 @@ def perform_led_control(job: JobStatus, request: dict[str, Any]) -> dict[str, An
                 + body.decode(errors="replace")
             )
         response = json.loads(body.decode("utf-8"))
+        fallback_brightness = brightness if action == "led-set" else 50
 
         for inventoried_node in job.data.get("nodes", []):
             if inventoried_node.get("ssid") == ssid:
                 inventoried_node["ledOverrideActive"] = bool(
                     response.get("overrideActive", False)
+                )
+                inventoried_node["ledBrightness"] = int(
+                    response.get("brightness", fallback_brightness)
                 )
 
         message = (

@@ -35,6 +35,8 @@ def test_node_red_flow_contains_capability_aware_led_controls() -> None:
     assert "Legacy hardware" in template["format"]
     assert "led-set" in validator["func"]
     assert "led-release" in validator["func"]
+    assert "brightness" in validator["func"]
+    assert 'type="range"' in template["format"]
     assert hardware_page["name"] == "Hardware Test"
     assert hardware_page["path"] == "/hardware-test"
     assert led_group["page"] == hardware_page["id"]
@@ -494,10 +496,12 @@ def test_led_control_applies_colors_and_restores_previous_connection(
             "ssid": "uNode_ABC123",
             "network": "#123456",
             "activity": "#abcdef",
+            "brightness": 37,
         },
     )
 
     assert result["action"] == "led-set"
+    assert ("post", "/api/brightness", {"brightness": 37}) in events
     assert (
         "post",
         "/api/leds",
@@ -549,6 +553,12 @@ def test_led_control_rejects_legacy_hardware_and_restores_connection(
 def test_normalize_rgb_color_rejects_invalid_values(value: str) -> None:
     with pytest.raises(ValueError, match="#RRGGBB"):
         node_updater.normalize_rgb_color(value, "LED color")
+
+
+@pytest.mark.parametrize("value", [None, True, 0, 101, "bright"])
+def test_normalize_led_brightness_rejects_invalid_values(value: object) -> None:
+    with pytest.raises(ValueError, match="1 to 100"):
+        node_updater.normalize_led_brightness(value)
 
 
 def test_decode_request_accepts_urlsafe_json_and_rejects_non_objects() -> None:
