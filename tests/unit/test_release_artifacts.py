@@ -78,7 +78,7 @@ def test_platformio_profiles_pin_the_release_build_configuration() -> None:
     assert "-DUSE_LEGACY_HARDWARE=1" in parser["env:legacy"]["build_flags"]
     gpio_fix_flags = parser["env:gpio_fix"]["build_flags"]
     assert "-DUSE_GPIO_FIX_HARDWARE=1" in gpio_fix_flags
-    assert "-DLED_WS2812_COLOR_ORDER=NEO_RGB" in gpio_fix_flags
+    assert "-DLED_WS2812_COLOR_ORDER=NEO_GRB" in gpio_fix_flags
     assert "-DENABLE_TEST_HARNESS_API=1" in parser["env:test"]["build_flags"]
     legacy_test_flags = parser["env:legacy_test"]["build_flags"]
     assert "-DUSE_LEGACY_HARDWARE=1" in legacy_test_flags

@@ -46,7 +46,7 @@ are written to the repository-level `artifacts/release/` directory.
 
 The `gpio_fix` environment is for the PCB revision whose ESP8266 symbol
 swapped GPIO4 and GPIO5. It drives the WS2812 chain on GPIO5, RS-485 `/RE` on
-GPIO4, and retains the board's `NEO_RGB` color order.
+GPIO4, and uses the board's `NEO_GRB` color order.
 
 The sketch remains compatible with the Arduino IDE. When compiling it there,
 make the repository-local libraries available to the Arduino sketchbook and

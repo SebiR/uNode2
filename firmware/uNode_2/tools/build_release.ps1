@@ -450,7 +450,7 @@ $manifest = [ordered]@{
             platformIoEnvironment = "gpio_fix"
             buildFlags = @(
                 "-DUSE_GPIO_FIX_HARDWARE=1",
-                "-DLED_WS2812_COLOR_ORDER=NEO_RGB"
+                "-DLED_WS2812_COLOR_ORDER=NEO_GRB"
             )
             firmware = [ordered]@{
                 file = (Split-Path $gpioFixFirmwareArtifact -Leaf)

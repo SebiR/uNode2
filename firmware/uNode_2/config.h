@@ -9,7 +9,7 @@
 
 #define FW_VERSION_MAJOR 0
 #define FW_VERSION_MINOR 25
-#define FW_VERSION_PATCH 3
+#define FW_VERSION_PATCH 4
 
 #define FW_STRINGIFY_IMPL(value) #value
 #define FW_STRINGIFY(value) FW_STRINGIFY_IMPL(value)
@@ -147,7 +147,7 @@
 
 // Adafruit NeoPixel color order, e.g. NEO_GRB, NEO_RGB or NEO_BRG
 #ifndef LED_WS2812_COLOR_ORDER
-#define LED_WS2812_COLOR_ORDER NEO_RGB
+#define LED_WS2812_COLOR_ORDER NEO_GRB
 #endif
 
 //#define DIRECTION_ARTNET_TO_DMX 0

@@ -14,7 +14,7 @@ explicitly in each release entry.
 ### Added
 
 - Added the `GPIO_Fix` firmware profile for the PCB revision with GPIO4 and
-  GPIO5 swapped in the ESP8266 component definition. It keeps `NEO_RGB`, moves
+  GPIO5 swapped in the ESP8266 component definition. It uses `NEO_GRB`, moves
   WS2812 data to GPIO5, and moves the split RS-485 `/RE` signal to GPIO4.
 - Added a self-contained PlatformIO project for the Waveshare RP2040-Zero DMX
   test fixture. The RP2040 platform, Earle Philhower Arduino-Pico 5.6.0 core,
@@ -60,6 +60,8 @@ explicitly in each release entry.
 
 ### Changed
 
+- Restored the WS2812 color order to `NEO_GRB` after verification on production
+  hardware.
 - Made `firmware/uNode_2` a self-contained PlatformIO project by moving its
   build configuration, PlatformIO hook, and release builder below the firmware
   directory. Workspace-level libraries, deployment tools, and HIL tests remain
